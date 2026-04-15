@@ -58,7 +58,7 @@ const PMDashboard = () => {
 
         {/* Stats Strip */}
         <div className="mb-8 flex flex-wrap items-center gap-4 rounded-xl border border-border/50 bg-muted/20 px-5 py-3">
-          <Stat label="Pending" value={stats.pending} />
+          <Stat label="Pending" value={pending} />
           <div className="h-4 w-px bg-border/60" />
           <Stat label="In Progress" value={stats.inProgress} color="text-blue-500" />
           <div className="h-4 w-px bg-border/60" />
