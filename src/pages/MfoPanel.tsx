@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react";
 import KaiRoleInsights from "@/components/KaiRoleInsights";
+import EscalationLog from "@/components/EscalationLog";
 import Navbar from "@/components/Navbar";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -7,7 +8,9 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { useTaskContext } from "@/contexts/TaskContext";
+import { useEscalations } from "@/contexts/EscalationContext";
 import { startups } from "@/data/startups";
 import { assigneeOptions, type Task, type TaskStatus, taskStatusConfig } from "@/data/tasks";
 import { toast } from "sonner";
