@@ -8,6 +8,7 @@ import KaiPrediction from "@/components/KaiPrediction";
 import KaiRecommendation from "@/components/KaiRecommendation";
 import KaiPortfolioIntel from "@/components/KaiPortfolioIntel";
 import KaiStrategicBrief from "@/components/KaiStrategicBrief";
+import MyWork from "@/components/MyWork";
 import { startups, getDailySummary, type Startup } from "@/data/startups";
 import {
   globalKaiInsight, globalKaiPredictions, globalKaiRecommendation,
