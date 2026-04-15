@@ -38,6 +38,7 @@ const columnConfig: Record<BoardColumn, { label: string; accent: string; bg: str
 
 const MfoPanel = () => {
   const { tasks, updateTaskStatus, notifications } = useTaskContext();
+  const { escalateTask } = useEscalations();
   const [filterStartup, setFilterStartup] = useState("all");
   const [filterOwner, setFilterOwner] = useState("all");
   const [draggedTask, setDraggedTask] = useState<string | null>(null);
@@ -47,6 +48,8 @@ const MfoPanel = () => {
   const [bulkMode, setBulkMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkAssignee, setBulkAssignee] = useState("");
+  const [escalateTarget, setEscalateTarget] = useState<Task | null>(null);
+  const [escalateReason, setEscalateReason] = useState("");
 
   const filtered = tasks.filter((t) => {
     if (filterStartup !== "all" && t.linkedStartupId !== filterStartup) return false;
