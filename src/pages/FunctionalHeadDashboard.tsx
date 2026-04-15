@@ -6,6 +6,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { useTaskContext } from "@/contexts/TaskContext";
 import { useAuth } from "@/contexts/AuthContext";
 import TaskCard from "@/components/TaskCard";
+import KaiPredictiveIntel from "@/components/KaiPredictiveIntel";
 import {
   type Domain,
   domainConfigs,
@@ -263,6 +264,14 @@ const FunctionalHeadDashboard = () => {
                             <Brain className="h-3 w-3 text-primary mt-0.5 flex-shrink-0" />
                             <p className="text-xs text-muted-foreground leading-relaxed">{issue.kaiInsight}</p>
                           </div>
+                        </div>
+                        {/* Predictive Intel per issue */}
+                        <div className="mt-2">
+                          <KaiPredictiveIntel
+                            issueTitle={issue.title}
+                            startupName={issue.startupName}
+                            kpiData={`Severity: ${issue.severity}, Impact: ${issue.impact}, Domain: ${config.label}`}
+                          />
                         </div>
                       </CardContent>
                     </Card>
