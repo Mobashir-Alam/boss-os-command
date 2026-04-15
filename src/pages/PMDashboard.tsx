@@ -39,7 +39,7 @@ const kaiPmInsights = [
 const PMDashboard = () => {
   const { tasks, getTaskStats } = useTaskContext();
   const stats = getTaskStats();
-
+  const pending = stats.total - stats.completed - stats.inProgress;
   const thisWeekTasks = tasks.filter((t) => t.status !== "completed");
   const completedTasks = tasks.filter((t) => t.status === "completed");
   const overdueTasks = tasks.filter((t) => {
