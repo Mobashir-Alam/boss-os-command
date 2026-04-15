@@ -10,6 +10,7 @@ import KaiPortfolioIntel from "@/components/KaiPortfolioIntel";
 import KaiStrategicBrief from "@/components/KaiStrategicBrief";
 import KaiRoleInsights from "@/components/KaiRoleInsights";
 import EscalationLog from "@/components/EscalationLog";
+import KaiPredictiveIntel from "@/components/KaiPredictiveIntel";
 import MyWork from "@/components/MyWork";
 import { startups, getDailySummary, type Startup } from "@/data/startups";
 import {
@@ -84,6 +85,19 @@ const Index = () => {
           </div>
           <KaiPortfolioIntel crossInsights={crossStartupInsights} capitalAllocations={capitalAllocations} />
           <KaiRoleInsights role="founder" className="mt-4" />
+          {/* Predictive Intelligence */}
+          <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <KaiPredictiveIntel
+              issueTitle="Nasheedio retention dropping 12% week-over-week"
+              startupName="Nasheedio"
+              kpiData="Retention: 62% (was 74%), Creator uploads down 30%, Churn rate: 4.2%"
+            />
+            <KaiPredictiveIntel
+              issueTitle="Project X runway critically low at 73 days"
+              startupName="Project X"
+              kpiData="Burn: $48K/mo, Runway: 73 days, Revenue: $0, Team: 5 FTE"
+            />
+          </div>
         </div>
 
         {/* Escalation Log — Founder can acknowledge & resolve */}
