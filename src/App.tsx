@@ -10,6 +10,7 @@ import Index from "./pages/Index.tsx";
 import Focus from "./pages/Focus.tsx";
 import StartupDetail from "./pages/StartupDetail.tsx";
 import Login from "./pages/Login.tsx";
+import Onboarding from "./pages/Onboarding.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient({});
