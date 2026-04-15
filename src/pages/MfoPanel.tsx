@@ -73,9 +73,18 @@ const MfoPanel = () => {
   };
 
   const handleEscalate = (task: Task) => {
-    toast.success(`Escalated "${task.title}" to Founder`, {
-      description: task.blockedReason || "Blocked — needs attention",
+    setEscalateTarget(task);
+    setEscalateReason(task.blockedReason || "");
+  };
+
+  const submitEscalation = () => {
+    if (!escalateTarget || !escalateReason.trim()) return;
+    escalateTask(escalateTarget, "MFO", escalateReason.trim());
+    toast.success(`Escalated "${escalateTarget.title}" to Founder`, {
+      description: escalateReason,
     });
+    setEscalateTarget(null);
+    setEscalateReason("");
   };
 
   const handleReassign = () => {
