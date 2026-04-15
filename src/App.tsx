@@ -25,6 +25,7 @@ const App = () => (
           <BrowserRouter>
             <Routes>
               <Route path="/login" element={<Login />} />
+              <Route path="/onboarding" element={<Onboarding />} />
               <Route path="/" element={<AuthGuard><Index /></AuthGuard>} />
               <Route path="/focus" element={<AuthGuard><Focus /></AuthGuard>} />
               <Route path="/startup/:id" element={<AuthGuard><StartupDetail /></AuthGuard>} />
