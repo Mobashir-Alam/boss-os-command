@@ -18,7 +18,7 @@ const roleNavItems: Record<string, { label: string; path: string }[]> = {
     { label: "Tasks", path: "/decisions" },
   ],
   project_manager: [
-    { label: "Project Board", path: "/pm" },
+    { label: "Project Board", path: "/project-board" },
   ],
   team_member: [
     { label: "My Work", path: "/my-work" },

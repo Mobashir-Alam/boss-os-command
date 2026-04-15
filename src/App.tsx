@@ -38,6 +38,7 @@ const App = () => (
               <Route path="/focus" element={<AuthGuard><Focus /></AuthGuard>} />
               <Route path="/startup/:id" element={<AuthGuard><StartupDetail /></AuthGuard>} />
               <Route path="/pm" element={<AuthGuard><PMDashboard /></AuthGuard>} />
+              <Route path="/project-board" element={<AuthGuard><PMDashboard /></AuthGuard>} />
               <Route path="/my-domain" element={<AuthGuard><FunctionalHeadDashboard /></AuthGuard>} />
               <Route path="/mfo" element={<AuthGuard><MfoPanel /></AuthGuard>} />
               <Route path="/decisions" element={<AuthGuard><DecisionLog /></AuthGuard>} />

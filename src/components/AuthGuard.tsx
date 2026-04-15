@@ -6,7 +6,7 @@ const roleDefaultRoutes: Record<string, string> = {
   founder: "/",
   mfo: "/mfo",
   functional_head: "/my-domain",
-  project_manager: "/pm",
+  project_manager: "/project-board",
   team_member: "/my-work",
 };
 
@@ -14,7 +14,7 @@ const roleAllowedRoutes: Record<string, string[]> = {
   founder: ["/", "/focus", "/decisions"],
   mfo: ["/mfo", "/", "/focus"],
   functional_head: ["/my-domain", "/decisions"],
-  project_manager: ["/pm"],
+  project_manager: ["/pm", "/project-board"],
   team_member: ["/my-work"],
 };
 
