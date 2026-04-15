@@ -10,9 +10,13 @@ import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import KaiInsight from "@/components/KaiInsight";
+import KaiPrediction from "@/components/KaiPrediction";
+import KaiRecommendation from "@/components/KaiRecommendation";
+import KaiSimulation from "@/components/KaiSimulation";
+import KaiScoreCard from "@/components/KaiScoreCard";
 import type { FocusPriority, ExecutionStatus } from "@/data/focus";
 import { severityConfig } from "@/data/focus";
-import { focusKaiInsights } from "@/data/kai";
+import { focusKaiData } from "@/data/kai";
 
 interface PriorityCardProps {
   priority: FocusPriority;
@@ -36,7 +40,7 @@ const PriorityCard = ({ priority, index }: PriorityCardProps) => {
   const [dismissed, setDismissed] = useState(false);
 
   const statusCfg = executionStatusConfig[status];
-  const kaiInsight = focusKaiInsights[priority.id];
+  const kaiData = focusKaiData[priority.id];
 
   const handleAssign = (value: string) => {
     setAssignee(value);
@@ -160,10 +164,16 @@ const PriorityCard = ({ priority, index }: PriorityCardProps) => {
         </Select>
       </div>
 
-      {/* KAI Insight */}
-      {kaiInsight && (
-        <div className="mb-5">
-          <KaiInsight insight={kaiInsight} convertible compact />
+      {/* KAI Engine Block */}
+      {kaiData && (
+        <div className="mb-5 space-y-3">
+          <KaiInsight insight={kaiData.insight} convertible compact />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <KaiPrediction predictions={kaiData.predictions} />
+            <KaiScoreCard score={kaiData.score} />
+          </div>
+          <KaiRecommendation recommendation={kaiData.recommendation} onAccept={() => toast.success("Recommendation accepted as task")} />
+          <KaiSimulation simulations={kaiData.simulations} />
         </div>
       )}
 
