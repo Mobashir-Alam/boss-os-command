@@ -4,6 +4,7 @@ import TaskCard from "@/components/TaskCard";
 import { useTaskContext } from "@/contexts/TaskContext";
 import { Badge } from "@/components/ui/badge";
 import { Sparkles, AlertTriangle, Link2, ChevronRight } from "lucide-react";
+import KaiRoleInsights from "@/components/KaiRoleInsights";
 
 interface Blocker {
   id: string;
@@ -71,22 +72,9 @@ const PMDashboard = () => {
           )}
         </div>
 
-        {/* KAI for PM */}
+        {/* KAI Role Insights for PM */}
         <section className="mb-8">
-          <div className="rounded-xl border border-border/50 bg-card p-5 space-y-3">
-            <div className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-amber-500" />
-              <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">KAI Execution Intel</span>
-            </div>
-            <div className="space-y-2">
-              {kaiPmInsights.map((insight, i) => (
-                <div key={i} className="flex items-start gap-2">
-                  <ChevronRight className="h-3.5 w-3.5 mt-0.5 text-amber-500 flex-shrink-0" />
-                  <p className="text-sm text-foreground/80">{insight}</p>
-                </div>
-              ))}
-            </div>
-          </div>
+          <KaiRoleInsights role="project_manager" />
         </section>
 
         {/* Overdue */}

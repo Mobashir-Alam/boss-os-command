@@ -11,7 +11,6 @@ import {
   domainMetrics,
   domainIssues,
   domainDecisions,
-  domainKaiInsights,
 } from "@/data/functionalHead";
 import { startups } from "@/data/startups";
 import KaiRoleInsights from "@/components/KaiRoleInsights";
@@ -30,7 +29,6 @@ const FunctionalHeadDashboard = () => {
   const [domain, setDomain] = useState<Domain>("hr");
   const [selectedStartup, setSelectedStartup] = useState<string>("all");
   const [decisionsOpen, setDecisionsOpen] = useState(false);
-  const [kaiOpen, setKaiOpen] = useState(false);
   const { tasks } = useTaskContext();
 
   const config = domainConfigs[domain];
