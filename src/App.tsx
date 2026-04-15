@@ -41,7 +41,6 @@ const App = () => (
               <Route path="/my-domain" element={<AuthGuard><FunctionalHeadDashboard /></AuthGuard>} />
               <Route path="/mfo" element={<AuthGuard><MfoPanel /></AuthGuard>} />
               <Route path="/decisions" element={<AuthGuard><DecisionLog /></AuthGuard>} />
-              <Route path="/my-tasks" element={<AuthGuard><TeamMemberDashboard /></AuthGuard>} />
               <Route path="/my-work" element={<AuthGuard><MyWorkDashboard /></AuthGuard>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
