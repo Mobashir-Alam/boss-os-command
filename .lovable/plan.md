@@ -1,44 +1,82 @@
 
 
-# Founder OS — CEO War Dashboard
+# Founder OS — Elite Polish (Final Refinement)
 
 ## Overview
-A premium, Apple-like SaaS dashboard for managing multiple startups at a glance. Ultra-clean, minimal, and action-oriented.
+Elevate all three screens (Home, Focus, Startup Detail) to a 10/10 command center with stronger urgency, inline actions, execution tracking, and time context — without redesigning.
 
-## Pages & Components
+---
 
-### 1. Home Dashboard (Index page)
-- **Sticky Top Navbar**: "Founder OS" logo left, Focus Score (78/100) center, bell icon with badge + avatar right
-- **Startup Cards Grid**: 3-col desktop, 1-col mobile. Each card shows name, status dot/border (green/yellow/red), runway, growth with trend arrow, one-line insight, and View/Fix buttons. Subtle shadow, hover elevation effect.
-- **Critical Alert Strip**: Horizontal scrollable row of pill-shaped alerts at the bottom
+## 1. Data Layer Updates
 
-### 2. Startup Detail Page (`/startup/:id`)
-- Header with startup name, status, and key metrics
-- Expanded insight section with more context
-- Placeholder sections for deeper data
+**`src/data/startups.ts`**
+- Add `detectedAgo`, `lastUpdated` fields to `Startup` type
+- Add a `getDailySummary()` function that returns a briefing string based on startup statuses
 
-### 3. Fix Action Modal
-- Triggered by "Fix" button on any card
-- Fields: Assign person (dropdown), Add note (textarea), Set deadline (date picker)
-- Clean dialog using shadcn Dialog component
+**`src/data/focus.ts`**
+- Add fields to `FocusPriority`: `detectedAgo`, `deadlineIn`, `status` (Pending/In Progress/Done), `mfoConfidence` ("High"/"Medium"), `rank` number
+- Add `detectedAgo` and `owner` to `lowerPriorities` items
 
-### 4. Insight Tooltip
-- Hover on insight text shows a tooltip with a mini spark line (CSS/SVG) and short explanation
+---
 
-## Design System
-- **Font**: Inter (already available)
-- **Theme**: Light mode default with dark mode support
-- **Colors**: Neutral grays for UI, color only for status (green/yellow/red)
-- **Cards**: Rounded-xl, soft shadow, hover lift animation
-- **Spacing**: Generous padding, no clutter
+## 2. Home Screen (`Index.tsx`)
 
-## Mock Data
-4 startups: Nasheedio (Yellow), Gurucool (Yellow), LevelUp Climate (Green), Project X (Red) — with all specified metrics and insights.
+- Add **Daily Summary** line above the cards grid: a single computed sentence like "Nasheedio needs attention. Others stable." styled as a calm briefing
+- Cards already have status borders, urgency icons, and Fix-primary hierarchy — no card changes needed
 
-## Tech
-- React Router for navigation
-- shadcn/ui components (Dialog, Tooltip, Card, Badge, Popover)
-- Tailwind for styling
-- Lucide icons
-- All data hardcoded as mock
+---
+
+## 3. Focus Screen (`Focus.tsx` + `PriorityCard.tsx`)
+
+**Priority ordering**: Show `#1`, `#2`, `#3` rank badges on each card
+
+**Time pressure**: Display "Detected 2 days ago" and "Deadline in 3 days" labels inside each card
+
+**Execution status**: Add a status badge (Pending / In Progress / Done) with a small colored dot indicator
+
+**Inline actions** (replace modal-based):
+- Assign dropdown already inline — keep as-is
+- Note: replace modal with an inline expandable textarea inside the card
+- Deadline: already inline via popover — keep
+
+**MFO enhancements**:
+- Add "Confidence: High/Medium" next to suggestion
+- Add "Accept Suggestion" button that converts to a task (toast confirmation)
+
+**Quick resolution**: Add "Mark as Done" and "Ignore" buttons to the action row
+
+---
+
+## 4. Startup Detail Page (`StartupDetail.tsx`)
+
+**Reorder & expand sections**:
+1. **Snapshot** — existing metrics cards
+2. **Problems** — new section with structured problem cards (problem, why, impact, owner, status, actions: assign/note/deadline/done)
+3. **Next Decision** — new block: "Should we invest in creator incentives?" with "Review Data" and "Decide" buttons
+4. **People** — placeholder team list
+5. **Progress** — placeholder timeline
+6. **Plan** — placeholder strategic notes
+
+**Time context**: Each problem shows "Detected 3 days ago" and "Last updated 5 hours ago"
+
+---
+
+## 5. Files Changed
+
+| File | Change |
+|------|--------|
+| `src/data/startups.ts` | Add time fields, daily summary helper |
+| `src/data/focus.ts` | Add rank, status, time, confidence fields |
+| `src/pages/Index.tsx` | Add daily summary line |
+| `src/components/PriorityCard.tsx` | Rank badge, inline note, execution status, MFO confidence + accept, mark done/ignore |
+| `src/pages/Focus.tsx` | Pass rank to PriorityCard |
+| `src/pages/StartupDetail.tsx` | Full rebuild: problems section, next decision, people/progress/plan placeholders, time context |
+
+---
+
+## Technical Notes
+- All data remains mock/hardcoded
+- No new dependencies needed
+- Inline note uses local state toggle instead of Dialog
+- Execution status is local state only (Pending → In Progress → Done cycle)
 
