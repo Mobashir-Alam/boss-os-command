@@ -1,9 +1,27 @@
 import { useAuth } from "@/contexts/AuthContext";
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import { Loader2 } from "lucide-react";
+
+const roleDefaultRoutes: Record<string, string> = {
+  founder: "/",
+  mfo: "/mfo",
+  functional_head: "/my-domain",
+  project_manager: "/pm",
+  team_member: "/my-tasks",
+};
+
+// Routes each role is allowed to access
+const roleAllowedRoutes: Record<string, string[]> = {
+  founder: ["/", "/focus", "/decisions", "/mfo", "/my-domain", "/pm", "/my-tasks"],
+  mfo: ["/mfo", "/", "/focus"],
+  functional_head: ["/my-domain", "/decisions", "/"],
+  project_manager: ["/pm"],
+  team_member: ["/my-tasks"],
+};
 
 const AuthGuard = ({ children }: { children: React.ReactNode }) => {
   const { user, loading, profile } = useAuth();
+  const location = useLocation();
 
   if (loading) {
     return (
@@ -18,6 +36,20 @@ const AuthGuard = ({ children }: { children: React.ReactNode }) => {
   // Redirect to onboarding if not completed
   const onboardingDone = localStorage.getItem("onboarding_complete");
   if (!onboardingDone) return <Navigate to="/onboarding" replace />;
+
+  // Role-based route protection
+  const role = profile?.role;
+  if (role && role !== "founder") {
+    const currentPath = location.pathname;
+    // Check startup detail pages — allow for all roles that have dashboard access
+    const isStartupRoute = currentPath.startsWith("/startup/");
+    const allowed = roleAllowedRoutes[role] || [];
+    
+    if (!isStartupRoute && !allowed.includes(currentPath)) {
+      const defaultRoute = roleDefaultRoutes[role] || "/";
+      return <Navigate to={defaultRoute} replace />;
+    }
+  }
 
   return <>{children}</>;
 };
