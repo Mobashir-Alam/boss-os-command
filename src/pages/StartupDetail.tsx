@@ -162,23 +162,11 @@ const StartupDetail = () => {
           </section>
         )}
 
-        {/* 3. Next Decision */}
-        {decision && (
+        {/* 3. KAI Decision */}
+        {kaiData?.decision && (
           <section className="mb-10">
-            <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-4">Next Decision</h2>
-            <div className="rounded-xl border border-border/60 bg-card p-6">
-              <p className="text-lg font-semibold tracking-tight mb-2">{decision.question}</p>
-              <p className="text-sm text-muted-foreground mb-5">{decision.context}</p>
-              <div className="flex gap-2.5">
-                <Button size="sm" variant="outline" onClick={() => toast.info("Opening data review...")}>
-                  <BarChart3 className="h-3.5 w-3.5 mr-1.5" />
-                  Review Data
-                </Button>
-                <Button size="sm" onClick={() => toast.success("Decision recorded")}>
-                  Decide
-                </Button>
-              </div>
-            </div>
+            <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-4">KAI Decision</h2>
+            <KaiDecision decision={kaiData.decision} />
           </section>
         )}
 
