@@ -68,6 +68,11 @@ const Index = () => {
           <p className="text-sm font-medium text-foreground/80">{summary}</p>
         </div>
 
+        {/* My Work */}
+        <div className="mb-6">
+          <MyWork />
+        </div>
+
         {/* KAI Portfolio Intelligence */}
         <div className="mb-8 space-y-3">
           <KaiInsight insight={globalKaiInsight.insight} convertible />
