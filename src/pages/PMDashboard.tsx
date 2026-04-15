@@ -22,7 +22,7 @@ import {
 import { cn } from "@/lib/utils";
 import type { Task, TaskStatus } from "@/data/tasks";
 import { taskStatusConfig, assigneeOptions } from "@/data/tasks";
-import { startups } from "@/data/startups";
+import { useStartups } from "@/hooks/useStartups";
 import KaiRoleInsights from "@/components/KaiRoleInsights";
 import {
   AlertTriangle,

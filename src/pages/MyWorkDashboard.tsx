@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useTaskContext } from "@/contexts/TaskContext";
 import { taskStatusConfig, type Task, type TaskStatus } from "@/data/tasks";
-import { startups } from "@/data/startups";
+import { useStartups } from "@/hooks/useStartups";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {

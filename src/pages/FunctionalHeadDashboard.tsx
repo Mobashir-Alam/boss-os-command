@@ -15,7 +15,7 @@ import {
   domainDecisions,
   inferDomain,
 } from "@/data/functionalHead";
-import { startups } from "@/data/startups";
+import { useStartups } from "@/hooks/useStartups";
 import { getDomainKaiInsights, type FunctionalDomain } from "@/data/kaiRoleInsights";
 import { cn } from "@/lib/utils";
 import {
