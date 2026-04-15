@@ -1,6 +1,6 @@
 // Role-aware KAI insights
 
-export type KaiRole = "founder" | "functional_head" | "mfo" | "project_manager";
+export type KaiRole = "founder" | "functional_head" | "mfo" | "project_manager" | "team_member";
 export type InsightSeverity = "info" | "warning" | "critical" | "positive";
 
 export interface RoleKaiInsight {
@@ -149,6 +149,36 @@ export const roleKaiInsights: Record<KaiRole, RoleKaiInsight[]> = {
       severity: "info",
       metric: "Task Summary",
       metricValue: "6 active tasks",
+    },
+  ],
+
+  team_member: [
+    {
+      id: "tm-1",
+      label: "Priority",
+      insight: "Complete 'Cut non-essential spend' first — deadline is tomorrow.",
+      detail: "This task is due Apr 17. It's currently blocked on budget approval. If the blocker is resolved, prioritize this immediately.",
+      severity: "critical",
+      metric: "Deadline",
+      metricValue: "Tomorrow",
+    },
+    {
+      id: "tm-2",
+      label: "Blocker Impact",
+      insight: "Your blocked task is holding up 2 other tasks downstream.",
+      detail: "Resolving 'Schedule backend engineer interviews' will unblock the hiring pipeline for Gurucool. Report the blocker if you need help.",
+      severity: "warning",
+      metric: "Impact",
+      metricValue: "2 tasks waiting",
+    },
+    {
+      id: "tm-3",
+      label: "Progress",
+      insight: "You're making good progress — 1 task completed this week.",
+      detail: "'Analyze premium tier churn reasons' was completed. Keep the momentum going with your remaining active tasks.",
+      severity: "positive",
+      metric: "Completed",
+      metricValue: "1 this week",
     },
   ],
 };
