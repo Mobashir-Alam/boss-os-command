@@ -3,7 +3,7 @@ import { Navigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 
 const AuthGuard = ({ children }: { children: React.ReactNode }) => {
-  const { user, loading } = useAuth();
+  const { user, loading, profile } = useAuth();
 
   if (loading) {
     return (
@@ -14,6 +14,10 @@ const AuthGuard = ({ children }: { children: React.ReactNode }) => {
   }
 
   if (!user) return <Navigate to="/login" replace />;
+
+  // Redirect to onboarding if not completed
+  const onboardingDone = localStorage.getItem("onboarding_complete");
+  if (!onboardingDone) return <Navigate to="/onboarding" replace />;
 
   return <>{children}</>;
 };
