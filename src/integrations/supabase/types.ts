@@ -229,6 +229,74 @@ export type Database = {
         }
         Relationships: []
       }
+      startups: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          detected_ago: string
+          growth: string
+          growth_direction: string
+          id: string
+          insight: string
+          insight_detail: string
+          insight_last_updated: string
+          insight_trend: string
+          last_updated: string
+          name: string
+          runway: string
+          slug: string
+          spark_data: Json
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          detected_ago?: string
+          growth?: string
+          growth_direction?: string
+          id?: string
+          insight?: string
+          insight_detail?: string
+          insight_last_updated?: string
+          insight_trend?: string
+          last_updated?: string
+          name: string
+          runway?: string
+          slug: string
+          spark_data?: Json
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          detected_ago?: string
+          growth?: string
+          growth_direction?: string
+          id?: string
+          insight?: string
+          insight_detail?: string
+          insight_last_updated?: string
+          insight_trend?: string
+          last_updated?: string
+          name?: string
+          runway?: string
+          slug?: string
+          spark_data?: Json
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "startups_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       suppressed_emails: {
         Row: {
           created_at: string
