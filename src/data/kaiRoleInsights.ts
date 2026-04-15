@@ -1,6 +1,7 @@
 // Role-aware KAI insights
 
 export type KaiRole = "founder" | "functional_head" | "mfo" | "project_manager" | "team_member";
+export type FunctionalDomain = "finance" | "product" | "marketing" | "hr";
 export type InsightSeverity = "info" | "warning" | "critical" | "positive";
 
 export interface RoleKaiInsight {
@@ -11,7 +12,139 @@ export interface RoleKaiInsight {
   severity: InsightSeverity;
   metric?: string;
   metricValue?: string;
+  domain?: FunctionalDomain; // Used for functional_head domain filtering
 }
+
+// Domain-specific KAI insights for functional heads
+const functionalHeadInsights: RoleKaiInsight[] = [
+  // CFO / Finance
+  {
+    id: "fh-fin-1",
+    label: "Burn Alert",
+    insight: "Portfolio burn rate up 12% MoM — Project X infra costs driving the spike.",
+    detail: "Monthly burn increased from $165K to $185K. Cloud costs rose $8K. Recommend infra audit and reserved instance migration to save ~$5K/mo.",
+    severity: "critical",
+    metric: "Monthly Burn",
+    metricValue: "$185K (+12%)",
+    domain: "finance",
+  },
+  {
+    id: "fh-fin-2",
+    label: "Runway Risk",
+    insight: "Project X runway at 2.5 months — bridge round or 20% cost cut needed by Apr 30.",
+    detail: "At current $85K/mo burn, cash depletes Jul 1. Bridge round materials in progress. Parallel track: identify $17K in non-essential spend to cut.",
+    severity: "critical",
+    metric: "Runway",
+    metricValue: "2.5 months",
+    domain: "finance",
+  },
+  {
+    id: "fh-fin-3",
+    label: "Revenue Signal",
+    insight: "Portfolio MRR up 8% MoM — Nasheedio and LevelUp Climate leading growth.",
+    detail: "Total MRR at $42K. Nasheedio contributing $18K (+6%), LevelUp Climate $12K (+15%). Project X flat. Gurucool pre-revenue.",
+    severity: "positive",
+    metric: "MRR Growth",
+    metricValue: "+8% MoM",
+    domain: "finance",
+  },
+
+  // CTO / Product
+  {
+    id: "fh-tech-1",
+    label: "Tech Debt",
+    insight: "Sprint velocity declined 10% over 3 sprints — possible scope creep or team fatigue.",
+    detail: "Velocity dropped from 38 to 34 points. Two engineers context-switching across projects. Recommend sprint retrospective focused on scope management.",
+    severity: "warning",
+    metric: "Sprint Velocity",
+    metricValue: "34 pts (↓10%)",
+    domain: "product",
+  },
+  {
+    id: "fh-tech-2",
+    label: "Bug Spike",
+    insight: "Open bugs at 23 — up 5 this sprint. Nasheedio mobile crash rate at 2.1%.",
+    detail: "Top crash: media upload on Android 12+. Hotfix estimated at 2 dev-days. Prioritize before next release to protect retention.",
+    severity: "critical",
+    metric: "Open Bugs",
+    metricValue: "23 (+5)",
+    domain: "product",
+  },
+  {
+    id: "fh-tech-3",
+    label: "Infra Health",
+    insight: "Uptime consistently above SLA at 99.7% — infrastructure stability is strong.",
+    detail: "No P0 incidents in 30 days. Monitoring coverage at 94%. Consider expanding APM to Gurucool staging environment.",
+    severity: "positive",
+    metric: "Uptime (30d)",
+    metricValue: "99.7%",
+    domain: "product",
+  },
+
+  // CMO / Marketing
+  {
+    id: "fh-mkt-1",
+    label: "CAC Rising",
+    insight: "Paid acquisition costs rising across 2 startups — review channel mix before next spend cycle.",
+    detail: "Nasheedio paid CPA at $28 (+$4 vs target). LevelUp Climate CPA at $22 (+$3). Organic channels showing 2× better ROI. Consider 30% budget shift.",
+    severity: "warning",
+    metric: "CAC",
+    metricValue: "$28 (+$4)",
+    domain: "marketing",
+  },
+  {
+    id: "fh-mkt-2",
+    label: "Growth Win",
+    insight: "Organic traffic +18% MoM — SEO investments from Q1 paying off across portfolio.",
+    detail: "Total organic sessions at 12.4K. Top performers: LevelUp Climate (+24%), Nasheedio (+14%). Continue doubling down on content strategy.",
+    severity: "positive",
+    metric: "Organic Traffic",
+    metricValue: "12.4K (+18%)",
+    domain: "marketing",
+  },
+  {
+    id: "fh-mkt-3",
+    label: "Campaign Alert",
+    insight: "Creator reactivation email open rate at 18% — below 25% benchmark. Test subject lines.",
+    detail: "Reactivation campaign sent to 200 creators. 18% open rate, 4% click-through. A/B test with personalized subject lines could improve by 30-40%.",
+    severity: "warning",
+    metric: "Email Open Rate",
+    metricValue: "18% (target 25%)",
+    domain: "marketing",
+  },
+
+  // CHRO / HR
+  {
+    id: "fh-hr-1",
+    label: "Hiring Delay",
+    insight: "Time-to-hire increased 15% this month — sourcing channels need expansion.",
+    detail: "Average time-to-hire now 24 days vs 21 day target. Local pipeline yielding fewer qualified candidates. Remote postings showing 40% faster fill rates.",
+    severity: "warning",
+    metric: "Time-to-Hire",
+    metricValue: "24 days (+15%)",
+    domain: "hr",
+  },
+  {
+    id: "fh-hr-2",
+    label: "Attrition Trend",
+    insight: "Team churn trending down to 4.2% — retention initiatives showing impact.",
+    detail: "Churn rate down from 5.0% last quarter. Exit interview feedback improved. Mentorship program contributing. Continue current approach.",
+    severity: "positive",
+    metric: "Churn Rate",
+    metricValue: "4.2% (↓0.8%)",
+    domain: "hr",
+  },
+  {
+    id: "fh-hr-3",
+    label: "Pipeline Gap",
+    insight: "7 open positions across portfolio — Gurucool backend role critical at 21 days.",
+    detail: "Gurucool backend: 21 days open, blocking API v2. Nasheedio content: 14 days. Recommend expanding to remote candidates and contractor bridge.",
+    severity: "critical",
+    metric: "Open Roles",
+    metricValue: "7 positions",
+    domain: "hr",
+  },
+];
 
 export const roleKaiInsights: Record<KaiRole, RoleKaiInsight[]> = {
   founder: [
@@ -53,35 +186,7 @@ export const roleKaiInsights: Record<KaiRole, RoleKaiInsight[]> = {
     },
   ],
 
-  functional_head: [
-    {
-      id: "fh-1",
-      label: "Domain Alert",
-      insight: "Time-to-hire increased 15% this month — sourcing channels may need expansion.",
-      detail: "Average time-to-hire now 24 days vs 21 day target. Local pipeline yielding fewer qualified candidates. Remote postings showing 40% faster fill rates in similar roles.",
-      severity: "warning",
-      metric: "Time-to-Hire",
-      metricValue: "24 days (+15%)",
-    },
-    {
-      id: "fh-2",
-      label: "Domain Trend",
-      insight: "Team churn trending down — retention initiatives showing impact across 3 startups.",
-      detail: "Churn rate at 4.2%, down from 5.0% last quarter. Exit interview feedback improved. Continue current mentorship program.",
-      severity: "positive",
-      metric: "Churn Rate",
-      metricValue: "4.2% (↓0.8%)",
-    },
-    {
-      id: "fh-3",
-      label: "Action Needed",
-      insight: "Sprint velocity declined 10% over 3 sprints — possible scope creep or team fatigue.",
-      detail: "Velocity dropped from 38 to 34 points. Two engineers context-switching across projects. Recommend sprint retrospective focused on scope management.",
-      severity: "warning",
-      metric: "Sprint Velocity",
-      metricValue: "34 pts (↓10%)",
-    },
-  ],
+  functional_head: functionalHeadInsights,
 
   mfo: [
     {
@@ -182,3 +287,8 @@ export const roleKaiInsights: Record<KaiRole, RoleKaiInsight[]> = {
     },
   ],
 };
+
+// Helper to get domain-filtered insights for functional heads
+export function getDomainKaiInsights(domain: FunctionalDomain): RoleKaiInsight[] {
+  return functionalHeadInsights.filter((i) => i.domain === domain);
+}
