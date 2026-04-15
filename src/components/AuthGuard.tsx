@@ -10,20 +10,18 @@ const roleDefaultRoutes: Record<string, string> = {
   team_member: "/my-work",
 };
 
-// Routes each role is allowed to access
 const roleAllowedRoutes: Record<string, string[]> = {
-  founder: ["/", "/focus", "/decisions", "/mfo", "/my-domain", "/pm", "/my-tasks"],
+  founder: ["/", "/focus", "/decisions"],
   mfo: ["/mfo", "/", "/focus"],
-  functional_head: ["/my-domain", "/decisions", "/"],
+  functional_head: ["/my-domain", "/decisions"],
   project_manager: ["/pm"],
-  team_member: ["/my-work", "/my-tasks"],
+  team_member: ["/my-work"],
 };
 
 const AuthGuard = ({ children }: { children: React.ReactNode }) => {
   const { user, loading, profile } = useAuth();
   const location = useLocation();
 
-  // Wait for both auth AND profile to resolve
   if (loading || (user && !profile)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -34,11 +32,9 @@ const AuthGuard = ({ children }: { children: React.ReactNode }) => {
 
   if (!user) return <Navigate to="/login" replace />;
 
-  // Redirect to onboarding if not completed
   const onboardingDone = localStorage.getItem("onboarding_complete");
   if (!onboardingDone) return <Navigate to="/onboarding" replace />;
 
-  // Role-based route protection — applies to ALL roles including founder
   const role = profile?.role;
   if (role) {
     const currentPath = location.pathname;
