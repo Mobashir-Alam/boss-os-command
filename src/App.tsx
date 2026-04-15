@@ -4,6 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { TaskProvider } from "@/contexts/TaskContext";
+import { EscalationProvider } from "@/contexts/EscalationContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 import AuthGuard from "@/components/AuthGuard";
 import Index from "./pages/Index.tsx";
@@ -26,6 +27,7 @@ const App = () => (
     <TooltipProvider>
       <AuthProvider>
         <TaskProvider>
+          <EscalationProvider>
           <Toaster />
           <Sonner />
           <BrowserRouter>
@@ -44,6 +46,7 @@ const App = () => (
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
+          </EscalationProvider>
         </TaskProvider>
       </AuthProvider>
     </TooltipProvider>
