@@ -9,6 +9,7 @@ import KaiRecommendation from "@/components/KaiRecommendation";
 import KaiPortfolioIntel from "@/components/KaiPortfolioIntel";
 import KaiStrategicBrief from "@/components/KaiStrategicBrief";
 import KaiRoleInsights from "@/components/KaiRoleInsights";
+import EscalationLog from "@/components/EscalationLog";
 import MyWork from "@/components/MyWork";
 import { startups, getDailySummary, type Startup } from "@/data/startups";
 import {
@@ -83,6 +84,11 @@ const Index = () => {
           </div>
           <KaiPortfolioIntel crossInsights={crossStartupInsights} capitalAllocations={capitalAllocations} />
           <KaiRoleInsights role="founder" className="mt-4" />
+        </div>
+
+        {/* Escalation Log — Founder can acknowledge & resolve */}
+        <div className="mb-8">
+          <EscalationLog canAct />
         </div>
 
         {/* Cards Grid */}
