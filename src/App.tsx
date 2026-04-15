@@ -14,6 +14,7 @@ import Onboarding from "./pages/Onboarding.tsx";
 import PMDashboard from "./pages/PMDashboard.tsx";
 import FunctionalHeadDashboard from "./pages/FunctionalHeadDashboard.tsx";
 import MfoPanel from "./pages/MfoPanel.tsx";
+import DecisionLog from "./pages/DecisionLog.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient({});
@@ -35,6 +36,7 @@ const App = () => (
               <Route path="/pm" element={<AuthGuard><PMDashboard /></AuthGuard>} />
               <Route path="/my-domain" element={<AuthGuard><FunctionalHeadDashboard /></AuthGuard>} />
               <Route path="/mfo" element={<AuthGuard><MfoPanel /></AuthGuard>} />
+              <Route path="/decisions" element={<AuthGuard><DecisionLog /></AuthGuard>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>

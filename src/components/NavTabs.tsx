@@ -12,6 +12,7 @@ const NavTabs = () => {
     : isFunctionalHead
     ? [
         { label: "My Domain", path: "/my-domain" },
+        { label: "Decisions", path: "/decisions" },
         { label: "Dashboard", path: "/" },
       ]
     : role === "mfo"
@@ -23,6 +24,7 @@ const NavTabs = () => {
     : [
         { label: "Dashboard", path: "/" },
         { label: "Focus", path: "/focus" },
+        { label: "Decisions", path: "/decisions" },
       ];
 
   return (
