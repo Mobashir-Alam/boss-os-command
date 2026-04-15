@@ -9,9 +9,14 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import Navbar from "@/components/Navbar";
 import SparkLine from "@/components/SparkLine";
 import KaiInsight from "@/components/KaiInsight";
+import KaiPrediction from "@/components/KaiPrediction";
+import KaiRecommendation from "@/components/KaiRecommendation";
+import KaiSimulation from "@/components/KaiSimulation";
+import KaiScoreCard from "@/components/KaiScoreCard";
+import KaiDecision from "@/components/KaiDecision";
 import AskKai from "@/components/AskKai";
 import { startups, statusConfig } from "@/data/startups";
-import { startupKaiInsights } from "@/data/kai";
+import { startupKaiData } from "@/data/kai";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -43,13 +48,6 @@ const startupProblems: Record<string, Problem[]> = {
   ],
 };
 
-const nextDecisions: Record<string, { question: string; context: string }> = {
-  nasheedio: { question: "Should we invest in creator incentives to reverse retention?", context: "Creator uploads dropped 18% — incentives could cost $5K/mo but may recover 30% of churned creators." },
-  gurucool: { question: "Should we use a recruiting agency for the backend role?", context: "Role has been open 21 days. Agency fee ~20% of salary but could fill in 1–2 weeks." },
-  "levelup-climate": { question: "Should we expand to a second cohort market?", context: "Current cohort performing well at +18% growth. New market could 2x TAM but requires $40K investment." },
-  "project-x": { question: "Should we pursue bridge funding or cut burn?", context: "Series A delayed. Bridge would extend runway 3 months. Cutting burn means pausing hiring." },
-};
-
 const statusDot: Record<string, string> = {
   pending: "bg-muted-foreground",
   "in-progress": "bg-blue-500",
@@ -75,8 +73,8 @@ const StartupDetail = () => {
 
   const config = statusConfig[startup.status];
   const problems = startupProblems[startup.id] || [];
-  const decision = nextDecisions[startup.id];
-  const kaiInsight = startupKaiInsights[startup.id];
+  
+  const kaiData = startupKaiData[startup.id];
   const startupContext = `Startup: ${startup.name}. Status: ${config.label}. Runway: ${startup.runway}. Growth: ${startup.growth}. Insight: ${startup.insight}. ${startup.insightDetail}`;
 
   return (
@@ -105,10 +103,17 @@ const StartupDetail = () => {
           </div>
         </div>
 
-        {/* KAI Insight (summary level) */}
-        {kaiInsight && (
-          <div className="mb-8">
-            <KaiInsight insight={kaiInsight} convertible />
+        {/* KAI Intelligence Block */}
+        {kaiData && (
+          <div className="mb-10 space-y-4">
+            <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">KAI Intelligence</h2>
+            <KaiInsight insight={kaiData.insight} convertible />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <KaiPrediction predictions={kaiData.predictions} />
+              <KaiScoreCard score={kaiData.score} />
+            </div>
+            <KaiRecommendation recommendation={kaiData.recommendation} onAccept={() => toast.success("Recommendation accepted")} />
+            <KaiSimulation simulations={kaiData.simulations} />
           </div>
         )}
 
@@ -150,23 +155,11 @@ const StartupDetail = () => {
           </section>
         )}
 
-        {/* 3. Next Decision */}
-        {decision && (
+        {/* 3. KAI Decision */}
+        {kaiData?.decision && (
           <section className="mb-10">
-            <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-4">Next Decision</h2>
-            <div className="rounded-xl border border-border/60 bg-card p-6">
-              <p className="text-lg font-semibold tracking-tight mb-2">{decision.question}</p>
-              <p className="text-sm text-muted-foreground mb-5">{decision.context}</p>
-              <div className="flex gap-2.5">
-                <Button size="sm" variant="outline" onClick={() => toast.info("Opening data review...")}>
-                  <BarChart3 className="h-3.5 w-3.5 mr-1.5" />
-                  Review Data
-                </Button>
-                <Button size="sm" onClick={() => toast.success("Decision recorded")}>
-                  Decide
-                </Button>
-              </div>
-            </div>
+            <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-4">KAI Decision</h2>
+            <KaiDecision decision={kaiData.decision} />
           </section>
         )}
 

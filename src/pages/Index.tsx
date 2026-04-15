@@ -4,8 +4,11 @@ import StartupCard from "@/components/StartupCard";
 import AlertStrip from "@/components/AlertStrip";
 import FixModal from "@/components/FixModal";
 import KaiInsight from "@/components/KaiInsight";
+import KaiPrediction from "@/components/KaiPrediction";
+import KaiRecommendation from "@/components/KaiRecommendation";
 import { startups, getDailySummary, type Startup } from "@/data/startups";
-import { globalKaiInsight } from "@/data/kai";
+import { globalKaiInsight, globalKaiPredictions, globalKaiRecommendation } from "@/data/kai";
+import { toast } from "sonner";
 
 const Index = () => {
   const [fixTarget, setFixTarget] = useState<Startup | null>(null);
@@ -27,9 +30,13 @@ const Index = () => {
           <p className="text-sm font-medium text-foreground/80">{summary}</p>
         </div>
 
-        {/* KAI Insight */}
-        <div className="mb-8">
+        {/* KAI Intelligence */}
+        <div className="mb-8 space-y-3">
           <KaiInsight insight={globalKaiInsight.insight} convertible />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <KaiPrediction predictions={globalKaiPredictions} />
+            <KaiRecommendation recommendation={globalKaiRecommendation} onAccept={() => toast.success("Recommendation accepted as task")} />
+          </div>
         </div>
 
         {/* Cards Grid */}
