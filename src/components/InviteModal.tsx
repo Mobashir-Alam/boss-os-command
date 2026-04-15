@@ -37,6 +37,22 @@ const InviteModal = () => {
         invited_by: user.id,
       });
       if (error) throw error;
+
+      // Send invite email
+      const inviteId = crypto.randomUUID();
+      await supabase.functions.invoke("send-transactional-email", {
+        body: {
+          templateName: "team-invite",
+          recipientEmail: email,
+          idempotencyKey: `team-invite-${inviteId}`,
+          templateData: {
+            role,
+            invitedBy: profile?.full_name || profile?.email || "A team member",
+            signupUrl: `${window.location.origin}/login`,
+          },
+        },
+      });
+
       toast.success(`Invite sent to ${email}`);
       setOpen(false);
       setEmail("");
