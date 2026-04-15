@@ -3,7 +3,9 @@ import Navbar from "@/components/Navbar";
 import StartupCard from "@/components/StartupCard";
 import AlertStrip from "@/components/AlertStrip";
 import FixModal from "@/components/FixModal";
+import KaiInsight from "@/components/KaiInsight";
 import { startups, getDailySummary, type Startup } from "@/data/startups";
+import { globalKaiInsight } from "@/data/kai";
 
 const Index = () => {
   const [fixTarget, setFixTarget] = useState<Startup | null>(null);
@@ -20,9 +22,14 @@ const Index = () => {
         </div>
 
         {/* Daily Summary Briefing */}
-        <div className="mb-8 flex items-center gap-2.5 rounded-xl border border-border/50 bg-muted/30 px-5 py-3.5">
+        <div className="mb-6 flex items-center gap-2.5 rounded-xl border border-border/50 bg-muted/30 px-5 py-3.5">
           <span className="text-sm">📋</span>
           <p className="text-sm font-medium text-foreground/80">{summary}</p>
+        </div>
+
+        {/* KAI Insight */}
+        <div className="mb-8">
+          <KaiInsight insight={globalKaiInsight.insight} convertible />
         </div>
 
         {/* Cards Grid */}

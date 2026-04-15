@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Clock, CheckCircle2, CalendarClock, ExternalLink, User, BarChart3, FileText } from "lucide-react";
+import { ArrowLeft, Clock, CheckCircle2, CalendarClock, User, BarChart3, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
@@ -8,7 +8,10 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import Navbar from "@/components/Navbar";
 import SparkLine from "@/components/SparkLine";
+import KaiInsight from "@/components/KaiInsight";
+import AskKai from "@/components/AskKai";
 import { startups, statusConfig } from "@/data/startups";
+import { startupKaiInsights } from "@/data/kai";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -73,6 +76,8 @@ const StartupDetail = () => {
   const config = statusConfig[startup.status];
   const problems = startupProblems[startup.id] || [];
   const decision = nextDecisions[startup.id];
+  const kaiInsight = startupKaiInsights[startup.id];
+  const startupContext = `Startup: ${startup.name}. Status: ${config.label}. Runway: ${startup.runway}. Growth: ${startup.growth}. Insight: ${startup.insight}. ${startup.insightDetail}`;
 
   return (
     <div className="min-h-screen bg-background">
@@ -99,6 +104,13 @@ const StartupDetail = () => {
             Last updated {startup.lastUpdated}
           </div>
         </div>
+
+        {/* KAI Insight (summary level) */}
+        {kaiInsight && (
+          <div className="mb-8">
+            <KaiInsight insight={kaiInsight} convertible />
+          </div>
+        )}
 
         {/* 1. Snapshot */}
         <section className="mb-10">
@@ -158,7 +170,13 @@ const StartupDetail = () => {
           </section>
         )}
 
-        {/* 4. People (placeholder) */}
+        {/* 4. Ask KAI */}
+        <section className="mb-10">
+          <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-4">Ask KAI</h2>
+          <AskKai startupContext={startupContext} />
+        </section>
+
+        {/* 5. People (placeholder) */}
         <section className="mb-10">
           <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-4">People</h2>
           <div className="rounded-xl border border-border/60 bg-card p-6">
@@ -169,7 +187,7 @@ const StartupDetail = () => {
           </div>
         </section>
 
-        {/* 5. Progress (placeholder) */}
+        {/* 6. Progress (placeholder) */}
         <section className="mb-10">
           <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-4">Progress</h2>
           <div className="rounded-xl border border-border/60 bg-card p-6">
@@ -180,7 +198,7 @@ const StartupDetail = () => {
           </div>
         </section>
 
-        {/* 6. Plan (placeholder) */}
+        {/* 7. Plan (placeholder) */}
         <section className="mb-10">
           <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-4">Plan</h2>
           <div className="rounded-xl border border-border/60 bg-card p-6">

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { CalendarClock, ExternalLink, Lightbulb, CheckCircle2, X, Clock, ChevronDown, ChevronUp } from "lucide-react";
+import { CalendarClock, ExternalLink, Lightbulb, CheckCircle2, X, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
@@ -9,8 +9,10 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { toast } from "sonner";
+import KaiInsight from "@/components/KaiInsight";
 import type { FocusPriority, ExecutionStatus } from "@/data/focus";
 import { severityConfig } from "@/data/focus";
+import { focusKaiInsights } from "@/data/kai";
 
 interface PriorityCardProps {
   priority: FocusPriority;
@@ -34,6 +36,7 @@ const PriorityCard = ({ priority, index }: PriorityCardProps) => {
   const [dismissed, setDismissed] = useState(false);
 
   const statusCfg = executionStatusConfig[status];
+  const kaiInsight = focusKaiInsights[priority.id];
 
   const handleAssign = (value: string) => {
     setAssignee(value);
@@ -88,7 +91,7 @@ const PriorityCard = ({ priority, index }: PriorityCardProps) => {
         #{priority.rank}
       </div>
 
-      {/* Top row: Startup + Severity + Execution Status */}
+      {/* Top row */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2.5">
           <h3 className="text-base font-semibold tracking-tight">{priority.startupName}</h3>
@@ -97,7 +100,6 @@ const PriorityCard = ({ priority, index }: PriorityCardProps) => {
           </span>
         </div>
         <div className="flex items-center gap-3">
-          {/* Execution Status */}
           <button
             onClick={cycleStatus}
             className={cn("inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors hover:bg-muted/60", statusCfg.color)}
@@ -105,7 +107,6 @@ const PriorityCard = ({ priority, index }: PriorityCardProps) => {
             <span className={cn("h-1.5 w-1.5 rounded-full", statusCfg.dot)} />
             {statusCfg.label}
           </button>
-          {/* Severity */}
           <span
             className={cn(
               "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide",
@@ -119,7 +120,6 @@ const PriorityCard = ({ priority, index }: PriorityCardProps) => {
         </div>
       </div>
 
-      {/* Problem — THE HEADLINE */}
       <p className="text-lg font-semibold tracking-tight mb-2">{priority.problem}</p>
 
       {/* Time pressure */}
@@ -160,6 +160,13 @@ const PriorityCard = ({ priority, index }: PriorityCardProps) => {
         </Select>
       </div>
 
+      {/* KAI Insight */}
+      {kaiInsight && (
+        <div className="mb-5">
+          <KaiInsight insight={kaiInsight} convertible compact />
+        </div>
+      )}
+
       {/* MFO Suggestion */}
       <div className="flex items-start gap-2 rounded-xl bg-background/60 border border-border/40 px-4 py-3 mb-5">
         <Lightbulb className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
@@ -180,7 +187,7 @@ const PriorityCard = ({ priority, index }: PriorityCardProps) => {
         </Button>
       </div>
 
-      {/* Inline Note (expandable) */}
+      {/* Inline Note */}
       {noteExpanded && (
         <div className="mb-5 animate-in fade-in-0 slide-in-from-top-2 duration-150">
           <Textarea
