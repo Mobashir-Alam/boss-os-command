@@ -366,6 +366,9 @@ const MfoPanel = () => {
           </div>
         </div>
 
+        {/* Escalation Log */}
+        <EscalationLog className="mt-6" />
+
         {/* KAI MFO Insights */}
         <KaiRoleInsights role="mfo" className="mt-6" />
       </main>
@@ -407,6 +410,37 @@ const MfoPanel = () => {
           <DialogFooter>
             <Button variant="outline" size="sm" onClick={() => setReassignTask(null)}>Cancel</Button>
             <Button size="sm" onClick={handleReassign}>Reassign</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Escalate Modal */}
+      <Dialog open={!!escalateTarget} onOpenChange={() => setEscalateTarget(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-base">Escalate to Founder</DialogTitle>
+          </DialogHeader>
+          {escalateTarget && (
+            <div className="space-y-3">
+              <p className="text-sm font-medium">{escalateTarget.title}</p>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">
+                  Reason for escalation
+                </label>
+                <Textarea
+                  placeholder="e.g. Blocked for 3 days, needs founder approval to proceed"
+                  value={escalateReason}
+                  onChange={(e) => setEscalateReason(e.target.value)}
+                  className="text-sm min-h-[60px]"
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setEscalateTarget(null)}>Cancel</Button>
+            <Button size="sm" onClick={submitEscalation} disabled={!escalateReason.trim()}>
+              <Megaphone className="h-3 w-3 mr-1" /> Escalate
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
