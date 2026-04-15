@@ -9,7 +9,7 @@ const MyWork = () => {
 
   const myName = profile?.full_name || profile?.email || "";
   const myTasks = tasks.filter(
-    (t) => t.assignedTo.toLowerCase() === myName.toLowerCase() && t.status !== "completed"
+    (t) => t.assignee.toLowerCase() === myName.toLowerCase() && t.status !== "completed"
   );
 
   if (myTasks.length === 0) return null;
