@@ -51,6 +51,7 @@ const assignedStartupIds = ["nasheedio", "project-x", "gurucool"];
 
 const PMDashboard = () => {
   const { tasks, updateTaskStatus, createTask } = useTaskContext();
+  const { startups } = useStartups();
   const [filterStartup, setFilterStartup] = useState<string>("all");
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [blockerDialog, setBlockerDialog] = useState<{ open: boolean; taskId: string | null }>({ open: false, taskId: null });

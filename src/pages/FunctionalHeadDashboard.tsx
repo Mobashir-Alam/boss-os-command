@@ -131,6 +131,7 @@ const KaiDomainInsights = ({ domain }: { domain: Domain }) => {
 
 const FunctionalHeadDashboard = () => {
   const { profile } = useAuth();
+  const { startups } = useStartups();
   const domain = detectDomain(profile);
 
   const [selectedStartup, setSelectedStartup] = useState<string>("all");

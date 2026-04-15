@@ -39,6 +39,7 @@ const columnConfig: Record<BoardColumn, { label: string; accent: string; bg: str
 const MfoPanel = () => {
   const { tasks, updateTaskStatus, notifications } = useTaskContext();
   const { escalateTask } = useEscalations();
+  const { startups } = useStartups();
   const [filterStartup, setFilterStartup] = useState("all");
   const [filterOwner, setFilterOwner] = useState("all");
   const [draggedTask, setDraggedTask] = useState<string | null>(null);

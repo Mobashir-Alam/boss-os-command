@@ -62,12 +62,14 @@ function getKaiLine(tasks: Task[]): string | null {
   return null;
 }
 
-const startupName = (id: string) => startups.find((s) => s.id === id)?.name || id;
+// startupName moved inside component
 
 /* ── Component ───────────────────────────────────────── */
 
 const MyWorkDashboard = () => {
   const { tasks, updateTaskStatus } = useTaskContext();
+  const { startups } = useStartups();
+  const startupName = (id: string) => startups.find((s) => s.id === id)?.name || id;
 
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [blockerTask, setBlockerTask] = useState<Task | null>(null);

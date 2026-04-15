@@ -46,6 +46,7 @@ function getKaiSuggestion(tasks: Task[]): string | null {
 
 const TeamMemberDashboard = () => {
   const { tasks, updateTaskStatus } = useTaskContext();
+  const { startups } = useStartups();
   const [blockerTask, setBlockerTask] = useState<Task | null>(null);
   const [blockerReason, setBlockerReason] = useState("");
   const [commentTask, setCommentTask] = useState<Task | null>(null);

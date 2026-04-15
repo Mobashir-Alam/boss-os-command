@@ -43,6 +43,7 @@ interface EscalationLogProps {
 
 const EscalationLog = ({ className, canAct = false }: EscalationLogProps) => {
   const { escalations, updateStatus, pendingCount } = useEscalations();
+  const { startups } = useStartups();
   const [filterStatus, setFilterStatus] = useState<string>("all");
 
   const filtered = escalations.filter((e) =>
