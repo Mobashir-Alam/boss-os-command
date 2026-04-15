@@ -18,6 +18,7 @@ import MfoPanel from "./pages/MfoPanel.tsx";
 import DecisionLog from "./pages/DecisionLog.tsx";
 import TeamMemberDashboard from "./pages/TeamMemberDashboard.tsx";
 import MyWorkDashboard from "./pages/MyWorkDashboard.tsx";
+import Unsubscribe from "./pages/Unsubscribe.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient({});
@@ -43,6 +44,7 @@ const App = () => (
               <Route path="/mfo" element={<AuthGuard><MfoPanel /></AuthGuard>} />
               <Route path="/decisions" element={<AuthGuard><DecisionLog /></AuthGuard>} />
               <Route path="/my-work" element={<AuthGuard><MyWorkDashboard /></AuthGuard>} />
+              <Route path="/unsubscribe" element={<Unsubscribe />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
