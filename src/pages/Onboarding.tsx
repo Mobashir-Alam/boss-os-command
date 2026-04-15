@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-type Role = "founder" | "mfo" | "functional_head" | "project_manager";
+type Role = "founder" | "mfo" | "functional_head" | "project_manager" | "team_member";
 
 const STEPS = [
   "role",
@@ -30,7 +30,8 @@ const roleOptions: { value: Role; label: string; desc: string; icon: React.React
   { value: "founder", label: "Founder / CEO", desc: "Full access to all startups and data", icon: <Rocket className="h-5 w-5" /> },
   { value: "mfo", label: "Manager at Founder's Office", desc: "Execute tasks and manage updates", icon: <Briefcase className="h-5 w-5" /> },
   { value: "project_manager", label: "Project Manager", desc: "Own execution and delivery for assigned startups", icon: <Target className="h-5 w-5" /> },
-  { value: "functional_head", label: "Team Member", desc: "Access relevant startups and data", icon: <Users className="h-5 w-5" /> },
+  { value: "functional_head", label: "Functional Head / C-Suite", desc: "Domain-specific leadership and metrics", icon: <Briefcase className="h-5 w-5" /> },
+  { value: "team_member", label: "Team Member", desc: "Focus on assigned tasks and execution", icon: <Users className="h-5 w-5" /> },
 ];
 
 const walkthroughTips = [
