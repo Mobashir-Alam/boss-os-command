@@ -315,6 +315,7 @@ const KanbanCard = ({
   onReportBlocker: (taskId: string) => void;
   onAddNote: (taskId: string) => void;
 }) => {
+  const { startups } = useStartups();
   const startup = startups.find((s) => s.id === task.linkedStartupId);
   const statusActions: { label: string; status: TaskStatus }[] = [];
 
