@@ -3,7 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useEscalations, type Escalation, type EscalationStatus } from "@/contexts/EscalationContext";
-import { startups } from "@/data/startups";
+import { useStartups } from "@/hooks/useStartups";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
@@ -43,6 +43,7 @@ interface EscalationLogProps {
 
 const EscalationLog = ({ className, canAct = false }: EscalationLogProps) => {
   const { escalations, updateStatus, pendingCount } = useEscalations();
+  const { startups } = useStartups();
   const [filterStatus, setFilterStatus] = useState<string>("all");
 
   const filtered = escalations.filter((e) =>

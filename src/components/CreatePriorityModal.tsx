@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
-import { startups } from "@/data/startups";
+import { useStartups } from "@/hooks/useStartups";
 import type { PrioritySeverity } from "@/data/focus";
 
 interface CreatePriorityModalProps {
@@ -26,6 +26,7 @@ interface CreatePriorityModalProps {
 
 const CreatePriorityModal = ({ onSubmit }: CreatePriorityModalProps) => {
   const [open, setOpen] = useState(false);
+  const { startups } = useStartups();
   const [startupId, setStartupId] = useState("");
   const [tag, setTag] = useState("");
   const [severity, setSeverity] = useState<PrioritySeverity>("at-risk");

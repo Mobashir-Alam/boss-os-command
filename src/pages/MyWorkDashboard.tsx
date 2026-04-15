@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useTaskContext } from "@/contexts/TaskContext";
 import { taskStatusConfig, type Task, type TaskStatus } from "@/data/tasks";
-import { startups } from "@/data/startups";
+import { useStartups } from "@/hooks/useStartups";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
@@ -62,12 +62,14 @@ function getKaiLine(tasks: Task[]): string | null {
   return null;
 }
 
-const startupName = (id: string) => startups.find((s) => s.id === id)?.name || id;
+// startupName moved inside component
 
 /* ── Component ───────────────────────────────────────── */
 
 const MyWorkDashboard = () => {
   const { tasks, updateTaskStatus } = useTaskContext();
+  const { startups } = useStartups();
+  const startupName = (id: string) => startups.find((s) => s.id === id)?.name || id;
 
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [blockerTask, setBlockerTask] = useState<Task | null>(null);

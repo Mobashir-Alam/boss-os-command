@@ -21,7 +21,8 @@ import MfoUpdates from "@/components/MfoUpdates";
 import ActivityTimeline from "@/components/ActivityTimeline";
 import IssueTaskFlow from "@/components/IssueTaskFlow";
 import ResolutionPrompt from "@/components/ResolutionPrompt";
-import { startups, statusConfig } from "@/data/startups";
+import { statusConfig } from "@/data/startups";
+import { useStartups } from "@/hooks/useStartups";
 import { startupKaiData, startupSignals } from "@/data/kai";
 import { assigneeOptions } from "@/data/tasks";
 import { useTaskContext } from "@/contexts/TaskContext";
@@ -65,6 +66,7 @@ const statusDot: Record<string, string> = {
 const StartupDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { startups } = useStartups();
   const startup = startups.find((s) => s.id === id);
   const { getTasksByStartup, getTasksByIssue } = useTaskContext();
 

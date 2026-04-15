@@ -7,12 +7,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { startups } from "@/data/startups";
+import { useStartups } from "@/hooks/useStartups";
 import { toast } from "sonner";
 import { UserPlus, Loader2 } from "lucide-react";
 
 const InviteModal = () => {
   const { user, isFounder, profile } = useAuth();
+  const { startups } = useStartups();
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<string>("mfo");

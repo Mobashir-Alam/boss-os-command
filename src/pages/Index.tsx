@@ -12,7 +12,10 @@ import KaiRoleInsights from "@/components/KaiRoleInsights";
 import EscalationLog from "@/components/EscalationLog";
 import KaiPredictiveIntel from "@/components/KaiPredictiveIntel";
 import MyWork from "@/components/MyWork";
-import { startups, getDailySummary, type Startup } from "@/data/startups";
+import { StartupManagementPanel } from "@/components/StartupManagement";
+import { useStartups } from "@/hooks/useStartups";
+import type { Startup } from "@/data/startups";
+import { getDailySummary } from "@/data/startups";
 import {
   globalKaiInsight, globalKaiPredictions, globalKaiRecommendation,
   crossStartupInsights, capitalAllocations,
@@ -24,6 +27,7 @@ import { AlertTriangle, CheckCircle2, Clock, ListTodo } from "lucide-react";
 
 const Index = () => {
   const [fixTarget, setFixTarget] = useState<Startup | null>(null);
+  const { startups } = useStartups();
   const summary = getDailySummary();
   const { getTaskStats, getActiveIssueCount } = useTaskContext();
   const stats = getTaskStats();
@@ -98,6 +102,11 @@ const Index = () => {
               kpiData="Burn: $48K/mo, Runway: 73 days, Revenue: $0, Team: 5 FTE"
             />
           </div>
+        </div>
+
+        {/* Startup Management */}
+        <div className="mb-8">
+          <StartupManagementPanel />
         </div>
 
         {/* Escalation Log — Founder can acknowledge & resolve */}

@@ -15,7 +15,7 @@ import {
   domainDecisions,
   inferDomain,
 } from "@/data/functionalHead";
-import { startups } from "@/data/startups";
+import { useStartups } from "@/hooks/useStartups";
 import { getDomainKaiInsights, type FunctionalDomain } from "@/data/kaiRoleInsights";
 import { cn } from "@/lib/utils";
 import {
@@ -131,6 +131,7 @@ const KaiDomainInsights = ({ domain }: { domain: Domain }) => {
 
 const FunctionalHeadDashboard = () => {
   const { profile } = useAuth();
+  const { startups } = useStartups();
   const domain = detectDomain(profile);
 
   const [selectedStartup, setSelectedStartup] = useState<string>("all");

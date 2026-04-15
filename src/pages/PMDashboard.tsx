@@ -22,7 +22,7 @@ import {
 import { cn } from "@/lib/utils";
 import type { Task, TaskStatus } from "@/data/tasks";
 import { taskStatusConfig, assigneeOptions } from "@/data/tasks";
-import { startups } from "@/data/startups";
+import { useStartups } from "@/hooks/useStartups";
 import KaiRoleInsights from "@/components/KaiRoleInsights";
 import {
   AlertTriangle,
@@ -51,6 +51,7 @@ const assignedStartupIds = ["nasheedio", "project-x", "gurucool"];
 
 const PMDashboard = () => {
   const { tasks, updateTaskStatus, createTask } = useTaskContext();
+  const { startups } = useStartups();
   const [filterStartup, setFilterStartup] = useState<string>("all");
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [blockerDialog, setBlockerDialog] = useState<{ open: boolean; taskId: string | null }>({ open: false, taskId: null });
@@ -314,6 +315,7 @@ const KanbanCard = ({
   onReportBlocker: (taskId: string) => void;
   onAddNote: (taskId: string) => void;
 }) => {
+  const { startups } = useStartups();
   const startup = startups.find((s) => s.id === task.linkedStartupId);
   const statusActions: { label: string; status: TaskStatus }[] = [];
 

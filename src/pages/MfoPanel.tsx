@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useTaskContext } from "@/contexts/TaskContext";
 import { useEscalations } from "@/contexts/EscalationContext";
-import { startups } from "@/data/startups";
+import { useStartups } from "@/hooks/useStartups";
 import { assigneeOptions, type Task, type TaskStatus, taskStatusConfig } from "@/data/tasks";
 import { toast } from "sonner";
 import {
@@ -39,6 +39,7 @@ const columnConfig: Record<BoardColumn, { label: string; accent: string; bg: str
 const MfoPanel = () => {
   const { tasks, updateTaskStatus, notifications } = useTaskContext();
   const { escalateTask } = useEscalations();
+  const { startups } = useStartups();
   const [filterStartup, setFilterStartup] = useState("all");
   const [filterOwner, setFilterOwner] = useState("all");
   const [draggedTask, setDraggedTask] = useState<string | null>(null);
