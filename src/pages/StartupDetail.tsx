@@ -15,8 +15,9 @@ import KaiSimulation from "@/components/KaiSimulation";
 import KaiScoreCard from "@/components/KaiScoreCard";
 import KaiDecision from "@/components/KaiDecision";
 import AskKai from "@/components/AskKai";
+import KaiSignalBadge from "@/components/KaiSignalBadge";
 import { startups, statusConfig } from "@/data/startups";
-import { startupKaiData } from "@/data/kai";
+import { startupKaiData, startupSignals } from "@/data/kai";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -76,6 +77,7 @@ const StartupDetail = () => {
   
   const kaiData = startupKaiData[startup.id];
   const startupContext = `Startup: ${startup.name}. Status: ${config.label}. Runway: ${startup.runway}. Growth: ${startup.growth}. Insight: ${startup.insight}. ${startup.insightDetail}`;
+  const signal = startupSignals[startup.id];
 
   return (
     <div className="min-h-screen bg-background">
@@ -102,6 +104,13 @@ const StartupDetail = () => {
             Last updated {startup.lastUpdated}
           </div>
         </div>
+
+        {/* KAI Signal */}
+        {signal && (
+          <div className="mb-8">
+            <KaiSignalBadge signal={signal} />
+          </div>
+        )}
 
         {/* KAI Intelligence Block */}
         {kaiData && (

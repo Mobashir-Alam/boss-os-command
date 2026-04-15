@@ -6,8 +6,14 @@ import FixModal from "@/components/FixModal";
 import KaiInsight from "@/components/KaiInsight";
 import KaiPrediction from "@/components/KaiPrediction";
 import KaiRecommendation from "@/components/KaiRecommendation";
+import KaiPortfolioIntel from "@/components/KaiPortfolioIntel";
+import KaiStrategicBrief from "@/components/KaiStrategicBrief";
 import { startups, getDailySummary, type Startup } from "@/data/startups";
-import { globalKaiInsight, globalKaiPredictions, globalKaiRecommendation } from "@/data/kai";
+import {
+  globalKaiInsight, globalKaiPredictions, globalKaiRecommendation,
+  crossStartupInsights, capitalAllocations,
+  weeklyBrief, founderPatterns, founderTimeAllocation,
+} from "@/data/kai";
 import { toast } from "sonner";
 
 const Index = () => {
@@ -30,13 +36,14 @@ const Index = () => {
           <p className="text-sm font-medium text-foreground/80">{summary}</p>
         </div>
 
-        {/* KAI Intelligence */}
+        {/* KAI Portfolio Intelligence */}
         <div className="mb-8 space-y-3">
           <KaiInsight insight={globalKaiInsight.insight} convertible />
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <KaiPrediction predictions={globalKaiPredictions} />
             <KaiRecommendation recommendation={globalKaiRecommendation} onAccept={() => toast.success("Recommendation accepted as task")} />
           </div>
+          <KaiPortfolioIntel crossInsights={crossStartupInsights} capitalAllocations={capitalAllocations} />
         </div>
 
         {/* Cards Grid */}
@@ -44,6 +51,12 @@ const Index = () => {
           {startups.map((s, i) => (
             <StartupCard key={s.id} startup={s} onFix={setFixTarget} index={i} />
           ))}
+        </div>
+
+        {/* Weekly Strategic Brief */}
+        <div className="mt-10">
+          <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-4">KAI Weekly Brief</h2>
+          <KaiStrategicBrief brief={weeklyBrief} founderPatterns={founderPatterns} timeAllocation={founderTimeAllocation} />
         </div>
 
         {/* Alert Strip */}
