@@ -1,4 +1,4 @@
-export type TaskStatus = "pending" | "in-progress" | "completed";
+export type TaskStatus = "pending" | "in-progress" | "blocked" | "completed";
 
 export interface Task {
   id: string;
@@ -11,6 +11,8 @@ export interface Task {
   instructions: string;
   lastUpdated: string;
   createdAt: string;
+  blockedReason?: string;
+  blocksTaskIds?: string[];
 }
 
 export interface MfoUpdate {
@@ -31,7 +33,7 @@ export interface ActivityLogEntry {
 
 export interface Notification {
   id: string;
-  type: "assigned" | "deadline-near" | "overdue";
+  type: "assigned" | "deadline-near" | "overdue" | "escalation";
   message: string;
   read: boolean;
   timestamp: string;
@@ -61,6 +63,7 @@ export const initialTasks: Task[] = [
     instructions: "Compile 15 potential bridge investors. Include warm intros from existing board.",
     lastUpdated: "3 hours ago",
     createdAt: "5 days ago",
+    blocksTaskIds: ["task-3"],
   },
   {
     id: "task-3",
@@ -68,11 +71,12 @@ export const initialTasks: Task[] = [
     linkedIssueId: "fp-2",
     linkedStartupId: "project-x",
     assignee: "CFO",
-    status: "pending",
+    status: "blocked",
     deadline: "Apr 17, 2026",
     instructions: "Review all recurring costs. Pause non-critical SaaS tools and contractor engagements.",
     lastUpdated: "1 day ago",
     createdAt: "3 days ago",
+    blockedReason: "Waiting on budget approval from Founder",
   },
   {
     id: "task-4",
@@ -85,6 +89,7 @@ export const initialTasks: Task[] = [
     instructions: "Offer $2K referral bonus. Post in 5 backend-focused communities.",
     lastUpdated: "2 days ago",
     createdAt: "5 days ago",
+    blocksTaskIds: ["task-6"],
   },
   {
     id: "task-5",
@@ -97,6 +102,19 @@ export const initialTasks: Task[] = [
     instructions: "Survey churned premium users. Identify top 3 reasons.",
     lastUpdated: "6 hours ago",
     createdAt: "1 week ago",
+  },
+  {
+    id: "task-6",
+    title: "Schedule backend engineer interviews",
+    linkedIssueId: "fp-3",
+    linkedStartupId: "gurucool",
+    assignee: "Carol Martinez (MFO)",
+    status: "blocked",
+    deadline: "Apr 19, 2026",
+    instructions: "Coordinate with shortlisted candidates for final rounds.",
+    lastUpdated: "1 day ago",
+    createdAt: "3 days ago",
+    blockedReason: "Waiting on referral hiring pipeline (Task 4)",
   },
 ];
 
@@ -129,6 +147,7 @@ export const initialNotifications: Notification[] = [
 export const taskStatusConfig: Record<TaskStatus, { label: string; color: string; dot: string }> = {
   pending: { label: "Pending", color: "text-muted-foreground", dot: "bg-muted-foreground" },
   "in-progress": { label: "In Progress", color: "text-blue-500", dot: "bg-blue-500" },
+  blocked: { label: "Blocked", color: "text-amber-500", dot: "bg-amber-500" },
   completed: { label: "Completed", color: "text-emerald-500", dot: "bg-emerald-500" },
 };
 

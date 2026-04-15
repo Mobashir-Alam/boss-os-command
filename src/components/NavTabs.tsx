@@ -14,6 +14,12 @@ const NavTabs = () => {
         { label: "My Domain", path: "/my-domain" },
         { label: "Dashboard", path: "/" },
       ]
+    : role === "mfo"
+    ? [
+        { label: "Control Panel", path: "/mfo" },
+        { label: "Dashboard", path: "/" },
+        { label: "Focus", path: "/focus" },
+      ]
     : [
         { label: "Dashboard", path: "/" },
         { label: "Focus", path: "/focus" },

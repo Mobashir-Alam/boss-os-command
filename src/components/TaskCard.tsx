@@ -10,7 +10,7 @@ const TaskCard = ({ task }: { task: Task }) => {
   const cfg = taskStatusConfig[task.status];
 
   const cycleStatus = () => {
-    const next: Record<TaskStatus, TaskStatus> = { pending: "in-progress", "in-progress": "completed", completed: "pending" };
+    const next: Record<TaskStatus, TaskStatus> = { pending: "in-progress", "in-progress": "completed", blocked: "in-progress", completed: "pending" };
     const newStatus = next[task.status];
     updateTaskStatus(task.id, newStatus);
     toast.success(`Task: ${taskStatusConfig[newStatus].label}`);
