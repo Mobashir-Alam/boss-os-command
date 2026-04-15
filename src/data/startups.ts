@@ -9,6 +9,8 @@ export interface Startup {
   growthDirection: "up" | "down";
   insight: string;
   insightDetail: string;
+  insightTrend: string;
+  insightLastUpdated: string;
   sparkData: number[];
 }
 
@@ -20,8 +22,10 @@ export const startups: Startup[] = [
     runway: "5.5 months",
     growth: "+12%",
     growthDirection: "up",
-    insight: "Retention dropping (↓12% — low creator uploads)",
+    insight: "⚠️ Retention ↓12% this week — low creator uploads",
     insightDetail: "Monthly active creators decreased from 1,240 to 1,091. Content upload frequency dropped 18% in the last 30 days.",
+    insightTrend: "↓ Declining over last 2 weeks",
+    insightLastUpdated: "Updated 2 hours ago",
     sparkData: [80, 78, 75, 70, 68, 62, 58],
   },
   {
@@ -31,8 +35,10 @@ export const startups: Startup[] = [
     runway: "8 months",
     growth: "+5%",
     growthDirection: "up",
-    insight: "Hiring delayed (Backend role open 21 days)",
+    insight: "⚠️ Hiring delayed — backend role open 21 days",
     insightDetail: "Senior backend engineer position unfilled. 3 candidates in pipeline, 1 final round scheduled. Blocking API v2 launch.",
+    insightTrend: "→ No change in 3 weeks",
+    insightLastUpdated: "Updated 1 day ago",
     sparkData: [40, 42, 44, 43, 45, 46, 45],
   },
   {
@@ -42,8 +48,10 @@ export const startups: Startup[] = [
     runway: "10 months",
     growth: "+18%",
     growthDirection: "up",
-    insight: "Strong growth from new cohort",
+    insight: "✅ Strong growth — new cohort driving +18% MoM",
     insightDetail: "Q1 cohort onboarded 340 new users. Activation rate at 72%, up from 58% last quarter. NPS score improved to 67.",
+    insightTrend: "↑ Accelerating over last 4 weeks",
+    insightLastUpdated: "Updated 5 hours ago",
     sparkData: [30, 35, 42, 50, 58, 65, 74],
   },
   {
@@ -53,8 +61,10 @@ export const startups: Startup[] = [
     runway: "2.5 months",
     growth: "-3%",
     growthDirection: "down",
-    insight: "Runway critical — funding decision pending",
+    insight: "🔥 Runway critical — 2.5 months left, funding pending",
     insightDetail: "Series A term sheet expected by end of month. Current burn rate $85K/mo. Need bridge funding if round delayed beyond 3 weeks.",
+    insightTrend: "↓ Burn rate increased 12% this month",
+    insightLastUpdated: "Updated 30 min ago",
     sparkData: [90, 85, 78, 70, 60, 50, 42],
   },
 ];
@@ -64,17 +74,36 @@ export interface CriticalAlert {
   startupId: string;
   icon: string;
   text: string;
+  severity: "warning" | "critical";
 }
 
 export const criticalAlerts: CriticalAlert[] = [
-  { id: "1", startupId: "gurucool", icon: "⚠️", text: "Gurucool hiring blocked (Backend dev missing)" },
-  { id: "2", startupId: "project-x", icon: "🔥", text: "Project X runway < 3 months" },
-  { id: "3", startupId: "nasheedio", icon: "📉", text: "Nasheedio retention down 12% this month" },
-  { id: "4", startupId: "project-x", icon: "💰", text: "Project X funding decision overdue" },
+  { id: "1", startupId: "gurucool", icon: "⚠️", text: "Gurucool: Backend hiring blocked", severity: "warning" },
+  { id: "2", startupId: "project-x", icon: "🔥", text: "Project X: Runway < 3 months", severity: "critical" },
+  { id: "3", startupId: "nasheedio", icon: "📉", text: "Nasheedio: Retention ↓12% this month", severity: "warning" },
+  { id: "4", startupId: "project-x", icon: "💰", text: "Project X: Funding decision overdue", severity: "critical" },
 ];
 
-export const statusConfig: Record<StartupStatus, { label: string; color: string; bg: string; border: string }> = {
-  healthy: { label: "Healthy", color: "hsl(142 71% 45%)", bg: "hsl(142 71% 45% / 0.1)", border: "hsl(142 71% 45% / 0.4)" },
-  "at-risk": { label: "At Risk", color: "hsl(38 92% 50%)", bg: "hsl(38 92% 50% / 0.1)", border: "hsl(38 92% 50% / 0.4)" },
-  critical: { label: "Critical", color: "hsl(0 84% 60%)", bg: "hsl(0 84% 60% / 0.1)", border: "hsl(0 84% 60% / 0.4)" },
+export const statusConfig: Record<StartupStatus, { label: string; color: string; bg: string; border: string; glow: string }> = {
+  healthy: {
+    label: "Healthy",
+    color: "hsl(142 71% 45%)",
+    bg: "hsl(142 71% 45% / 0.08)",
+    border: "hsl(142 71% 45% / 0.4)",
+    glow: "0 0 20px hsl(142 71% 45% / 0.15)",
+  },
+  "at-risk": {
+    label: "At Risk",
+    color: "hsl(38 92% 50%)",
+    bg: "hsl(38 92% 50% / 0.08)",
+    border: "hsl(38 92% 50% / 0.4)",
+    glow: "0 0 20px hsl(38 92% 50% / 0.15)",
+  },
+  critical: {
+    label: "Critical",
+    color: "hsl(0 84% 60%)",
+    bg: "hsl(0 84% 60% / 0.08)",
+    border: "hsl(0 84% 60% / 0.4)",
+    glow: "0 0 20px hsl(0 84% 60% / 0.2)",
+  },
 };
