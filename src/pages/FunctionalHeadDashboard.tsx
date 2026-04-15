@@ -11,9 +11,9 @@ import {
   domainMetrics,
   domainIssues,
   domainDecisions,
-  domainKaiInsights,
 } from "@/data/functionalHead";
 import { startups } from "@/data/startups";
+import KaiRoleInsights from "@/components/KaiRoleInsights";
 import {
   ChevronDown,
   ChevronUp,
@@ -29,7 +29,6 @@ const FunctionalHeadDashboard = () => {
   const [domain, setDomain] = useState<Domain>("hr");
   const [selectedStartup, setSelectedStartup] = useState<string>("all");
   const [decisionsOpen, setDecisionsOpen] = useState(false);
-  const [kaiOpen, setKaiOpen] = useState(false);
   const { tasks } = useTaskContext();
 
   const config = domainConfigs[domain];
@@ -38,7 +37,6 @@ const FunctionalHeadDashboard = () => {
     (i) => selectedStartup === "all" || i.startupId === selectedStartup
   );
   const decisions = domainDecisions[domain];
-  const kaiInsights = domainKaiInsights[domain];
 
   // Get startups referenced in this domain's issues
   const domainStartupIds = [...new Set(domainIssues[domain].map((i) => i.startupId))];
@@ -235,38 +233,8 @@ const FunctionalHeadDashboard = () => {
               </Card>
             </Collapsible>
 
-            {/* KAI Insight Panel */}
-            <Collapsible open={kaiOpen} onOpenChange={setKaiOpen}>
-              <Card className="border-border/40">
-                <CollapsibleTrigger className="w-full">
-                  <CardHeader className="p-4 pb-0">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Brain className="h-4 w-4 text-primary" />
-                        <CardTitle className="text-sm font-semibold">KAI Insights</CardTitle>
-                      </div>
-                      {kaiOpen ? (
-                        <ChevronUp className="h-4 w-4 text-muted-foreground" />
-                      ) : (
-                        <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                      )}
-                    </div>
-                  </CardHeader>
-                </CollapsibleTrigger>
-                <CollapsibleContent>
-                  <CardContent className="p-4 pt-3 space-y-2">
-                    {kaiInsights.map((k) => (
-                      <div
-                        key={k.id}
-                        className={`rounded-lg border-l-2 ${insightSeverityColor(k.severity)} bg-muted/20 px-3 py-2`}
-                      >
-                        <p className="text-xs leading-relaxed">{k.insight}</p>
-                      </div>
-                    ))}
-                  </CardContent>
-                </CollapsibleContent>
-              </Card>
-            </Collapsible>
+            {/* KAI Role Insights */}
+            <KaiRoleInsights role="functional_head" compact />
           </div>
         </div>
       </main>

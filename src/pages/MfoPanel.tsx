@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import KaiRoleInsights from "@/components/KaiRoleInsights";
 import Navbar from "@/components/Navbar";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -349,6 +350,9 @@ const MfoPanel = () => {
             )}
           </div>
         </div>
+
+        {/* KAI MFO Insights */}
+        <KaiRoleInsights role="mfo" className="mt-6" />
       </main>
 
       {/* Reassign Modal */}
