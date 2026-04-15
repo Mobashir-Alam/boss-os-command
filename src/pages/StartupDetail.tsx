@@ -48,13 +48,6 @@ const startupProblems: Record<string, Problem[]> = {
   ],
 };
 
-const nextDecisions: Record<string, { question: string; context: string }> = {
-  nasheedio: { question: "Should we invest in creator incentives to reverse retention?", context: "Creator uploads dropped 18% — incentives could cost $5K/mo but may recover 30% of churned creators." },
-  gurucool: { question: "Should we use a recruiting agency for the backend role?", context: "Role has been open 21 days. Agency fee ~20% of salary but could fill in 1–2 weeks." },
-  "levelup-climate": { question: "Should we expand to a second cohort market?", context: "Current cohort performing well at +18% growth. New market could 2x TAM but requires $40K investment." },
-  "project-x": { question: "Should we pursue bridge funding or cut burn?", context: "Series A delayed. Bridge would extend runway 3 months. Cutting burn means pausing hiring." },
-};
-
 const statusDot: Record<string, string> = {
   pending: "bg-muted-foreground",
   "in-progress": "bg-blue-500",
@@ -80,7 +73,7 @@ const StartupDetail = () => {
 
   const config = statusConfig[startup.status];
   const problems = startupProblems[startup.id] || [];
-  const decision = nextDecisions[startup.id];
+  
   const kaiData = startupKaiData[startup.id];
   const startupContext = `Startup: ${startup.name}. Status: ${config.label}. Runway: ${startup.runway}. Growth: ${startup.growth}. Insight: ${startup.insight}. ${startup.insightDetail}`;
 
