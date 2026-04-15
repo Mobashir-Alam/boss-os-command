@@ -1,18 +1,22 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Target, ClipboardList, PenLine, ChevronDown, ChevronUp } from "lucide-react";
+import { Target, ClipboardList, PenLine, ChevronDown, ChevronUp, Loader2 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import PriorityCard from "@/components/PriorityCard";
-import TaskList from "@/components/TaskList";
+import CreatePriorityModal from "@/components/CreatePriorityModal";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { focusPriorities, lowerPriorities, activityUpdates, severityConfig } from "@/data/focus";
+import { lowerPriorities, activityUpdates, severityConfig } from "@/data/focus";
 import { useTaskContext } from "@/contexts/TaskContext";
+import { usePriorities } from "@/hooks/usePriorities";
+import { useAuth } from "@/contexts/AuthContext";
+import { cn } from "@/lib/utils";
 
 const Focus = () => {
   const navigate = useNavigate();
+  const { role } = useAuth();
   const [viewMode, setViewMode] = useState<"founder" | "manager">("founder");
   const [showLower, setShowLower] = useState(false);
   const [decisionOpen, setDecisionOpen] = useState(false);
@@ -20,6 +24,9 @@ const Focus = () => {
   const [updateOpen, setUpdateOpen] = useState(false);
   const [updateText, setUpdateText] = useState("");
   const { getTasksByIssue } = useTaskContext();
+  const { priorities, loading, createPriority } = usePriorities();
+
+  const isFounderOrMfo = role === "founder" || role === "mfo";
 
   return (
     <div className="min-h-screen bg-background">
@@ -31,23 +38,26 @@ const Focus = () => {
             <h1 className="text-3xl font-bold tracking-tight mb-1">Here's where you win this week</h1>
             <p className="text-sm text-muted-foreground">Based on risk, growth impact, and urgency</p>
           </div>
-          <div className="flex items-center rounded-full border border-border/60 p-0.5 bg-muted/40">
-            <button
-              onClick={() => setViewMode("founder")}
-              className={`rounded-full px-4 py-1.5 text-xs font-semibold transition-all duration-150 ${
-                viewMode === "founder" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              Founder View
-            </button>
-            <button
-              onClick={() => setViewMode("manager")}
-              className={`rounded-full px-4 py-1.5 text-xs font-semibold transition-all duration-150 ${
-                viewMode === "manager" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              Manager View
-            </button>
+          <div className="flex items-center gap-3">
+            {isFounderOrMfo && <CreatePriorityModal onSubmit={createPriority} />}
+            <div className="flex items-center rounded-full border border-border/60 p-0.5 bg-muted/40">
+              <button
+                onClick={() => setViewMode("founder")}
+                className={`rounded-full px-4 py-1.5 text-xs font-semibold transition-all duration-150 ${
+                  viewMode === "founder" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Founder View
+              </button>
+              <button
+                onClick={() => setViewMode("manager")}
+                className={`rounded-full px-4 py-1.5 text-xs font-semibold transition-all duration-150 ${
+                  viewMode === "manager" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Manager View
+              </button>
+            </div>
           </div>
         </div>
 
@@ -70,12 +80,23 @@ const Focus = () => {
         {/* Top Priorities */}
         <section className="mb-12">
           <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-5">Top Priorities</h2>
-          <div className="space-y-5">
-            {focusPriorities.map((p, i) => {
-              const linkedTasks = getTasksByIssue(p.id);
-              return <PriorityCard key={p.id} priority={p} index={i} linkedTasks={linkedTasks} />;
-            })}
-          </div>
+          {loading ? (
+            <div className="flex items-center justify-center py-16">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : priorities.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-border/60 p-12 text-center">
+              <p className="text-sm text-muted-foreground mb-3">No priorities yet</p>
+              {isFounderOrMfo && <CreatePriorityModal onSubmit={createPriority} />}
+            </div>
+          ) : (
+            <div className="space-y-5">
+              {priorities.map((p, i) => {
+                const linkedTasks = getTasksByIssue(p.id);
+                return <PriorityCard key={p.id} priority={p} index={i} linkedTasks={linkedTasks} />;
+              })}
+            </div>
+          )}
         </section>
 
         {/* Everything Else */}
