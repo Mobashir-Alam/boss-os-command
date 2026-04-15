@@ -23,7 +23,8 @@ const AuthGuard = ({ children }: { children: React.ReactNode }) => {
   const { user, loading, profile } = useAuth();
   const location = useLocation();
 
-  if (loading) {
+  // Wait for both auth AND profile to resolve
+  if (loading || (user && !profile)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -37,14 +38,13 @@ const AuthGuard = ({ children }: { children: React.ReactNode }) => {
   const onboardingDone = localStorage.getItem("onboarding_complete");
   if (!onboardingDone) return <Navigate to="/onboarding" replace />;
 
-  // Role-based route protection
+  // Role-based route protection — applies to ALL roles including founder
   const role = profile?.role;
-  if (role && role !== "founder") {
+  if (role) {
     const currentPath = location.pathname;
-    // Check startup detail pages — allow for all roles that have dashboard access
     const isStartupRoute = currentPath.startsWith("/startup/");
     const allowed = roleAllowedRoutes[role] || [];
-    
+
     if (!isStartupRoute && !allowed.includes(currentPath)) {
       const defaultRoute = roleDefaultRoutes[role] || "/";
       return <Navigate to={defaultRoute} replace />;
