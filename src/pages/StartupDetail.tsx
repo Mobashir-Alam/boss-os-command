@@ -66,6 +66,7 @@ const statusDot: Record<string, string> = {
 const StartupDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { startups } = useStartups();
   const startup = startups.find((s) => s.id === id);
   const { getTasksByStartup, getTasksByIssue } = useTaskContext();
 

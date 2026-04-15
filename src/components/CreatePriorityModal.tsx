@@ -26,6 +26,7 @@ interface CreatePriorityModalProps {
 
 const CreatePriorityModal = ({ onSubmit }: CreatePriorityModalProps) => {
   const [open, setOpen] = useState(false);
+  const { startups } = useStartups();
   const [startupId, setStartupId] = useState("");
   const [tag, setTag] = useState("");
   const [severity, setSeverity] = useState<PrioritySeverity>("at-risk");

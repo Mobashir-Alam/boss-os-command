@@ -13,6 +13,7 @@ import { UserPlus, Loader2 } from "lucide-react";
 
 const InviteModal = () => {
   const { user, isFounder, profile } = useAuth();
+  const { startups } = useStartups();
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<string>("mfo");
