@@ -14,6 +14,80 @@ export type Database = {
   }
   public: {
     Tables: {
+      priorities: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          deadline_in: string
+          detected_ago: string
+          execution_status: string
+          id: string
+          impact: string
+          impact_level: string
+          mfo_confidence: string
+          mfo_suggestion: string
+          owner: string | null
+          problem: string
+          rank: number
+          severity: string
+          startup_id: string
+          startup_name: string
+          tag: string
+          updated_at: string
+          why: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          deadline_in?: string
+          detected_ago?: string
+          execution_status?: string
+          id?: string
+          impact?: string
+          impact_level?: string
+          mfo_confidence?: string
+          mfo_suggestion?: string
+          owner?: string | null
+          problem: string
+          rank?: number
+          severity?: string
+          startup_id: string
+          startup_name: string
+          tag?: string
+          updated_at?: string
+          why?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          deadline_in?: string
+          detected_ago?: string
+          execution_status?: string
+          id?: string
+          impact?: string
+          impact_level?: string
+          mfo_confidence?: string
+          mfo_suggestion?: string
+          owner?: string | null
+          problem?: string
+          rank?: number
+          severity?: string
+          startup_id?: string
+          startup_name?: string
+          tag?: string
+          updated_at?: string
+          why?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "priorities_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -67,6 +141,59 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      tasks: {
+        Row: {
+          assignee: string
+          blocked_reason: string | null
+          created_at: string
+          created_by: string | null
+          deadline: string | null
+          id: string
+          instructions: string
+          linked_issue_id: string | null
+          linked_startup_id: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          assignee: string
+          blocked_reason?: string | null
+          created_at?: string
+          created_by?: string | null
+          deadline?: string | null
+          id?: string
+          instructions?: string
+          linked_issue_id?: string | null
+          linked_startup_id: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          assignee?: string
+          blocked_reason?: string | null
+          created_at?: string
+          created_by?: string | null
+          deadline?: string | null
+          id?: string
+          instructions?: string
+          linked_issue_id?: string | null
+          linked_startup_id?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tasks_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       team_invites: {
         Row: {
