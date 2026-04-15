@@ -14,23 +14,54 @@ import {
   crossStartupInsights, capitalAllocations,
   weeklyBrief, founderPatterns, founderTimeAllocation,
 } from "@/data/kai";
+import { useTaskContext } from "@/contexts/TaskContext";
 import { toast } from "sonner";
+import { AlertTriangle, CheckCircle2, Clock, ListTodo } from "lucide-react";
 
 const Index = () => {
   const [fixTarget, setFixTarget] = useState<Startup | null>(null);
   const summary = getDailySummary();
+  const { getTaskStats, getActiveIssueCount } = useTaskContext();
+  const stats = getTaskStats();
+  const activeIssues = getActiveIssueCount();
 
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
       <main className="mx-auto max-w-7xl px-6 py-10">
-        {/* Section Header */}
         <div className="mb-8">
           <h1 className="text-2xl font-bold tracking-tight">Your Startups</h1>
           <p className="text-sm text-muted-foreground mt-1">Focus on what needs attention — act on what matters.</p>
         </div>
 
-        {/* Daily Summary Briefing */}
+        {/* Execution Summary Strip */}
+        <div className="mb-4 flex flex-wrap items-center gap-4 rounded-xl border border-border/50 bg-muted/20 px-5 py-3">
+          <div className="flex items-center gap-1.5 text-sm">
+            <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
+            <span className="font-medium">{activeIssues} active issues</span>
+          </div>
+          <div className="h-4 w-px bg-border/60" />
+          <div className="flex items-center gap-1.5 text-sm">
+            <ListTodo className="h-3.5 w-3.5 text-blue-500" />
+            <span className="font-medium">{stats.inProgress} tasks in progress</span>
+          </div>
+          <div className="h-4 w-px bg-border/60" />
+          <div className="flex items-center gap-1.5 text-sm">
+            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+            <span className="font-medium">{stats.completed} completed</span>
+          </div>
+          {stats.overdue > 0 && (
+            <>
+              <div className="h-4 w-px bg-border/60" />
+              <div className="flex items-center gap-1.5 text-sm text-destructive">
+                <Clock className="h-3.5 w-3.5" />
+                <span className="font-semibold">{stats.overdue} overdue</span>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Daily Summary */}
         <div className="mb-6 flex items-center gap-2.5 rounded-xl border border-border/50 bg-muted/30 px-5 py-3.5">
           <span className="text-sm">📋</span>
           <p className="text-sm font-medium text-foreground/80">{summary}</p>
@@ -59,11 +90,9 @@ const Index = () => {
           <KaiStrategicBrief brief={weeklyBrief} founderPatterns={founderPatterns} timeAllocation={founderTimeAllocation} />
         </div>
 
-        {/* Alert Strip */}
         <AlertStrip />
       </main>
 
-      {/* Fix Modal */}
       <FixModal startup={fixTarget} open={!!fixTarget} onOpenChange={(open) => !open && setFixTarget(null)} />
     </div>
   );

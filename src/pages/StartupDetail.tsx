@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Clock, CheckCircle2, CalendarClock, User, BarChart3, FileText } from "lucide-react";
+import { ArrowLeft, Clock, CheckCircle2, CalendarClock, BarChart3, FileText, MessageSquare, Activity } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
@@ -16,8 +16,15 @@ import KaiScoreCard from "@/components/KaiScoreCard";
 import KaiDecision from "@/components/KaiDecision";
 import AskKai from "@/components/AskKai";
 import KaiSignalBadge from "@/components/KaiSignalBadge";
+import TaskList from "@/components/TaskList";
+import MfoUpdates from "@/components/MfoUpdates";
+import ActivityTimeline from "@/components/ActivityTimeline";
+import IssueTaskFlow from "@/components/IssueTaskFlow";
+import ResolutionPrompt from "@/components/ResolutionPrompt";
 import { startups, statusConfig } from "@/data/startups";
 import { startupKaiData, startupSignals } from "@/data/kai";
+import { assigneeOptions } from "@/data/tasks";
+import { useTaskContext } from "@/contexts/TaskContext";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -36,16 +43,16 @@ interface Problem {
 
 const startupProblems: Record<string, Problem[]> = {
   nasheedio: [
-    { id: "p1", problem: "⚠️ Retention ↓12% this week", why: "Fewer creator uploads in last 2 weeks", impact: "Affects long-term growth", impactLevel: "High", owner: null, status: "pending", detectedAgo: "3 days ago", lastUpdated: "2 hours ago" },
-    { id: "p2", problem: "Premium tier churn at 4.2%", why: "Pricing may not match perceived value", impact: "Revenue impact moderate", impactLevel: "Medium", owner: "CS Head", status: "in-progress", detectedAgo: "1 week ago", lastUpdated: "1 day ago" },
+    { id: "p1-nasheedio", problem: "⚠️ Retention ↓12% this week", why: "Fewer creator uploads in last 2 weeks", impact: "Affects long-term growth", impactLevel: "High", owner: null, status: "pending", detectedAgo: "3 days ago", lastUpdated: "2 hours ago" },
+    { id: "p2-nasheedio", problem: "Premium tier churn at 4.2%", why: "Pricing may not match perceived value", impact: "Revenue impact moderate", impactLevel: "Medium", owner: "CS Head", status: "in-progress", detectedAgo: "1 week ago", lastUpdated: "1 day ago" },
   ],
   gurucool: [
-    { id: "p1", problem: "⚠️ Backend role open for 21 days", why: "Low qualified applicants", impact: "Blocking API v2 launch", impactLevel: "Medium", owner: "HR Head", status: "pending", detectedAgo: "21 days ago", lastUpdated: "1 day ago" },
+    { id: "p1-gurucool", problem: "⚠️ Backend role open for 21 days", why: "Low qualified applicants", impact: "Blocking API v2 launch", impactLevel: "Medium", owner: "HR Head", status: "pending", detectedAgo: "21 days ago", lastUpdated: "1 day ago" },
   ],
   "levelup-climate": [],
   "project-x": [
-    { id: "p1", problem: "🔥 Runway below 3 months", why: "High burn, no funding yet", impact: "Company survival at stake", impactLevel: "High", owner: "CFO", status: "in-progress", detectedAgo: "2 weeks ago", lastUpdated: "30 min ago" },
-    { id: "p2", problem: "Growth declining at -3% MoM", why: "User acquisition stalled", impact: "Weakens fundraising position", impactLevel: "High", owner: null, status: "pending", detectedAgo: "1 week ago", lastUpdated: "5 hours ago" },
+    { id: "p1-project-x", problem: "🔥 Runway below 3 months", why: "High burn, no funding yet", impact: "Company survival at stake", impactLevel: "High", owner: "CFO", status: "in-progress", detectedAgo: "2 weeks ago", lastUpdated: "30 min ago" },
+    { id: "p2-project-x", problem: "Growth declining at -3% MoM", why: "User acquisition stalled", impact: "Weakens fundraising position", impactLevel: "High", owner: null, status: "pending", detectedAgo: "1 week ago", lastUpdated: "5 hours ago" },
   ],
 };
 
@@ -59,6 +66,7 @@ const StartupDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const startup = startups.find((s) => s.id === id);
+  const { getTasksByStartup, getTasksByIssue } = useTaskContext();
 
   if (!startup) {
     return (
@@ -74,10 +82,13 @@ const StartupDetail = () => {
 
   const config = statusConfig[startup.status];
   const problems = startupProblems[startup.id] || [];
-  
+  const startupTasks = getTasksByStartup(startup.id);
   const kaiData = startupKaiData[startup.id];
   const startupContext = `Startup: ${startup.name}. Status: ${config.label}. Runway: ${startup.runway}. Growth: ${startup.growth}. Insight: ${startup.insight}. ${startup.insightDetail}`;
   const signal = startupSignals[startup.id];
+
+  const completedTasks = startupTasks.filter((t) => t.status === "completed").length;
+  const totalTasks = startupTasks.length;
 
   return (
     <div className="min-h-screen bg-background">
@@ -96,6 +107,9 @@ const StartupDetail = () => {
                 <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: config.color }} />
                 {config.label}
               </span>
+              {totalTasks > 0 && (
+                <span className="text-xs text-muted-foreground">{completedTasks}/{totalTasks} tasks done</span>
+              )}
             </div>
             <p className="text-muted-foreground mt-1">{startup.insight}</p>
           </div>
@@ -126,7 +140,7 @@ const StartupDetail = () => {
           </div>
         )}
 
-        {/* 1. Snapshot */}
+        {/* Snapshot */}
         <section className="mb-10">
           <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-4">Snapshot</h2>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -152,19 +166,27 @@ const StartupDetail = () => {
           </div>
         </section>
 
-        {/* 2. Problems */}
+        {/* Problems */}
         {problems.length > 0 && (
           <section className="mb-10">
             <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-4">Problems</h2>
             <div className="space-y-4">
               {problems.map((p) => (
-                <ProblemCard key={p.id} problem={p} />
+                <ProblemCard key={p.id} problem={p} startupId={startup.id} />
               ))}
             </div>
           </section>
         )}
 
-        {/* 3. KAI Decision */}
+        {/* Tasks */}
+        {startupTasks.length > 0 && (
+          <section className="mb-10">
+            <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-4">Tasks</h2>
+            <TaskList tasks={startupTasks} />
+          </section>
+        )}
+
+        {/* KAI Decision */}
         {kaiData?.decision && (
           <section className="mb-10">
             <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-4">KAI Decision</h2>
@@ -172,35 +194,33 @@ const StartupDetail = () => {
           </section>
         )}
 
-        {/* 4. Ask KAI */}
+        {/* MFO Updates */}
+        <section className="mb-10">
+          <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-4 flex items-center gap-2">
+            <MessageSquare className="h-3.5 w-3.5" />
+            MFO Updates
+          </h2>
+          <MfoUpdates startupId={startup.id} />
+        </section>
+
+        {/* Activity Timeline */}
+        <section className="mb-10">
+          <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-4 flex items-center gap-2">
+            <Activity className="h-3.5 w-3.5" />
+            Activity Timeline
+          </h2>
+          <div className="rounded-xl border border-border/60 bg-card p-5">
+            <ActivityTimeline startupId={startup.id} />
+          </div>
+        </section>
+
+        {/* Ask KAI */}
         <section className="mb-10">
           <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-4">Ask KAI</h2>
           <AskKai startupContext={startupContext} />
         </section>
 
-        {/* 5. People (placeholder) */}
-        <section className="mb-10">
-          <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-4">People</h2>
-          <div className="rounded-xl border border-border/60 bg-card p-6">
-            <div className="flex items-center gap-3 text-sm text-muted-foreground">
-              <User className="h-4 w-4" />
-              <span>Team members and roles will appear here</span>
-            </div>
-          </div>
-        </section>
-
-        {/* 6. Progress (placeholder) */}
-        <section className="mb-10">
-          <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-4">Progress</h2>
-          <div className="rounded-xl border border-border/60 bg-card p-6">
-            <div className="flex items-center gap-3 text-sm text-muted-foreground">
-              <BarChart3 className="h-4 w-4" />
-              <span>Milestone timeline and progress tracking will appear here</span>
-            </div>
-          </div>
-        </section>
-
-        {/* 7. Plan (placeholder) */}
+        {/* Plan placeholder */}
         <section className="mb-10">
           <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-4">Plan</h2>
           <div className="rounded-xl border border-border/60 bg-card p-6">
@@ -216,12 +236,12 @@ const StartupDetail = () => {
 };
 
 /* --- Problem Card sub-component --- */
-function ProblemCard({ problem }: { problem: Problem }) {
+function ProblemCard({ problem, startupId }: { problem: Problem; startupId: string }) {
   const [owner, setOwner] = useState(problem.owner || "");
-  const [noteOpen, setNoteOpen] = useState(false);
-  const [note, setNote] = useState("");
   const [status, setStatus] = useState(problem.status);
-  const [deadline, setDeadline] = useState<Date>();
+  const { getTasksByIssue } = useTaskContext();
+  const linkedTasks = getTasksByIssue(problem.id);
+  const allDone = linkedTasks.length > 0 && linkedTasks.every((t) => t.status === "completed");
 
   const dotClass = statusDot[status];
 
@@ -253,47 +273,23 @@ function ProblemCard({ problem }: { problem: Problem }) {
         <p><span className="font-medium text-foreground/70">Impact:</span> {problem.impactLevel} — {problem.impact}</p>
       </div>
 
-      <div className="flex items-center gap-3 mb-4">
-        <span className="text-xs text-muted-foreground">Owner:</span>
-        <Select value={owner} onValueChange={(v) => { setOwner(v); toast.success(`Assigned to ${v}`); }}>
-          <SelectTrigger className="h-7 w-[160px] text-xs">
-            <SelectValue placeholder="Unassigned" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="HR Head">HR Head</SelectItem>
-            <SelectItem value="CFO">CFO</SelectItem>
-            <SelectItem value="CTO">CTO</SelectItem>
-            <SelectItem value="CS Head">CS Head</SelectItem>
-            <SelectItem value="Product Lead">Product Lead</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      {noteOpen && (
-        <div className="mb-4 animate-in fade-in-0 duration-150">
-          <Textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="Quick note..." className="resize-none text-sm mb-2" rows={2} autoFocus />
-          <div className="flex gap-2">
-            <Button size="sm" onClick={() => { toast.success("Note saved"); setNote(""); setNoteOpen(false); }} disabled={!note.trim()}>Save</Button>
-            <Button size="sm" variant="ghost" onClick={() => { setNoteOpen(false); setNote(""); }}>Cancel</Button>
-          </div>
+      {/* Linked tasks */}
+      {linkedTasks.length > 0 && (
+        <div className="mb-4">
+          <TaskList tasks={linkedTasks} />
         </div>
       )}
 
+      {/* Resolution prompt */}
+      {allDone && (
+        <div className="mb-4">
+          <ResolutionPrompt issueLabel={problem.problem} onResolve={() => setStatus("done")} />
+        </div>
+      )}
+
+      {/* Actions */}
       <div className="flex flex-wrap gap-2">
-        {!noteOpen && (
-          <Button size="sm" variant="outline" className="text-xs h-7" onClick={() => setNoteOpen(true)}>Add Note</Button>
-        )}
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button size="sm" variant="outline" className="text-xs h-7">
-              <CalendarClock className="h-3 w-3 mr-1" />
-              {deadline ? format(deadline, "MMM d") : "Deadline"}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0" align="start">
-            <Calendar mode="single" selected={deadline} onSelect={(d) => { if (d) { setDeadline(d); toast.success(`Deadline: ${format(d, "PPP")}`); } }} initialFocus className="p-3 pointer-events-auto" />
-          </PopoverContent>
-        </Popover>
+        <IssueTaskFlow linkedIssueId={problem.id} linkedStartupId={startupId} defaultTitle={problem.problem.replace(/[⚠️🔥]/g, "").trim()} />
         <Button size="sm" variant="ghost" className="text-xs h-7 text-emerald-600" onClick={() => { setStatus("done"); toast.success("Marked done"); }}>
           <CheckCircle2 className="h-3 w-3 mr-1" />
           Done
