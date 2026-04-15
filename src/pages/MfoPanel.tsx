@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react";
 import KaiRoleInsights from "@/components/KaiRoleInsights";
+import EscalationLog from "@/components/EscalationLog";
 import Navbar from "@/components/Navbar";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -7,7 +8,9 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { useTaskContext } from "@/contexts/TaskContext";
+import { useEscalations } from "@/contexts/EscalationContext";
 import { startups } from "@/data/startups";
 import { assigneeOptions, type Task, type TaskStatus, taskStatusConfig } from "@/data/tasks";
 import { toast } from "sonner";
@@ -35,6 +38,7 @@ const columnConfig: Record<BoardColumn, { label: string; accent: string; bg: str
 
 const MfoPanel = () => {
   const { tasks, updateTaskStatus, notifications } = useTaskContext();
+  const { escalateTask } = useEscalations();
   const [filterStartup, setFilterStartup] = useState("all");
   const [filterOwner, setFilterOwner] = useState("all");
   const [draggedTask, setDraggedTask] = useState<string | null>(null);
@@ -44,6 +48,8 @@ const MfoPanel = () => {
   const [bulkMode, setBulkMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkAssignee, setBulkAssignee] = useState("");
+  const [escalateTarget, setEscalateTarget] = useState<Task | null>(null);
+  const [escalateReason, setEscalateReason] = useState("");
 
   const filtered = tasks.filter((t) => {
     if (filterStartup !== "all" && t.linkedStartupId !== filterStartup) return false;
@@ -67,9 +73,18 @@ const MfoPanel = () => {
   };
 
   const handleEscalate = (task: Task) => {
-    toast.success(`Escalated "${task.title}" to Founder`, {
-      description: task.blockedReason || "Blocked — needs attention",
+    setEscalateTarget(task);
+    setEscalateReason(task.blockedReason || "");
+  };
+
+  const submitEscalation = () => {
+    if (!escalateTarget || !escalateReason.trim()) return;
+    escalateTask(escalateTarget, "MFO", escalateReason.trim());
+    toast.success(`Escalated "${escalateTarget.title}" to Founder`, {
+      description: escalateReason,
     });
+    setEscalateTarget(null);
+    setEscalateReason("");
   };
 
   const handleReassign = () => {
@@ -351,6 +366,9 @@ const MfoPanel = () => {
           </div>
         </div>
 
+        {/* Escalation Log */}
+        <EscalationLog className="mt-6" />
+
         {/* KAI MFO Insights */}
         <KaiRoleInsights role="mfo" className="mt-6" />
       </main>
@@ -392,6 +410,37 @@ const MfoPanel = () => {
           <DialogFooter>
             <Button variant="outline" size="sm" onClick={() => setReassignTask(null)}>Cancel</Button>
             <Button size="sm" onClick={handleReassign}>Reassign</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Escalate Modal */}
+      <Dialog open={!!escalateTarget} onOpenChange={() => setEscalateTarget(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-base">Escalate to Founder</DialogTitle>
+          </DialogHeader>
+          {escalateTarget && (
+            <div className="space-y-3">
+              <p className="text-sm font-medium">{escalateTarget.title}</p>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">
+                  Reason for escalation
+                </label>
+                <Textarea
+                  placeholder="e.g. Blocked for 3 days, needs founder approval to proceed"
+                  value={escalateReason}
+                  onChange={(e) => setEscalateReason(e.target.value)}
+                  className="text-sm min-h-[60px]"
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setEscalateTarget(null)}>Cancel</Button>
+            <Button size="sm" onClick={submitEscalation} disabled={!escalateReason.trim()}>
+              <Megaphone className="h-3 w-3 mr-1" /> Escalate
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
