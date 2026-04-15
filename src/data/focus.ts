@@ -1,4 +1,5 @@
 export type PrioritySeverity = "critical" | "at-risk" | "monitor";
+export type ExecutionStatus = "pending" | "in-progress" | "done";
 
 export interface FocusPriority {
   id: string;
@@ -12,11 +13,17 @@ export interface FocusPriority {
   impactLevel: "High" | "Medium" | "Low";
   owner: string | null;
   mfoSuggestion: string;
+  mfoConfidence: "High" | "Medium";
+  rank: number;
+  detectedAgo: string;
+  deadlineIn: string;
+  executionStatus: ExecutionStatus;
 }
 
 export const focusPriorities: FocusPriority[] = [
   {
     id: "fp-1",
+    rank: 1,
     startupId: "nasheedio",
     startupName: "Nasheedio",
     tag: "Retention Drop",
@@ -27,9 +34,14 @@ export const focusPriorities: FocusPriority[] = [
     impactLevel: "High",
     owner: null,
     mfoSuggestion: "Launch creator reactivation campaign",
+    mfoConfidence: "High",
+    detectedAgo: "2 days ago",
+    deadlineIn: "3 days",
+    executionStatus: "pending",
   },
   {
     id: "fp-2",
+    rank: 2,
     startupId: "project-x",
     startupName: "Project X",
     tag: "Runway Risk",
@@ -40,9 +52,14 @@ export const focusPriorities: FocusPriority[] = [
     impactLevel: "High",
     owner: "CFO",
     mfoSuggestion: "Prepare investor outreach list",
+    mfoConfidence: "High",
+    detectedAgo: "5 days ago",
+    deadlineIn: "Overdue by 1 day",
+    executionStatus: "in-progress",
   },
   {
     id: "fp-3",
+    rank: 3,
     startupId: "gurucool",
     startupName: "Gurucool",
     tag: "Hiring Delay",
@@ -53,6 +70,10 @@ export const focusPriorities: FocusPriority[] = [
     impactLevel: "Medium",
     owner: "HR Head",
     mfoSuggestion: "Push referral hiring campaign",
+    mfoConfidence: "Medium",
+    detectedAgo: "21 days ago",
+    deadlineIn: "7 days",
+    executionStatus: "pending",
   },
 ];
 
@@ -64,6 +85,7 @@ export const lowerPriorities = [
     severity: "monitor" as PrioritySeverity,
     problem: "Onboarding completion rate at 68%",
     owner: "Product Lead",
+    detectedAgo: "5 days ago",
   },
   {
     id: "lp-2",
@@ -72,6 +94,7 @@ export const lowerPriorities = [
     severity: "monitor" as PrioritySeverity,
     problem: "Premium tier churn slightly elevated (4.2%)",
     owner: "CS Head",
+    detectedAgo: "3 days ago",
   },
 ];
 
