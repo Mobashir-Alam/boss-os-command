@@ -37,7 +37,6 @@ const FunctionalHeadDashboard = () => {
     (i) => selectedStartup === "all" || i.startupId === selectedStartup
   );
   const decisions = domainDecisions[domain];
-  const kaiInsights = domainKaiInsights[domain];
 
   // Get startups referenced in this domain's issues
   const domainStartupIds = [...new Set(domainIssues[domain].map((i) => i.startupId))];
