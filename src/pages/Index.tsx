@@ -3,10 +3,11 @@ import Navbar from "@/components/Navbar";
 import StartupCard from "@/components/StartupCard";
 import AlertStrip from "@/components/AlertStrip";
 import FixModal from "@/components/FixModal";
-import { startups, type Startup } from "@/data/startups";
+import { startups, getDailySummary, type Startup } from "@/data/startups";
 
 const Index = () => {
   const [fixTarget, setFixTarget] = useState<Startup | null>(null);
+  const summary = getDailySummary();
 
   return (
     <div className="min-h-screen bg-background">
@@ -16,6 +17,12 @@ const Index = () => {
         <div className="mb-8">
           <h1 className="text-2xl font-bold tracking-tight">Your Startups</h1>
           <p className="text-sm text-muted-foreground mt-1">Focus on what needs attention — act on what matters.</p>
+        </div>
+
+        {/* Daily Summary Briefing */}
+        <div className="mb-8 flex items-center gap-2.5 rounded-xl border border-border/50 bg-muted/30 px-5 py-3.5">
+          <span className="text-sm">📋</span>
+          <p className="text-sm font-medium text-foreground/80">{summary}</p>
         </div>
 
         {/* Cards Grid */}

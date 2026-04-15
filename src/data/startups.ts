@@ -12,6 +12,8 @@ export interface Startup {
   insightTrend: string;
   insightLastUpdated: string;
   sparkData: number[];
+  detectedAgo: string;
+  lastUpdated: string;
 }
 
 export const startups: Startup[] = [
@@ -27,6 +29,8 @@ export const startups: Startup[] = [
     insightTrend: "↓ Declining over last 2 weeks",
     insightLastUpdated: "Updated 2 hours ago",
     sparkData: [80, 78, 75, 70, 68, 62, 58],
+    detectedAgo: "3 days ago",
+    lastUpdated: "2 hours ago",
   },
   {
     id: "gurucool",
@@ -40,6 +44,8 @@ export const startups: Startup[] = [
     insightTrend: "→ No change in 3 weeks",
     insightLastUpdated: "Updated 1 day ago",
     sparkData: [40, 42, 44, 43, 45, 46, 45],
+    detectedAgo: "21 days ago",
+    lastUpdated: "1 day ago",
   },
   {
     id: "levelup-climate",
@@ -53,6 +59,8 @@ export const startups: Startup[] = [
     insightTrend: "↑ Accelerating over last 4 weeks",
     insightLastUpdated: "Updated 5 hours ago",
     sparkData: [30, 35, 42, 50, 58, 65, 74],
+    detectedAgo: "—",
+    lastUpdated: "5 hours ago",
   },
   {
     id: "project-x",
@@ -66,8 +74,27 @@ export const startups: Startup[] = [
     insightTrend: "↓ Burn rate increased 12% this month",
     insightLastUpdated: "Updated 30 min ago",
     sparkData: [90, 85, 78, 70, 60, 50, 42],
+    detectedAgo: "2 weeks ago",
+    lastUpdated: "30 min ago",
   },
 ];
+
+export function getDailySummary(): string {
+  const critical = startups.filter((s) => s.status === "critical");
+  const atRisk = startups.filter((s) => s.status === "at-risk");
+
+  if (critical.length > 0) {
+    const names = critical.map((s) => s.name).join(" and ");
+    if (atRisk.length > 0) {
+      return `${names} ${critical.length === 1 ? "needs" : "need"} urgent attention. ${atRisk.map((s) => s.name).join(", ")} at risk. Others stable.`;
+    }
+    return `${names} ${critical.length === 1 ? "needs" : "need"} urgent attention. Others stable.`;
+  }
+  if (atRisk.length > 0) {
+    return `${atRisk.map((s) => s.name).join(" and ")} ${atRisk.length === 1 ? "needs" : "need"} attention. Others stable.`;
+  }
+  return "All startups stable. No urgent risks.";
+}
 
 export interface CriticalAlert {
   id: string;
@@ -78,7 +105,7 @@ export interface CriticalAlert {
 }
 
 export const criticalAlerts: CriticalAlert[] = [
-  { id: "1", startupId: "gurucool", icon: "⚠️", text: "Gurucool: Backend hiring blocked", severity: "warning" },
+  { id: "1", startupId: "gurucool", icon: "⚠️", text: "Gurucool: Backend hiring blocked (21 days)", severity: "warning" },
   { id: "2", startupId: "project-x", icon: "🔥", text: "Project X: Runway < 3 months", severity: "critical" },
   { id: "3", startupId: "nasheedio", icon: "📉", text: "Nasheedio: Retention ↓12% this month", severity: "warning" },
   { id: "4", startupId: "project-x", icon: "💰", text: "Project X: Funding decision overdue", severity: "critical" },
