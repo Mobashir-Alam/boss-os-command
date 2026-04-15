@@ -11,6 +11,7 @@ import Focus from "./pages/Focus.tsx";
 import StartupDetail from "./pages/StartupDetail.tsx";
 import Login from "./pages/Login.tsx";
 import Onboarding from "./pages/Onboarding.tsx";
+import PMDashboard from "./pages/PMDashboard.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient({});
@@ -29,6 +30,7 @@ const App = () => (
               <Route path="/" element={<AuthGuard><Index /></AuthGuard>} />
               <Route path="/focus" element={<AuthGuard><Focus /></AuthGuard>} />
               <Route path="/startup/:id" element={<AuthGuard><StartupDetail /></AuthGuard>} />
+              <Route path="/pm" element={<AuthGuard><PMDashboard /></AuthGuard>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>

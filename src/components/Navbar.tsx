@@ -15,6 +15,7 @@ const roleLabels: Record<string, string> = {
   founder: "Founder",
   mfo: "MFO",
   functional_head: "Functional Head",
+  project_manager: "Project Manager",
 };
 
 const Navbar = () => {

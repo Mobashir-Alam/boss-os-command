@@ -9,11 +9,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
   Rocket, Users, Briefcase, ArrowRight, Plus, Sparkles,
-  LayoutDashboard, Target, Wrench, CheckCircle2, Send, Brain
+  LayoutDashboard, Target, Wrench, CheckCircle2, Send, Brain,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-type Role = "founder" | "mfo" | "functional_head";
+type Role = "founder" | "mfo" | "functional_head" | "project_manager";
 
 const STEPS = [
   "role",
@@ -29,6 +29,7 @@ type Step = (typeof STEPS)[number];
 const roleOptions: { value: Role; label: string; desc: string; icon: React.ReactNode }[] = [
   { value: "founder", label: "Founder / CEO", desc: "Full access to all startups and data", icon: <Rocket className="h-5 w-5" /> },
   { value: "mfo", label: "Manager at Founder's Office", desc: "Execute tasks and manage updates", icon: <Briefcase className="h-5 w-5" /> },
+  { value: "project_manager", label: "Project Manager", desc: "Own execution and delivery for assigned startups", icon: <Target className="h-5 w-5" /> },
   { value: "functional_head", label: "Team Member", desc: "Access relevant startups and data", icon: <Users className="h-5 w-5" /> },
 ];
 
