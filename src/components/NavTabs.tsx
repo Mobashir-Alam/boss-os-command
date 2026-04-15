@@ -1,10 +1,19 @@
 import { useLocation } from "react-router-dom";
 import { NavLink as RouterNavLink } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 
-const navItems = [
-  { label: "Dashboard", path: "/" },
-  { label: "Focus", path: "/focus" },
-];
+const NavTabs = () => {
+  const location = useLocation();
+  const { isPm, role } = useAuth();
+
+  const navItems = isPm
+    ? [
+        { label: "Execution Board", path: "/pm" },
+      ]
+    : [
+        { label: "Dashboard", path: "/" },
+        { label: "Focus", path: "/focus" },
+      ];
 
 const NavTabs = () => {
   const location = useLocation();
