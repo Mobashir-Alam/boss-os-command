@@ -10,6 +10,7 @@ import KaiRecommendation from "@/components/KaiRecommendation";
 import KaiSimulation from "@/components/KaiSimulation";
 import KaiScoreCard from "@/components/KaiScoreCard";
 import IssueTaskFlow from "@/components/IssueTaskFlow";
+import KaiPredictiveIntel from "@/components/KaiPredictiveIntel";
 import TaskList from "@/components/TaskList";
 import ResolutionPrompt from "@/components/ResolutionPrompt";
 import type { FocusPriority, ExecutionStatus } from "@/data/focus";
@@ -145,6 +146,15 @@ const PriorityCard = ({ priority, index, linkedTasks = [] }: PriorityCardProps) 
           <KaiSimulation simulations={kaiData.simulations} />
         </div>
       )}
+
+      {/* KAI Predictive Intelligence — live AI analysis */}
+      <div className="mb-5">
+        <KaiPredictiveIntel
+          issueTitle={`${priority.startupName}: ${priority.problem}`}
+          startupName={priority.startupName}
+          kpiData={`Severity: ${priority.severity}, Impact: ${priority.impactLevel}, Deadline: ${priority.deadlineIn}, Why: ${priority.why}`}
+        />
+      </div>
 
       {/* MFO Suggestion */}
       <div className="flex items-start gap-2 rounded-xl bg-background/60 border border-border/40 px-4 py-3 mb-5">

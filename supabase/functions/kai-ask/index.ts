@@ -46,6 +46,9 @@ RULES:
 - Never use "based on analysis", "it seems that", "I think", or filler phrases.
 - Connect cause and effect. Identify risks. Suggest next steps.
 - Be actionable. Every sentence should help the user decide or act.
+- When discussing risks, include numerical predictions (e.g. "may drop 8-12% in 14 days").
+- Include timeframes and confidence levels when making predictions.
+- Distinguish between "if no action" and "with intervention" scenarios.
 
 ${context ? `CONTEXT:\n${context}` : ""}
 
