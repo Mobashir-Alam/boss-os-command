@@ -1,12 +1,28 @@
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
 import NavTabs from "./NavTabs";
 import NotificationDropdown from "./NotificationDropdown";
+import InviteModal from "./InviteModal";
+import { useAuth } from "@/contexts/AuthContext";
+import { LogOut, Settings, User } from "lucide-react";
 
 const SCORE = 78;
 const scoreColor = SCORE >= 80 ? "hsl(142 71% 45%)" : SCORE >= 50 ? "hsl(38 92% 50%)" : "hsl(0 84% 60%)";
 
+const roleLabels: Record<string, string> = {
+  founder: "Founder",
+  mfo: "MFO",
+  functional_head: "Functional Head",
+};
+
 const Navbar = () => {
+  const { profile, signOut } = useAuth();
+  const initials = profile?.full_name
+    ? profile.full_name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
+    : profile?.email?.slice(0, 2).toUpperCase() || "??";
+
   return (
     <nav className="sticky top-0 z-40 border-b border-border/40 bg-background/80 backdrop-blur-xl">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
@@ -40,11 +56,40 @@ const Navbar = () => {
           </TooltipContent>
         </Tooltip>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
+          <InviteModal />
           <NotificationDropdown />
-          <Avatar className="h-8 w-8 cursor-pointer transition-transform duration-150 hover:scale-105">
-            <AvatarFallback className="bg-muted text-xs font-semibold">AK</AvatarFallback>
-          </Avatar>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="flex items-center gap-2 rounded-lg px-2 py-1 hover:bg-muted/50 transition-colors">
+                <Avatar className="h-8 w-8">
+                  {profile?.avatar_url && <AvatarImage src={profile.avatar_url} />}
+                  <AvatarFallback className="bg-muted text-xs font-semibold">{initials}</AvatarFallback>
+                </Avatar>
+                <div className="hidden md:flex flex-col items-start">
+                  <span className="text-xs font-medium leading-none">{profile?.full_name || profile?.email || "User"}</span>
+                  <Badge variant="secondary" className="mt-0.5 text-[10px] px-1.5 py-0 h-4">
+                    {roleLabels[profile?.role || "mfo"]}
+                  </Badge>
+                </div>
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem className="gap-2">
+                <User className="h-3.5 w-3.5" />
+                Profile
+              </DropdownMenuItem>
+              <DropdownMenuItem className="gap-2">
+                <Settings className="h-3.5 w-3.5" />
+                Settings
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem className="gap-2 text-destructive" onClick={signOut}>
+                <LogOut className="h-3.5 w-3.5" />
+                Sign Out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
     </nav>

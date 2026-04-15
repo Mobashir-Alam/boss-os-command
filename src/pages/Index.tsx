@@ -8,6 +8,7 @@ import KaiPrediction from "@/components/KaiPrediction";
 import KaiRecommendation from "@/components/KaiRecommendation";
 import KaiPortfolioIntel from "@/components/KaiPortfolioIntel";
 import KaiStrategicBrief from "@/components/KaiStrategicBrief";
+import MyWork from "@/components/MyWork";
 import { startups, getDailySummary, type Startup } from "@/data/startups";
 import {
   globalKaiInsight, globalKaiPredictions, globalKaiRecommendation,
@@ -65,6 +66,11 @@ const Index = () => {
         <div className="mb-6 flex items-center gap-2.5 rounded-xl border border-border/50 bg-muted/30 px-5 py-3.5">
           <span className="text-sm">📋</span>
           <p className="text-sm font-medium text-foreground/80">{summary}</p>
+        </div>
+
+        {/* My Work */}
+        <div className="mb-6">
+          <MyWork />
         </div>
 
         {/* KAI Portfolio Intelligence */}
