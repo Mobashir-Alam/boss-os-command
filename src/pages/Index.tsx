@@ -8,6 +8,7 @@ import KaiPrediction from "@/components/KaiPrediction";
 import KaiRecommendation from "@/components/KaiRecommendation";
 import KaiPortfolioIntel from "@/components/KaiPortfolioIntel";
 import KaiStrategicBrief from "@/components/KaiStrategicBrief";
+import KaiRoleInsights from "@/components/KaiRoleInsights";
 import MyWork from "@/components/MyWork";
 import { startups, getDailySummary, type Startup } from "@/data/startups";
 import {
@@ -81,6 +82,7 @@ const Index = () => {
             <KaiRecommendation recommendation={globalKaiRecommendation} onAccept={() => toast.success("Recommendation accepted as task")} />
           </div>
           <KaiPortfolioIntel crossInsights={crossStartupInsights} capitalAllocations={capitalAllocations} />
+          <KaiRoleInsights role="founder" className="mt-4" />
         </div>
 
         {/* Cards Grid */}
