@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,21 +10,13 @@ import { toast } from "sonner";
 import {
   Rocket, Users, Briefcase, ArrowRight, Plus, Sparkles,
   LayoutDashboard, Target, Wrench, CheckCircle2, Send, Brain,
+  ClipboardList, ListTodo,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type Role = "founder" | "mfo" | "functional_head" | "project_manager" | "team_member";
 
-const STEPS = [
-  "role",
-  "startup",
-  "walkthrough",
-  "first-action",
-  "invite",
-  "kai-intro",
-] as const;
-
-type Step = (typeof STEPS)[number];
+type Step = "role" | "startup" | "walkthrough" | "first-action" | "invite" | "kai-intro";
 
 const roleOptions: { value: Role; label: string; desc: string; icon: React.ReactNode }[] = [
   { value: "founder", label: "Founder / CEO", desc: "Full access to all startups and data", icon: <Rocket className="h-5 w-5" /> },
@@ -34,11 +26,51 @@ const roleOptions: { value: Role; label: string; desc: string; icon: React.React
   { value: "team_member", label: "Team Member", desc: "Focus on assigned tasks and execution", icon: <Users className="h-5 w-5" /> },
 ];
 
-const walkthroughTips = [
-  { icon: <LayoutDashboard className="h-5 w-5" />, title: "Dashboard", desc: "See what needs attention across your startups" },
-  { icon: <Target className="h-5 w-5" />, title: "Focus", desc: "Act on the highest-priority issues" },
-  { icon: <Wrench className="h-5 w-5" />, title: "Fix Button", desc: "Assign tasks instantly from any issue" },
-];
+const roleRedirects: Record<Role, string> = {
+  founder: "/",
+  mfo: "/mfo",
+  functional_head: "/my-domain",
+  project_manager: "/pm",
+  team_member: "/my-tasks",
+};
+
+// Role-specific walkthrough tips
+const walkthroughByRole: Record<Role, { icon: React.ReactNode; title: string; desc: string }[]> = {
+  founder: [
+    { icon: <LayoutDashboard className="h-5 w-5" />, title: "Dashboard", desc: "See what needs attention across your startups" },
+    { icon: <Target className="h-5 w-5" />, title: "Focus", desc: "Act on the highest-priority issues" },
+    { icon: <Wrench className="h-5 w-5" />, title: "Fix Button", desc: "Assign tasks instantly from any issue" },
+  ],
+  mfo: [
+    { icon: <ClipboardList className="h-5 w-5" />, title: "Control Panel", desc: "Coordinate tasks, track blockers, and keep delivery on schedule" },
+    { icon: <LayoutDashboard className="h-5 w-5" />, title: "Dashboard", desc: "Portfolio view of all startups" },
+    { icon: <Target className="h-5 w-5" />, title: "Focus", desc: "See priorities across startups" },
+  ],
+  functional_head: [
+    { icon: <LayoutDashboard className="h-5 w-5" />, title: "My Domain", desc: "Your domain metrics, issues, and tasks across assigned startups" },
+    { icon: <ClipboardList className="h-5 w-5" />, title: "Decisions", desc: "Track strategic decisions to closure" },
+    { icon: <Brain className="h-5 w-5" />, title: "KAI Insights", desc: "Role-specific intelligence for your domain" },
+  ],
+  project_manager: [
+    { icon: <ClipboardList className="h-5 w-5" />, title: "Execution Board", desc: "Track tasks, blockers, and dependencies" },
+    { icon: <Brain className="h-5 w-5" />, title: "KAI Guidance", desc: "AI suggestions for prioritization and risk" },
+    { icon: <Wrench className="h-5 w-5" />, title: "Task Actions", desc: "Update status, reassign, and unblock" },
+  ],
+  team_member: [
+    { icon: <ListTodo className="h-5 w-5" />, title: "My Work", desc: "Your assigned tasks — clear and focused" },
+    { icon: <CheckCircle2 className="h-5 w-5" />, title: "Actions", desc: "Start tasks, mark done, report blockers" },
+    { icon: <Brain className="h-5 w-5" />, title: "KAI Tips", desc: "Simple execution guidance — what to do next" },
+  ],
+};
+
+// KAI intro messages by role
+const kaiIntroByRole: Record<Role, string> = {
+  founder: "Your AI co-founder. KAI will surface insights, predict risks, and recommend actions — automatically.",
+  mfo: "Your execution intelligence. KAI helps you spot bottlenecks, track SLAs, and escalate issues before they become problems.",
+  functional_head: "Your domain advisor. KAI surfaces cross-startup patterns in your function and recommends where to focus.",
+  project_manager: "Your delivery partner. KAI highlights blockers, dependencies, and priorities so nothing slips.",
+  team_member: "Your task assistant. KAI tells you what to do next and flags if your work is blocking others.",
+};
 
 const Onboarding = () => {
   const navigate = useNavigate();
@@ -51,19 +83,43 @@ const Onboarding = () => {
   const [inviteEmail, setInviteEmail] = useState("");
   const [saving, setSaving] = useState(false);
 
-  const currentIndex = STEPS.indexOf(step);
-  const progress = ((currentIndex + 1) / STEPS.length) * 100;
+  // Determine which steps to show based on role
+  const steps = useMemo<Step[]>(() => {
+    if (!selectedRole) return ["role"];
+    switch (selectedRole) {
+      case "founder":
+        return ["role", "startup", "walkthrough", "first-action", "invite", "kai-intro"];
+      case "mfo":
+        return ["role", "walkthrough", "invite", "kai-intro"];
+      case "functional_head":
+        return ["role", "walkthrough", "kai-intro"];
+      case "project_manager":
+        return ["role", "walkthrough", "kai-intro"];
+      case "team_member":
+        return ["role", "walkthrough", "kai-intro"];
+      default:
+        return ["role", "walkthrough", "kai-intro"];
+    }
+  }, [selectedRole]);
+
+  const currentIndex = steps.indexOf(step);
+  const progress = ((currentIndex + 1) / steps.length) * 100;
+
+  const nextStep = () => {
+    const idx = steps.indexOf(step);
+    if (idx < steps.length - 1) {
+      setStep(steps[idx + 1]);
+    }
+  };
 
   const handleRoleSelect = async () => {
     if (!selectedRole || !user) return;
     setSaving(true);
     try {
-      // Update profile role
       await supabase.from("profiles").update({ role: selectedRole }).eq("id", user.id);
-      // Update user_roles
       await supabase.from("user_roles").upsert({ user_id: user.id, role: selectedRole }, { onConflict: "user_id,role" });
       await refreshProfile();
-      setStep("startup");
+      nextStep();
     } catch {
       toast.error("Failed to save role");
     } finally {
@@ -76,7 +132,6 @@ const Onboarding = () => {
       toast.error("Enter a startup name");
       return;
     }
-    // Store in localStorage for now (startup data is local)
     const onboardingStartup = {
       name: startupName,
       stage: startupStage || "Seed",
@@ -84,12 +139,12 @@ const Onboarding = () => {
     };
     localStorage.setItem("onboarding_startup", JSON.stringify(onboardingStartup));
     toast.success(`${startupName} added!`);
-    setStep("walkthrough");
+    nextStep();
   };
 
   const handleInvite = async () => {
     if (!inviteEmail.trim() || !user) {
-      setStep("kai-intro");
+      nextStep();
       return;
     }
     try {
@@ -102,13 +157,17 @@ const Onboarding = () => {
     } catch {
       toast.error("Failed to send invite");
     }
-    setStep("kai-intro");
+    nextStep();
   };
 
   const handleFinish = () => {
     localStorage.setItem("onboarding_complete", "true");
-    navigate("/focus");
+    const redirectPath = selectedRole ? roleRedirects[selectedRole] : "/";
+    navigate(redirectPath);
   };
+
+  const walkthroughTips = selectedRole ? walkthroughByRole[selectedRole] : walkthroughByRole.founder;
+  const kaiIntroMessage = selectedRole ? kaiIntroByRole[selectedRole] : kaiIntroByRole.founder;
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -123,11 +182,11 @@ const Onboarding = () => {
       <div className="flex-1 flex items-center justify-center px-4 py-12">
         <div className="w-full max-w-lg space-y-8">
 
-          {/* STEP 1: Role Selection */}
+          {/* STEP: Role Selection */}
           {step === "role" && (
             <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-400">
               <div className="text-center space-y-2">
-                <h1 className="text-2xl font-bold tracking-tight">What are you managing?</h1>
+                <h1 className="text-2xl font-bold tracking-tight">What's your role?</h1>
                 <p className="text-sm text-muted-foreground">This helps us personalize your experience</p>
               </div>
               <div className="space-y-3">
@@ -168,7 +227,7 @@ const Onboarding = () => {
             </div>
           )}
 
-          {/* STEP 2: Add First Startup */}
+          {/* STEP: Add First Startup (Founder only) */}
           {step === "startup" && (
             <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-400">
               <div className="text-center space-y-2">
@@ -181,19 +240,12 @@ const Onboarding = () => {
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label>Startup Name</Label>
-                  <Input
-                    placeholder="e.g. Acme Inc"
-                    value={startupName}
-                    onChange={(e) => setStartupName(e.target.value)}
-                    autoFocus
-                  />
+                  <Input placeholder="e.g. Acme Inc" value={startupName} onChange={(e) => setStartupName(e.target.value)} autoFocus />
                 </div>
                 <div className="space-y-2">
                   <Label>Stage</Label>
                   <Select value={startupStage} onValueChange={setStartupStage}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select stage" />
-                    </SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder="Select stage" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="idea">Idea</SelectItem>
                       <SelectItem value="mvp">MVP</SelectItem>
@@ -205,19 +257,11 @@ const Onboarding = () => {
                 </div>
                 <div className="space-y-2">
                   <Label>Runway <span className="text-muted-foreground font-normal">(optional)</span></Label>
-                  <Input
-                    placeholder="e.g. 12 months"
-                    value={runway}
-                    onChange={(e) => setRunway(e.target.value)}
-                  />
+                  <Input placeholder="e.g. 12 months" value={runway} onChange={(e) => setRunway(e.target.value)} />
                 </div>
               </div>
               <div className="flex gap-3">
-                <Button variant="outline" className="flex-1" onClick={() => {
-                  setStep("walkthrough");
-                }}>
-                  Skip
-                </Button>
+                <Button variant="outline" className="flex-1" onClick={nextStep}>Skip</Button>
                 <Button className="flex-1 h-11" onClick={handleAddStartup}>
                   Add Startup <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
@@ -228,7 +272,7 @@ const Onboarding = () => {
             </div>
           )}
 
-          {/* STEP 3: Walkthrough */}
+          {/* STEP: Walkthrough */}
           {step === "walkthrough" && (
             <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-400">
               <div className="text-center space-y-2">
@@ -242,9 +286,7 @@ const Onboarding = () => {
                     className="flex items-start gap-4 rounded-xl border border-border p-4 animate-in fade-in slide-in-from-bottom-2"
                     style={{ animationDelay: `${i * 150}ms` }}
                   >
-                    <div className="rounded-lg bg-muted p-2.5 text-foreground">
-                      {tip.icon}
-                    </div>
+                    <div className="rounded-lg bg-muted p-2.5 text-foreground">{tip.icon}</div>
                     <div>
                       <p className="font-semibold text-sm">{tip.title}</p>
                       <p className="text-xs text-muted-foreground mt-0.5">{tip.desc}</p>
@@ -252,13 +294,13 @@ const Onboarding = () => {
                   </div>
                 ))}
               </div>
-              <Button className="w-full h-11" onClick={() => setStep("first-action")}>
+              <Button className="w-full h-11" onClick={nextStep}>
                 Got it <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </div>
           )}
 
-          {/* STEP 4: First Action */}
+          {/* STEP: First Action (Founder only) */}
           {step === "first-action" && (
             <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-400">
               <div className="text-center space-y-2">
@@ -276,21 +318,19 @@ const Onboarding = () => {
                     <p className="text-sm font-medium">⚠️ Retention ↓12% this week</p>
                     <p className="text-xs text-muted-foreground mt-0.5">Nasheedio • Detected 3 hours ago</p>
                   </div>
-                  <Button size="sm" variant="outline" className="text-xs" disabled>
-                    Fix
-                  </Button>
+                  <Button size="sm" variant="outline" className="text-xs" disabled>Fix</Button>
                 </div>
                 <p className="text-xs text-muted-foreground italic">
                   → You'll assign an owner, add instructions, and set a deadline
                 </p>
               </div>
-              <Button className="w-full h-11" onClick={() => setStep("invite")}>
+              <Button className="w-full h-11" onClick={nextStep}>
                 Continue <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </div>
           )}
 
-          {/* STEP 5: Invite Team */}
+          {/* STEP: Invite Team (Founder + MFO) */}
           {step === "invite" && (
             <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-400">
               <div className="text-center space-y-2">
@@ -298,7 +338,7 @@ const Onboarding = () => {
                   <Send className="h-5 w-5 text-background" />
                 </div>
                 <h1 className="text-2xl font-bold tracking-tight">Bring your team in</h1>
-                <p className="text-sm text-muted-foreground">Invite your MFO or CTO to start collaborating</p>
+                <p className="text-sm text-muted-foreground">Invite your team to start collaborating</p>
               </div>
               <div className="space-y-2">
                 <Label>Email</Label>
@@ -310,9 +350,7 @@ const Onboarding = () => {
                 />
               </div>
               <div className="flex gap-3">
-                <Button variant="outline" className="flex-1" onClick={() => setStep("kai-intro")}>
-                  Skip
-                </Button>
+                <Button variant="outline" className="flex-1" onClick={nextStep}>Skip</Button>
                 <Button className="flex-1 h-11" onClick={handleInvite}>
                   Send Invite <Send className="ml-2 h-4 w-4" />
                 </Button>
@@ -320,7 +358,7 @@ const Onboarding = () => {
             </div>
           )}
 
-          {/* STEP 6: KAI Intro */}
+          {/* STEP: KAI Intro */}
           {step === "kai-intro" && (
             <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-400">
               <div className="text-center space-y-3">
@@ -329,7 +367,7 @@ const Onboarding = () => {
                 </div>
                 <h1 className="text-2xl font-bold tracking-tight">Meet KAI</h1>
                 <p className="text-sm text-muted-foreground max-w-xs mx-auto">
-                  Your AI co-founder. KAI will surface insights, predict risks, and recommend actions — automatically.
+                  {kaiIntroMessage}
                 </p>
               </div>
               <div className="rounded-xl border border-border p-4 bg-card space-y-2">
@@ -338,7 +376,11 @@ const Onboarding = () => {
                   <p className="text-sm font-medium">KAI Insight</p>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  "Retention may drop another 8–10% in 2 weeks if creator uploads stay flat"
+                  {selectedRole === "team_member"
+                    ? '"Complete the API bug fix first — it\'s blocking 2 other tasks"'
+                    : selectedRole === "project_manager"
+                    ? '"2 tasks are overdue on Project X — escalate or reassign before EOD"'
+                    : '"Retention may drop another 8–10% in 2 weeks if creator uploads stay flat"'}
                 </p>
               </div>
               <Button className="w-full h-11" onClick={handleFinish}>

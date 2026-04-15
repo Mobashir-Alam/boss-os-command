@@ -80,6 +80,8 @@ const InviteModal = () => {
               <SelectContent>
                 <SelectItem value="mfo">MFO (Manager)</SelectItem>
                 <SelectItem value="functional_head">Functional Head</SelectItem>
+                <SelectItem value="project_manager">Project Manager</SelectItem>
+                <SelectItem value="team_member">Team Member</SelectItem>
               </SelectContent>
             </Select>
           </div>
