@@ -4,11 +4,13 @@ import { useAuth } from "@/contexts/AuthContext";
 
 const NavTabs = () => {
   const location = useLocation();
-  const { isPm, role } = useAuth();
+  const { isPm, isTeamMember, role } = useAuth();
   const isFunctionalHead = role === "functional_head";
 
   const navItems = isPm
     ? [{ label: "Execution Board", path: "/pm" }]
+    : isTeamMember
+    ? [{ label: "My Work", path: "/my-tasks" }]
     : isFunctionalHead
     ? [
         { label: "My Domain", path: "/my-domain" },
