@@ -9,9 +9,14 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import Navbar from "@/components/Navbar";
 import SparkLine from "@/components/SparkLine";
 import KaiInsight from "@/components/KaiInsight";
+import KaiPrediction from "@/components/KaiPrediction";
+import KaiRecommendation from "@/components/KaiRecommendation";
+import KaiSimulation from "@/components/KaiSimulation";
+import KaiScoreCard from "@/components/KaiScoreCard";
+import KaiDecision from "@/components/KaiDecision";
 import AskKai from "@/components/AskKai";
 import { startups, statusConfig } from "@/data/startups";
-import { startupKaiInsights } from "@/data/kai";
+import { startupKaiData } from "@/data/kai";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -76,7 +81,7 @@ const StartupDetail = () => {
   const config = statusConfig[startup.status];
   const problems = startupProblems[startup.id] || [];
   const decision = nextDecisions[startup.id];
-  const kaiInsight = startupKaiInsights[startup.id];
+  const kaiData = startupKaiData[startup.id];
   const startupContext = `Startup: ${startup.name}. Status: ${config.label}. Runway: ${startup.runway}. Growth: ${startup.growth}. Insight: ${startup.insight}. ${startup.insightDetail}`;
 
   return (
@@ -105,10 +110,17 @@ const StartupDetail = () => {
           </div>
         </div>
 
-        {/* KAI Insight (summary level) */}
-        {kaiInsight && (
-          <div className="mb-8">
-            <KaiInsight insight={kaiInsight} convertible />
+        {/* KAI Intelligence Block */}
+        {kaiData && (
+          <div className="mb-10 space-y-4">
+            <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">KAI Intelligence</h2>
+            <KaiInsight insight={kaiData.insight} convertible />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <KaiPrediction predictions={kaiData.predictions} />
+              <KaiScoreCard score={kaiData.score} />
+            </div>
+            <KaiRecommendation recommendation={kaiData.recommendation} onAccept={() => toast.success("Recommendation accepted")} />
+            <KaiSimulation simulations={kaiData.simulations} />
           </div>
         )}
 
