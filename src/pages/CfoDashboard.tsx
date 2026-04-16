@@ -51,7 +51,7 @@ const CfoDashboard = () => {
   const totalBurn = burnCats.reduce((s, b) => s + Number(b.monthly_amount), 0);
   const netCashFlow = cashFlows.reduce((s, c) => s + (c.flow_type === "inflow" ? Number(c.amount) : -Number(c.amount)), 0);
 
-  const startupName = startups?.find(s => s.id === startupId)?.name || "Select Startup";
+  const startupName = dbStartups?.find(s => s.id === startupId)?.name || "Select Startup";
 
   // KAI insights for CFO
   const kaiInsights = [
