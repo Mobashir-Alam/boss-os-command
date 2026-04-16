@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Clock, CheckCircle2, CalendarClock, BarChart3, FileText, MessageSquare, Activity, PieChart, AlertTriangle, Users, Brain, FolderOpen, StickyNote, Target, Contact } from "lucide-react";
+import { ArrowLeft, Clock, CheckCircle2, CalendarClock, BarChart3, FileText, MessageSquare, Activity, PieChart, AlertTriangle, Users, Brain, FolderOpen, StickyNote, Target, Contact, DollarSign } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
