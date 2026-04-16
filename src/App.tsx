@@ -10,6 +10,7 @@ import AuthGuard from "@/components/AuthGuard";
 import Index from "./pages/Index.tsx";
 import Focus from "./pages/Focus.tsx";
 import StartupDetail from "./pages/StartupDetail.tsx";
+import OwnershipEngine from "./pages/OwnershipEngine.tsx";
 import Login from "./pages/Login.tsx";
 import Onboarding from "./pages/Onboarding.tsx";
 import PMDashboard from "./pages/PMDashboard.tsx";
@@ -38,6 +39,7 @@ const App = () => (
               <Route path="/" element={<AuthGuard><Index /></AuthGuard>} />
               <Route path="/focus" element={<AuthGuard><Focus /></AuthGuard>} />
               <Route path="/startup/:id" element={<AuthGuard><StartupDetail /></AuthGuard>} />
+              <Route path="/startup/:id/ownership" element={<AuthGuard><OwnershipEngine /></AuthGuard>} />
               <Route path="/pm" element={<AuthGuard><PMDashboard /></AuthGuard>} />
               <Route path="/project-board" element={<AuthGuard><PMDashboard /></AuthGuard>} />
               <Route path="/my-domain" element={<AuthGuard><FunctionalHeadDashboard /></AuthGuard>} />
