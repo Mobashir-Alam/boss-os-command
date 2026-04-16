@@ -81,7 +81,7 @@ const CfoDashboard = () => {
               <SelectValue placeholder="Select startup" />
             </SelectTrigger>
             <SelectContent>
-              {startups?.map(s => (
+              {dbStartups?.map(s => (
                 <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
               ))}
             </SelectContent>
