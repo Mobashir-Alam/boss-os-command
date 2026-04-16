@@ -428,6 +428,162 @@ export type Database = {
           },
         ]
       }
+      growth_config: {
+        Row: {
+          created_at: string
+          custom_channels: Json
+          funnel_stages: Json
+          growth_model: string
+          id: string
+          startup_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          custom_channels?: Json
+          funnel_stages?: Json
+          growth_model?: string
+          id?: string
+          startup_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          custom_channels?: Json
+          funnel_stages?: Json
+          growth_model?: string
+          id?: string
+          startup_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "growth_config_startup_id_fkey"
+            columns: ["startup_id"]
+            isOneToOne: true
+            referencedRelation: "startups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      growth_experiments: {
+        Row: {
+          channel: string
+          created_at: string
+          created_by: string | null
+          end_date: string | null
+          experiment_type: string
+          id: string
+          impact_score: number
+          name: string
+          result_summary: string | null
+          start_date: string | null
+          startup_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          channel?: string
+          created_at?: string
+          created_by?: string | null
+          end_date?: string | null
+          experiment_type?: string
+          id?: string
+          impact_score?: number
+          name: string
+          result_summary?: string | null
+          start_date?: string | null
+          startup_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          channel?: string
+          created_at?: string
+          created_by?: string | null
+          end_date?: string | null
+          experiment_type?: string
+          id?: string
+          impact_score?: number
+          name?: string
+          result_summary?: string | null
+          start_date?: string | null
+          startup_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "growth_experiments_startup_id_fkey"
+            columns: ["startup_id"]
+            isOneToOne: false
+            referencedRelation: "startups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      growth_metrics: {
+        Row: {
+          activation_rate: number
+          channel: string
+          created_at: string
+          created_by: string | null
+          growth_rate: number
+          id: string
+          metric_key: string
+          metric_type: string
+          metric_value: number
+          period: string
+          retention_rate: number
+          revenue: number
+          startup_id: string
+          updated_at: string
+          users: number
+        }
+        Insert: {
+          activation_rate?: number
+          channel?: string
+          created_at?: string
+          created_by?: string | null
+          growth_rate?: number
+          id?: string
+          metric_key?: string
+          metric_type?: string
+          metric_value?: number
+          period?: string
+          retention_rate?: number
+          revenue?: number
+          startup_id: string
+          updated_at?: string
+          users?: number
+        }
+        Update: {
+          activation_rate?: number
+          channel?: string
+          created_at?: string
+          created_by?: string | null
+          growth_rate?: number
+          id?: string
+          metric_key?: string
+          metric_type?: string
+          metric_value?: number
+          period?: string
+          retention_rate?: number
+          revenue?: number
+          startup_id?: string
+          updated_at?: string
+          users?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "growth_metrics_startup_id_fkey"
+            columns: ["startup_id"]
+            isOneToOne: false
+            referencedRelation: "startups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       kai_memories: {
         Row: {
           category: string
