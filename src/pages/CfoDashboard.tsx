@@ -21,9 +21,9 @@ import {
 } from "lucide-react";
 
 const CfoDashboard = () => {
-  const { startups } = useStartups();
+  const { dbStartups } = useStartups();
   const [selectedStartup, setSelectedStartup] = useState<string>("");
-  const startupId = selectedStartup || startups?.[0]?.id || "";
+  const startupId = selectedStartup || dbStartups?.[0]?.id || "";
 
   const { data: entries = [] } = useFinancialEntries(startupId);
   const { data: burnCats = [] } = useBurnCategories(startupId);
@@ -51,7 +51,7 @@ const CfoDashboard = () => {
   const totalBurn = burnCats.reduce((s, b) => s + Number(b.monthly_amount), 0);
   const netCashFlow = cashFlows.reduce((s, c) => s + (c.flow_type === "inflow" ? Number(c.amount) : -Number(c.amount)), 0);
 
-  const startupName = startups?.find(s => s.id === startupId)?.name || "Select Startup";
+  const startupName = dbStartups?.find(s => s.id === startupId)?.name || "Select Startup";
 
   // KAI insights for CFO
   const kaiInsights = [
@@ -81,7 +81,7 @@ const CfoDashboard = () => {
               <SelectValue placeholder="Select startup" />
             </SelectTrigger>
             <SelectContent>
-              {startups?.map(s => (
+              {dbStartups?.map(s => (
                 <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
               ))}
             </SelectContent>
