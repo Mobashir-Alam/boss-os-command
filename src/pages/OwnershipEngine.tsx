@@ -16,7 +16,7 @@ const OwnershipEngine = () => {
   const startup = startups.find((s) => s.id === id);
   const dbStartup = dbStartups.find((s) => s.slug === id);
 
-  if (!startup) {
+  if (!startup || !dbStartup) {
     return (
       <div className="min-h-screen bg-background">
         <Navbar />
