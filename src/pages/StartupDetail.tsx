@@ -144,7 +144,41 @@ const StartupDetail = () => {
           </div>
         </div>
 
-        {/* KAI Signal */}
+        {/* Hub Action Bar */}
+        <div className="flex items-center gap-1 mb-8 overflow-x-auto pb-1">
+          {hubTabs.map((tab) => {
+            const Icon = tab.icon;
+            const active = hubTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setHubTab(active ? null : tab.id)}
+                className={cn(
+                  "flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors whitespace-nowrap",
+                  active ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                )}
+              >
+                <Icon className="h-3.5 w-3.5" />
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Hub Tab Content */}
+        {hubTab && (
+          <section className="mb-10">
+            {hubTab === "priorities" && <PrioritiesTab startupId={startup.id} startupName={startup.name} />}
+            {hubTab === "people" && <PeopleTab startupId={startup.id} />}
+            {hubTab === "memories" && <KaiMemoriesTab startupId={startup.id} />}
+            {hubTab === "documents" && <DocumentsTab startupId={startup.id} />}
+            {hubTab === "notes" && <NotesTab startupId={startup.id} />}
+            {hubTab === "milestones" && <MilestonesTab startupId={startup.id} />}
+            {hubTab === "contacts" && <ContactsTab startupId={startup.id} />}
+          </section>
+        )}
+
+
         {signal && (
           <div className="mb-8">
             <KaiSignalBadge signal={signal} />
