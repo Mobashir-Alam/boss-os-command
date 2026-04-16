@@ -455,6 +455,86 @@ export type Database = {
         }
         Relationships: []
       }
+      people: {
+        Row: {
+          cost_to_company: number
+          created_at: string
+          created_by: string | null
+          department: string
+          employment_type: string
+          full_name: string
+          hours_committed: number
+          hours_delivered: number
+          id: string
+          joining_date: string | null
+          kpi_score: number
+          linked_startups: string[]
+          productivity_score: number
+          reporting_manager_id: string | null
+          role: string
+          salary: number
+          status: string
+          tasks_assigned: number
+          tasks_completed: number
+          updated_at: string
+          weekly_output_score: number
+        }
+        Insert: {
+          cost_to_company?: number
+          created_at?: string
+          created_by?: string | null
+          department?: string
+          employment_type?: string
+          full_name: string
+          hours_committed?: number
+          hours_delivered?: number
+          id?: string
+          joining_date?: string | null
+          kpi_score?: number
+          linked_startups?: string[]
+          productivity_score?: number
+          reporting_manager_id?: string | null
+          role?: string
+          salary?: number
+          status?: string
+          tasks_assigned?: number
+          tasks_completed?: number
+          updated_at?: string
+          weekly_output_score?: number
+        }
+        Update: {
+          cost_to_company?: number
+          created_at?: string
+          created_by?: string | null
+          department?: string
+          employment_type?: string
+          full_name?: string
+          hours_committed?: number
+          hours_delivered?: number
+          id?: string
+          joining_date?: string | null
+          kpi_score?: number
+          linked_startups?: string[]
+          productivity_score?: number
+          reporting_manager_id?: string | null
+          role?: string
+          salary?: number
+          status?: string
+          tasks_assigned?: number
+          tasks_completed?: number
+          updated_at?: string
+          weekly_output_score?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "people_reporting_manager_id_fkey"
+            columns: ["reporting_manager_id"]
+            isOneToOne: false
+            referencedRelation: "people"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       priorities: {
         Row: {
           created_at: string
