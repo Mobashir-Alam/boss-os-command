@@ -32,8 +32,22 @@ import {
 
 /* ── Domain detection from user profile ──────────────── */
 
-function detectDomain(profile: { full_name?: string | null; email?: string | null } | null): Domain {
+function detectDomain(profile: { full_name?: string | null; email?: string | null; department?: string | null } | null): Domain {
   if (!profile) return "hr";
+  
+  // Use department field if available (set during onboarding)
+  if (profile.department) {
+    const deptMap: Record<string, Domain> = {
+      finance: "finance",
+      hr: "hr",
+      technology: "product",
+      marketing: "marketing",
+      operations: "hr", // fallback to hr for ops
+    };
+    return deptMap[profile.department] || "hr";
+  }
+
+  // Fallback: infer from name/email
   const name = (profile.full_name || "").toLowerCase();
   const email = (profile.email || "").toLowerCase();
   const combined = `${name} ${email}`;
