@@ -70,12 +70,23 @@ const statusDot: Record<string, string> = {
   done: "bg-emerald-500",
 };
 
+const hubTabs = [
+  { id: "priorities", label: "Priorities", icon: AlertTriangle },
+  { id: "people", label: "People", icon: Users },
+  { id: "memories", label: "KAI Memories", icon: Brain },
+  { id: "documents", label: "Documents", icon: FolderOpen },
+  { id: "notes", label: "Notes", icon: StickyNote },
+  { id: "milestones", label: "Milestones", icon: Target },
+  { id: "contacts", label: "Contacts", icon: Contact },
+];
+
 const StartupDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { startups } = useStartups();
   const startup = startups.find((s) => s.id === id);
   const { getTasksByStartup, getTasksByIssue } = useTaskContext();
+  const [hubTab, setHubTab] = useState<string | null>(null);
 
   if (!startup) {
     return (
