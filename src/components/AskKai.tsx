@@ -38,6 +38,7 @@ const roleSuggestedPrompts: Record<AppRole, string[]> = {
     "Am I on track this week?",
     "What's blocking my work?",
   ],
+};
 
 const rolePlaceholders: Record<AppRole, string> = {
   founder: "Ask KAI about strategy, risk, or capital allocation...",
@@ -45,7 +46,6 @@ const rolePlaceholders: Record<AppRole, string> = {
   functional_head: "Ask KAI about your domain performance...",
   project_manager: "Ask KAI about task risks or team bottlenecks...",
   team_member: "Ask KAI what to focus on next...",
-  cfo: "Ask KAI about financial data, burn, or forecasts...",
 };
 
 interface AskKaiProps {
