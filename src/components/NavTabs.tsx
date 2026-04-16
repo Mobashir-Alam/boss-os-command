@@ -8,11 +8,13 @@ const roleNavItems: Record<string, { label: string; path: string }[]> = {
     { label: "Focus", path: "/focus" },
     { label: "Decisions", path: "/decisions" },
     { label: "Finances", path: "/cfo" },
+    { label: "People", path: "/people" },
   ],
   mfo: [
     { label: "Control Panel", path: "/mfo" },
     { label: "Dashboard", path: "/" },
     { label: "Focus", path: "/focus" },
+    { label: "People", path: "/people" },
   ],
   functional_head: [
     { label: "Domain Dashboard", path: "/my-domain" },
