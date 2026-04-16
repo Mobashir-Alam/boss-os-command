@@ -75,6 +75,13 @@ const Index = () => {
           <p className="text-sm font-medium text-foreground/80">{summary}</p>
         </div>
 
+        {/* Startup Cards */}
+        <div className="mb-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {startups.map((s, i) => (
+            <StartupCard key={s.id} startup={s} onFix={setFixTarget} index={i} />
+          ))}
+        </div>
+
         {/* My Work */}
         <div className="mb-6">
           <MyWork />
@@ -104,16 +111,9 @@ const Index = () => {
           </div>
         </div>
 
-        {/* Escalation Log — Founder can acknowledge & resolve */}
+        {/* Escalation Log */}
         <div className="mb-8">
           <EscalationLog canAct />
-        </div>
-
-        {/* Cards Grid */}
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {startups.map((s, i) => (
-            <StartupCard key={s.id} startup={s} onFix={setFixTarget} index={i} />
-          ))}
         </div>
 
         {/* Weekly Strategic Brief */}
