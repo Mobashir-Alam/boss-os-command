@@ -28,7 +28,7 @@ import DocumentsTab from "@/components/startup-hub/DocumentsTab";
 import NotesTab from "@/components/startup-hub/NotesTab";
 import MilestonesTab from "@/components/startup-hub/MilestonesTab";
 import ContactsTab from "@/components/startup-hub/ContactsTab";
-import { statusConfig } from "@/data/startups";
+import FinancesTab from "@/components/startup-hub/FinancesTab";
 import { useStartups } from "@/hooks/useStartups";
 import { startupKaiData, startupSignals } from "@/data/kai";
 import { assigneeOptions } from "@/data/tasks";
@@ -70,7 +70,10 @@ const statusDot: Record<string, string> = {
   done: "bg-emerald-500",
 };
 
+import { statusConfig } from "@/data/startups";
+
 const hubTabs = [
+  { id: "finances", label: "Finances", icon: DollarSign },
   { id: "priorities", label: "Priorities", icon: AlertTriangle },
   { id: "people", label: "People", icon: Users },
   { id: "memories", label: "KAI Memories", icon: Brain },
