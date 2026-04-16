@@ -12,8 +12,8 @@ const roleDefaultRoutes: Record<string, string> = {
 };
 
 const roleAllowedRoutes: Record<string, string[]> = {
-  founder: ["/", "/focus", "/decisions", "/cfo"],
-  mfo: ["/mfo", "/", "/focus"],
+  founder: ["/", "/focus", "/decisions", "/cfo", "/people"],
+  mfo: ["/mfo", "/", "/focus", "/people"],
   functional_head: ["/my-domain", "/decisions"],
   project_manager: ["/pm", "/project-board"],
   team_member: ["/my-work"],
