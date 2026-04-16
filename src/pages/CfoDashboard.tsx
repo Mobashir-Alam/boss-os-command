@@ -21,9 +21,9 @@ import {
 } from "lucide-react";
 
 const CfoDashboard = () => {
-  const { startups } = useStartups();
+  const { dbStartups } = useStartups();
   const [selectedStartup, setSelectedStartup] = useState<string>("");
-  const startupId = selectedStartup || startups?.[0]?.id || "";
+  const startupId = selectedStartup || dbStartups?.[0]?.id || "";
 
   const { data: entries = [] } = useFinancialEntries(startupId);
   const { data: burnCats = [] } = useBurnCategories(startupId);
