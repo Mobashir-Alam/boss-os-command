@@ -8,6 +8,7 @@ import { EscalationProvider } from "@/contexts/EscalationContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 import AuthGuard from "@/components/AuthGuard";
 import Index from "./pages/Index.tsx";
+import FounderCommandCenter from "./pages/FounderCommandCenter.tsx";
 import Focus from "./pages/Focus.tsx";
 import StartupDetail from "./pages/StartupDetail.tsx";
 import OwnershipEngine from "./pages/OwnershipEngine.tsx";
