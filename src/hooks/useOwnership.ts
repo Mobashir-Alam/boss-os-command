@@ -94,7 +94,7 @@ export function useStakeholders(startupId: string) {
         const { error } = await supabase.from("stakeholders").update(s).eq("id", s.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("stakeholders").insert(s);
+        const { error } = await supabase.from("stakeholders").insert([s as any]);
         if (error) throw error;
       }
     },
@@ -150,7 +150,7 @@ export function useBoardSeats(startupId: string) {
         const { error } = await supabase.from("board_seats").update(s).eq("id", s.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("board_seats").insert(s);
+        const { error } = await supabase.from("board_seats").insert([s as any]);
         if (error) throw error;
       }
     },
@@ -190,7 +190,7 @@ export function useSpecialRights(startupId: string) {
         const { error } = await supabase.from("special_rights").update(s).eq("id", s.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("special_rights").insert(s);
+        const { error } = await supabase.from("special_rights").insert([s as any]);
         if (error) throw error;
       }
     },
@@ -234,7 +234,7 @@ export function useFundingRounds(startupId: string) {
         const { error } = await supabase.from("funding_rounds").update(s).eq("id", s.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("funding_rounds").insert(s);
+        const { error } = await supabase.from("funding_rounds").insert([s as any]);
         if (error) throw error;
       }
     },
