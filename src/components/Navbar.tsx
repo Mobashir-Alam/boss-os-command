@@ -1,12 +1,15 @@
+import { useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import NavTabs from "./NavTabs";
 import NotificationDropdown from "./NotificationDropdown";
 import InviteModal from "./InviteModal";
+import { StartupManagementPanel } from "./StartupManagement";
 import { useAuth } from "@/contexts/AuthContext";
-import { LogOut, Settings, User } from "lucide-react";
+import { Building2, LogOut, Settings, User } from "lucide-react";
 
 const SCORE = 78;
 const scoreColor = SCORE >= 80 ? "hsl(142 71% 45%)" : SCORE >= 50 ? "hsl(38 92% 50%)" : "hsl(0 84% 60%)";
@@ -20,6 +23,7 @@ const roleLabels: Record<string, string> = {
 };
 
 const Navbar = () => {
+  const [manageOpen, setManageOpen] = useState(false);
   const { profile, signOut } = useAuth();
   const initials = profile?.full_name
     ? profile.full_name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
@@ -81,6 +85,12 @@ const Navbar = () => {
                 <User className="h-3.5 w-3.5" />
                 Profile
               </DropdownMenuItem>
+              {(profile?.role === "founder" || profile?.role === "mfo") && (
+                <DropdownMenuItem className="gap-2" onClick={() => setManageOpen(true)}>
+                  <Building2 className="h-3.5 w-3.5" />
+                  Manage Startups
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem className="gap-2">
                 <Settings className="h-3.5 w-3.5" />
                 Settings
@@ -92,6 +102,15 @@ const Navbar = () => {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+
+          <Dialog open={manageOpen} onOpenChange={setManageOpen}>
+            <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Manage Startups</DialogTitle>
+              </DialogHeader>
+              <StartupManagementPanel />
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
     </nav>
