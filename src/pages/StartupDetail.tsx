@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Clock, CheckCircle2, CalendarClock, BarChart3, FileText, MessageSquare, Activity, PieChart, AlertTriangle, Users, Brain, FolderOpen, StickyNote, Target, Contact, DollarSign, Gauge, TrendingUp } from "lucide-react";
+import { ArrowLeft, Clock, CheckCircle2, CalendarClock, BarChart3, FileText, MessageSquare, Activity, PieChart, AlertTriangle, Users, Brain, FolderOpen, StickyNote, Target, Contact, DollarSign, Gauge, TrendingUp, Rocket } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
@@ -31,6 +31,7 @@ import ContactsTab from "@/components/startup-hub/ContactsTab";
 import FinancesTab from "@/components/startup-hub/FinancesTab";
 import TeamEfficiencyEngine from "@/components/startup-hub/TeamEfficiencyEngine";
 import GrowthEngine from "@/components/startup-hub/GrowthEngine";
+import ProductEngine from "@/components/startup-hub/ProductEngine";
 import { useStartups } from "@/hooks/useStartups";
 import { startupKaiData, startupSignals } from "@/data/kai";
 import { assigneeOptions } from "@/data/tasks";
@@ -76,6 +77,7 @@ import { statusConfig } from "@/data/startups";
 
 const hubTabs = [
   { id: "growth", label: "Growth", icon: TrendingUp },
+  { id: "product", label: "Product", icon: Rocket },
   { id: "finances", label: "Finances", icon: DollarSign },
   { id: "efficiency", label: "Efficiency", icon: Gauge },
   { id: "priorities", label: "Priorities", icon: AlertTriangle },
@@ -177,6 +179,7 @@ const StartupDetail = () => {
         {hubTab && dbStartup && (
           <section className="mb-10">
             {hubTab === "growth" && <GrowthEngine startupId={dbStartup.id} />}
+            {hubTab === "product" && <ProductEngine startupId={dbStartup.id} />}
             {hubTab === "finances" && <FinancesTab startupId={dbStartup.id} />}
             {hubTab === "efficiency" && <TeamEfficiencyEngine startupId={dbStartup.id} runway={startup.runway} />}
             {hubTab === "priorities" && <PrioritiesTab startupId={dbStartup.slug} startupName={startup.name} />}

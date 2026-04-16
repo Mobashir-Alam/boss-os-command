@@ -765,6 +765,155 @@ export type Database = {
           },
         ]
       }
+      product_features: {
+        Row: {
+          assigned_to: string | null
+          created_at: string
+          cycle_time_days: number
+          feature_type: string
+          id: string
+          impact_score: number
+          initiative_id: string | null
+          name: string
+          released_at: string | null
+          startup_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          created_at?: string
+          cycle_time_days?: number
+          feature_type?: string
+          id?: string
+          impact_score?: number
+          initiative_id?: string | null
+          name: string
+          released_at?: string | null
+          startup_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          created_at?: string
+          cycle_time_days?: number
+          feature_type?: string
+          id?: string
+          impact_score?: number
+          initiative_id?: string | null
+          name?: string
+          released_at?: string | null
+          startup_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_features_initiative_id_fkey"
+            columns: ["initiative_id"]
+            isOneToOne: false
+            referencedRelation: "product_initiatives"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_features_startup_id_fkey"
+            columns: ["startup_id"]
+            isOneToOne: false
+            referencedRelation: "startups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_initiatives: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          outcome_id: string | null
+          priority: string
+          startup_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          outcome_id?: string | null
+          priority?: string
+          startup_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          outcome_id?: string | null
+          priority?: string
+          startup_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_initiatives_outcome_id_fkey"
+            columns: ["outcome_id"]
+            isOneToOne: false
+            referencedRelation: "product_outcomes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_initiatives_startup_id_fkey"
+            columns: ["startup_id"]
+            isOneToOne: false
+            referencedRelation: "startups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_outcomes: {
+        Row: {
+          created_at: string
+          current_value: number
+          id: string
+          name: string
+          startup_id: string
+          status: string
+          target_value: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          current_value?: number
+          id?: string
+          name: string
+          startup_id: string
+          status?: string
+          target_value?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          current_value?: number
+          id?: string
+          name?: string
+          startup_id?: string
+          status?: string
+          target_value?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_outcomes_startup_id_fkey"
+            columns: ["startup_id"]
+            isOneToOne: false
+            referencedRelation: "startups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -1251,6 +1400,50 @@ export type Database = {
           role?: Database["public"]["Enums"]["app_role"]
         }
         Relationships: []
+      }
+      tech_health_entries: {
+        Row: {
+          category: string
+          created_at: string
+          created_by: string | null
+          id: string
+          severity: string
+          startup_id: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          severity?: string
+          startup_id: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          severity?: string
+          startup_id?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tech_health_entries_startup_id_fkey"
+            columns: ["startup_id"]
+            isOneToOne: false
+            referencedRelation: "startups"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
