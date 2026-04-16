@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Clock, CheckCircle2, CalendarClock, BarChart3, FileText, MessageSquare, Activity, PieChart } from "lucide-react";
+import { ArrowLeft, Clock, CheckCircle2, CalendarClock, BarChart3, FileText, MessageSquare, Activity, PieChart, AlertTriangle, Users, Brain, FolderOpen, StickyNote, Target, Contact } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
@@ -21,6 +21,13 @@ import MfoUpdates from "@/components/MfoUpdates";
 import ActivityTimeline from "@/components/ActivityTimeline";
 import IssueTaskFlow from "@/components/IssueTaskFlow";
 import ResolutionPrompt from "@/components/ResolutionPrompt";
+import PrioritiesTab from "@/components/startup-hub/PrioritiesTab";
+import PeopleTab from "@/components/startup-hub/PeopleTab";
+import KaiMemoriesTab from "@/components/startup-hub/KaiMemoriesTab";
+import DocumentsTab from "@/components/startup-hub/DocumentsTab";
+import NotesTab from "@/components/startup-hub/NotesTab";
+import MilestonesTab from "@/components/startup-hub/MilestonesTab";
+import ContactsTab from "@/components/startup-hub/ContactsTab";
 import { statusConfig } from "@/data/startups";
 import { useStartups } from "@/hooks/useStartups";
 import { startupKaiData, startupSignals } from "@/data/kai";
@@ -63,12 +70,23 @@ const statusDot: Record<string, string> = {
   done: "bg-emerald-500",
 };
 
+const hubTabs = [
+  { id: "priorities", label: "Priorities", icon: AlertTriangle },
+  { id: "people", label: "People", icon: Users },
+  { id: "memories", label: "KAI Memories", icon: Brain },
+  { id: "documents", label: "Documents", icon: FolderOpen },
+  { id: "notes", label: "Notes", icon: StickyNote },
+  { id: "milestones", label: "Milestones", icon: Target },
+  { id: "contacts", label: "Contacts", icon: Contact },
+];
+
 const StartupDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { startups } = useStartups();
   const startup = startups.find((s) => s.id === id);
   const { getTasksByStartup, getTasksByIssue } = useTaskContext();
+  const [hubTab, setHubTab] = useState<string | null>(null);
 
   if (!startup) {
     return (
@@ -126,7 +144,41 @@ const StartupDetail = () => {
           </div>
         </div>
 
-        {/* KAI Signal */}
+        {/* Hub Action Bar */}
+        <div className="flex items-center gap-1 mb-8 overflow-x-auto pb-1">
+          {hubTabs.map((tab) => {
+            const Icon = tab.icon;
+            const active = hubTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setHubTab(active ? null : tab.id)}
+                className={cn(
+                  "flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors whitespace-nowrap",
+                  active ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                )}
+              >
+                <Icon className="h-3.5 w-3.5" />
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Hub Tab Content */}
+        {hubTab && (
+          <section className="mb-10">
+            {hubTab === "priorities" && <PrioritiesTab startupId={startup.id} startupName={startup.name} />}
+            {hubTab === "people" && <PeopleTab startupId={startup.id} />}
+            {hubTab === "memories" && <KaiMemoriesTab startupId={startup.id} />}
+            {hubTab === "documents" && <DocumentsTab startupId={startup.id} />}
+            {hubTab === "notes" && <NotesTab startupId={startup.id} />}
+            {hubTab === "milestones" && <MilestonesTab startupId={startup.id} />}
+            {hubTab === "contacts" && <ContactsTab startupId={startup.id} />}
+          </section>
+        )}
+
+
         {signal && (
           <div className="mb-8">
             <KaiSignalBadge signal={signal} />
@@ -227,16 +279,6 @@ const StartupDetail = () => {
           <AskKai startupContext={startupContext} />
         </section>
 
-        {/* Plan placeholder */}
-        <section className="mb-10">
-          <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-4">Plan</h2>
-          <div className="rounded-xl border border-border/60 bg-card p-6">
-            <div className="flex items-center gap-3 text-sm text-muted-foreground">
-              <FileText className="h-4 w-4" />
-              <span>Strategic plan and OKRs will appear here</span>
-            </div>
-          </div>
-        </section>
       </main>
     </div>
   );

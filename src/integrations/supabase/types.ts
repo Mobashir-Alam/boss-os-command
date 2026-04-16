@@ -237,6 +237,33 @@ export type Database = {
           },
         ]
       }
+      kai_memories: {
+        Row: {
+          category: string
+          created_at: string
+          created_by: string | null
+          id: string
+          memory: string
+          startup_id: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          memory: string
+          startup_id: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          memory?: string
+          startup_id?: string
+        }
+        Relationships: []
+      }
       priorities: {
         Row: {
           created_at: string
@@ -500,6 +527,129 @@ export type Database = {
           id?: string
           startup_id?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      startup_contacts: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          email: string | null
+          id: string
+          name: string
+          notes: string | null
+          phone: string | null
+          role: string
+          startup_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          phone?: string | null
+          role?: string
+          startup_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          role?: string
+          startup_id?: string
+        }
+        Relationships: []
+      }
+      startup_documents: {
+        Row: {
+          created_at: string
+          doc_type: string
+          file_name: string
+          file_url: string
+          id: string
+          startup_id: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          doc_type?: string
+          file_name: string
+          file_url: string
+          id?: string
+          startup_id: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          doc_type?: string
+          file_name?: string
+          file_url?: string
+          id?: string
+          startup_id?: string
+          uploaded_by?: string | null
+        }
+        Relationships: []
+      }
+      startup_milestones: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          deadline: string | null
+          description: string | null
+          id: string
+          startup_id: string
+          status: string
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          deadline?: string | null
+          description?: string | null
+          id?: string
+          startup_id: string
+          status?: string
+          title: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          deadline?: string | null
+          description?: string | null
+          id?: string
+          startup_id?: string
+          status?: string
+          title?: string
+        }
+        Relationships: []
+      }
+      startup_notes: {
+        Row: {
+          author_id: string | null
+          content: string
+          created_at: string
+          id: string
+          startup_id: string
+        }
+        Insert: {
+          author_id?: string | null
+          content: string
+          created_at?: string
+          id?: string
+          startup_id: string
+        }
+        Update: {
+          author_id?: string | null
+          content?: string
+          created_at?: string
+          id?: string
+          startup_id?: string
         }
         Relationships: []
       }
