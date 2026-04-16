@@ -63,6 +63,11 @@ const walkthroughByRole: Record<Role, { icon: React.ReactNode; title: string; de
     { icon: <CheckCircle2 className="h-5 w-5" />, title: "Actions", desc: "Start tasks, mark done, report blockers" },
     { icon: <Brain className="h-5 w-5" />, title: "KAI Tips", desc: "Simple execution guidance — what to do next" },
   ],
+  cfo: [
+    { icon: <LayoutDashboard className="h-5 w-5" />, title: "Financial Command", desc: "Manage expenses, cash flow, and burn across startups" },
+    { icon: <Target className="h-5 w-5" />, title: "Forecasts", desc: "Build and update financial projections" },
+    { icon: <Brain className="h-5 w-5" />, title: "KAI Finance Intel", desc: "Cost optimization and cash flow risk insights" },
+  ],
 };
 
 // KAI intro messages by role
@@ -72,6 +77,7 @@ const kaiIntroByRole: Record<Role, string> = {
   functional_head: "Your domain advisor. KAI surfaces cross-startup patterns in your function and recommends where to focus.",
   project_manager: "Your delivery partner. KAI highlights blockers, dependencies, and priorities so nothing slips.",
   team_member: "Your task assistant. KAI tells you what to do next and flags if your work is blocking others.",
+  cfo: "Your financial intelligence. KAI helps you track burn, optimize costs, and forecast cash flow risks.",
 };
 
 const Onboarding = () => {
