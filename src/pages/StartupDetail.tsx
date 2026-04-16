@@ -83,8 +83,9 @@ const hubTabs = [
 const StartupDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { startups } = useStartups();
+  const { startups, dbStartups } = useStartups();
   const startup = startups.find((s) => s.id === id);
+  const dbStartup = dbStartups.find((s) => s.slug === id);
   const { getTasksByStartup, getTasksByIssue } = useTaskContext();
   const [hubTab, setHubTab] = useState<string | null>(null);
 
@@ -166,15 +167,15 @@ const StartupDetail = () => {
         </div>
 
         {/* Hub Tab Content */}
-        {hubTab && (
+        {hubTab && dbStartup && (
           <section className="mb-10">
-            {hubTab === "priorities" && <PrioritiesTab startupId={startup.id} startupName={startup.name} />}
-            {hubTab === "people" && <PeopleTab startupId={startup.id} />}
-            {hubTab === "memories" && <KaiMemoriesTab startupId={startup.id} />}
-            {hubTab === "documents" && <DocumentsTab startupId={startup.id} />}
-            {hubTab === "notes" && <NotesTab startupId={startup.id} />}
-            {hubTab === "milestones" && <MilestonesTab startupId={startup.id} />}
-            {hubTab === "contacts" && <ContactsTab startupId={startup.id} />}
+            {hubTab === "priorities" && <PrioritiesTab startupId={dbStartup.id} startupName={startup.name} />}
+            {hubTab === "people" && <PeopleTab startupId={dbStartup.id} />}
+            {hubTab === "memories" && <KaiMemoriesTab startupId={dbStartup.id} />}
+            {hubTab === "documents" && <DocumentsTab startupId={dbStartup.id} />}
+            {hubTab === "notes" && <NotesTab startupId={dbStartup.id} />}
+            {hubTab === "milestones" && <MilestonesTab startupId={dbStartup.id} />}
+            {hubTab === "contacts" && <ContactsTab startupId={dbStartup.id} />}
           </section>
         )}
 

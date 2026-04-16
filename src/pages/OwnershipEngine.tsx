@@ -12,10 +12,11 @@ import OwnershipKaiInsights from "@/components/ownership/OwnershipKaiInsights";
 const OwnershipEngine = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { startups } = useStartups();
+  const { startups, dbStartups } = useStartups();
   const startup = startups.find((s) => s.id === id);
+  const dbStartup = dbStartups.find((s) => s.slug === id);
 
-  if (!startup) {
+  if (!startup || !dbStartup) {
     return (
       <div className="min-h-screen bg-background">
         <Navbar />
@@ -43,7 +44,7 @@ const OwnershipEngine = () => {
         </div>
 
         {/* KAI Strategic Insights */}
-        <OwnershipKaiInsights startupId={startup.id} />
+        <OwnershipKaiInsights startupId={dbStartup.id} />
 
         <Tabs defaultValue="ownership" className="mt-8">
           <TabsList className="w-full justify-start bg-muted/50 border border-border/40 rounded-xl p-1">
@@ -62,16 +63,16 @@ const OwnershipEngine = () => {
           </TabsList>
 
           <TabsContent value="ownership">
-            <OwnershipTab startupId={startup.id} />
+            <OwnershipTab startupId={dbStartup.id} />
           </TabsContent>
           <TabsContent value="control">
-            <ControlTab startupId={startup.id} />
+            <ControlTab startupId={dbStartup.id} />
           </TabsContent>
           <TabsContent value="simulate">
-            <SimulateTab startupId={startup.id} />
+            <SimulateTab startupId={dbStartup.id} />
           </TabsContent>
           <TabsContent value="documents">
-            <DocumentsTab startupId={startup.id} />
+            <DocumentsTab startupId={dbStartup.id} />
           </TabsContent>
         </Tabs>
       </main>
