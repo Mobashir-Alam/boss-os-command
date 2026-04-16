@@ -124,11 +124,10 @@ const Onboarding = () => {
     if (!selectedRole || !user) return;
     setSaving(true);
     try {
-      const updateData: Record<string, unknown> = { role: selectedRole };
-      if (selectedRole !== "functional_head") {
-        updateData.department = null;
-      }
-      await supabase.from("profiles").update(updateData).eq("id", user.id);
+      await supabase.from("profiles").update({
+        role: selectedRole,
+        department: selectedRole !== "functional_head" ? null : undefined,
+      }).eq("id", user.id);
       await supabase.from("user_roles").upsert(
         [{ user_id: user.id, role: selectedRole }],
         { onConflict: "user_id,role" }
