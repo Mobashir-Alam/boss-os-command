@@ -39,7 +39,8 @@ const App = () => (
             <Routes>
               <Route path="/login" element={<Login />} />
               <Route path="/onboarding" element={<Onboarding />} />
-              <Route path="/" element={<AuthGuard><Index /></AuthGuard>} />
+              <Route path="/" element={<AuthGuard><FounderCommandCenter /></AuthGuard>} />
+              <Route path="/portfolio" element={<AuthGuard><Index /></AuthGuard>} />
               <Route path="/focus" element={<AuthGuard><Focus /></AuthGuard>} />
               <Route path="/startup/:id" element={<AuthGuard><StartupDetail /></AuthGuard>} />
               <Route path="/startup/:id/ownership" element={<AuthGuard><OwnershipEngine /></AuthGuard>} />
