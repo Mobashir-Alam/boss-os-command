@@ -55,6 +55,97 @@ export type Database = {
           },
         ]
       }
+      burn_categories: {
+        Row: {
+          category_name: string
+          created_at: string
+          created_by: string | null
+          id: string
+          monthly_amount: number
+          notes: string | null
+          startup_id: string
+          trend: string
+          updated_at: string
+        }
+        Insert: {
+          category_name: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          monthly_amount?: number
+          notes?: string | null
+          startup_id: string
+          trend?: string
+          updated_at?: string
+        }
+        Update: {
+          category_name?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          monthly_amount?: number
+          notes?: string | null
+          startup_id?: string
+          trend?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "burn_categories_startup_id_fkey"
+            columns: ["startup_id"]
+            isOneToOne: false
+            referencedRelation: "startups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cash_flow_entries: {
+        Row: {
+          amount: number
+          created_at: string
+          created_by: string | null
+          entry_date: string
+          flow_type: string
+          id: string
+          notes: string | null
+          source: string
+          startup_id: string
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          entry_date?: string
+          flow_type?: string
+          id?: string
+          notes?: string | null
+          source?: string
+          startup_id: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          entry_date?: string
+          flow_type?: string
+          id?: string
+          notes?: string | null
+          source?: string
+          startup_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cash_flow_entries_startup_id_fkey"
+            columns: ["startup_id"]
+            isOneToOne: false
+            referencedRelation: "startups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_send_log: {
         Row: {
           created_at: string
@@ -183,6 +274,106 @@ export type Database = {
           },
           {
             foreignKeyName: "equity_documents_startup_id_fkey"
+            columns: ["startup_id"]
+            isOneToOne: false
+            referencedRelation: "startups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      financial_entries: {
+        Row: {
+          amount: number
+          category: string
+          created_at: string
+          created_by: string | null
+          currency: string
+          description: string
+          entry_date: string
+          entry_type: string
+          id: string
+          recurring: boolean
+          startup_id: string
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          description?: string
+          entry_date?: string
+          entry_type?: string
+          id?: string
+          recurring?: boolean
+          startup_id: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          description?: string
+          entry_date?: string
+          entry_type?: string
+          id?: string
+          recurring?: boolean
+          startup_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financial_entries_startup_id_fkey"
+            columns: ["startup_id"]
+            isOneToOne: false
+            referencedRelation: "startups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      financial_forecasts: {
+        Row: {
+          assumptions: string | null
+          created_at: string
+          created_by: string | null
+          forecast_month: string
+          id: string
+          projected_expenses: number
+          projected_revenue: number
+          projected_runway_months: number | null
+          startup_id: string
+          updated_at: string
+        }
+        Insert: {
+          assumptions?: string | null
+          created_at?: string
+          created_by?: string | null
+          forecast_month: string
+          id?: string
+          projected_expenses?: number
+          projected_revenue?: number
+          projected_runway_months?: number | null
+          startup_id: string
+          updated_at?: string
+        }
+        Update: {
+          assumptions?: string | null
+          created_at?: string
+          created_by?: string | null
+          forecast_month?: string
+          id?: string
+          projected_expenses?: number
+          projected_revenue?: number
+          projected_runway_months?: number | null
+          startup_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financial_forecasts_startup_id_fkey"
             columns: ["startup_id"]
             isOneToOne: false
             referencedRelation: "startups"
