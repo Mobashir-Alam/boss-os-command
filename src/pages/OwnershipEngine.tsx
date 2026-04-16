@@ -12,8 +12,9 @@ import OwnershipKaiInsights from "@/components/ownership/OwnershipKaiInsights";
 const OwnershipEngine = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { startups } = useStartups();
+  const { startups, dbStartups } = useStartups();
   const startup = startups.find((s) => s.id === id);
+  const dbStartup = dbStartups.find((s) => s.slug === id);
 
   if (!startup) {
     return (
