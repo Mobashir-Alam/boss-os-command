@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-type Role = "founder" | "mfo" | "functional_head" | "project_manager" | "team_member";
+type Role = "founder" | "mfo" | "functional_head" | "project_manager" | "team_member" | "cfo";
 
 type Step = "role" | "startup" | "walkthrough" | "first-action" | "invite" | "kai-intro";
 
@@ -24,6 +24,7 @@ const roleOptions: { value: Role; label: string; desc: string; icon: React.React
   { value: "project_manager", label: "Project Manager", desc: "Own execution and delivery for assigned startups", icon: <Target className="h-5 w-5" /> },
   { value: "functional_head", label: "Functional Head / C-Suite", desc: "Domain-specific leadership and metrics", icon: <Briefcase className="h-5 w-5" /> },
   { value: "team_member", label: "Team Member", desc: "Focus on assigned tasks and execution", icon: <Users className="h-5 w-5" /> },
+  { value: "cfo", label: "CFO / Finance Manager", desc: "Manage financial data, expenses, and forecasts", icon: <Briefcase className="h-5 w-5" /> },
 ];
 
 const roleRedirects: Record<Role, string> = {
@@ -32,6 +33,7 @@ const roleRedirects: Record<Role, string> = {
   functional_head: "/my-domain",
   project_manager: "/pm",
   team_member: "/my-tasks",
+  cfo: "/cfo",
 };
 
 // Role-specific walkthrough tips
