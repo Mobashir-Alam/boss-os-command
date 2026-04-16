@@ -44,7 +44,7 @@ const OwnershipEngine = () => {
         </div>
 
         {/* KAI Strategic Insights */}
-        <OwnershipKaiInsights startupId={startup.id} />
+        <OwnershipKaiInsights startupId={dbStartup.id} />
 
         <Tabs defaultValue="ownership" className="mt-8">
           <TabsList className="w-full justify-start bg-muted/50 border border-border/40 rounded-xl p-1">
