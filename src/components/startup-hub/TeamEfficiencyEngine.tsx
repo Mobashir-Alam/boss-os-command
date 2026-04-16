@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 
 const ROLE_LABELS: Record<string, string> = {
   founder: "Founder", mfo: "MFO", functional_head: "Func Head",
-  project_manager: "PM", team_member: "Team", cfo: "CFO",
+  project_manager: "PM", team_member: "Team",
 };
 
 interface Props { startupId: string; runway?: string }

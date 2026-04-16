@@ -50,7 +50,7 @@ const App = () => (
               <Route path="/mfo" element={<AuthGuard><MfoPanel /></AuthGuard>} />
               <Route path="/decisions" element={<AuthGuard><DecisionLog /></AuthGuard>} />
               <Route path="/my-work" element={<AuthGuard><MyWorkDashboard /></AuthGuard>} />
-              <Route path="/cfo" element={<AuthGuard><CfoDashboard /></AuthGuard>} />
+              <Route path="/finances" element={<AuthGuard><CfoDashboard /></AuthGuard>} />
               <Route path="/people" element={<AuthGuard><PeopleOS /></AuthGuard>} />
               <Route path="/unsubscribe" element={<Unsubscribe />} />
               <Route path="*" element={<NotFound />} />
