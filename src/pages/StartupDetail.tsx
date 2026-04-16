@@ -83,8 +83,9 @@ const hubTabs = [
 const StartupDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { startups } = useStartups();
+  const { startups, dbStartups } = useStartups();
   const startup = startups.find((s) => s.id === id);
+  const dbStartup = dbStartups.find((s) => s.slug === id);
   const { getTasksByStartup, getTasksByIssue } = useTaskContext();
   const [hubTab, setHubTab] = useState<string | null>(null);
 
