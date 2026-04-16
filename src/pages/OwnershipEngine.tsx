@@ -63,16 +63,16 @@ const OwnershipEngine = () => {
           </TabsList>
 
           <TabsContent value="ownership">
-            <OwnershipTab startupId={startup.id} />
+            <OwnershipTab startupId={dbStartup.id} />
           </TabsContent>
           <TabsContent value="control">
-            <ControlTab startupId={startup.id} />
+            <ControlTab startupId={dbStartup.id} />
           </TabsContent>
           <TabsContent value="simulate">
-            <SimulateTab startupId={startup.id} />
+            <SimulateTab startupId={dbStartup.id} />
           </TabsContent>
           <TabsContent value="documents">
-            <DocumentsTab startupId={startup.id} />
+            <DocumentsTab startupId={dbStartup.id} />
           </TabsContent>
         </Tabs>
       </main>
