@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 
-type AppRole = "founder" | "mfo" | "functional_head" | "project_manager" | "team_member";
+type AppRole = "founder" | "mfo" | "functional_head" | "project_manager" | "team_member" | "cfo";
 
 const roleSuggestedPrompts: Record<AppRole, string[]> = {
   founder: [
@@ -38,6 +38,12 @@ const roleSuggestedPrompts: Record<AppRole, string[]> = {
     "Am I on track this week?",
     "What's blocking my work?",
   ],
+  cfo: [
+    "What's our current burn rate?",
+    "Which startups have cash flow risk?",
+    "Where can we optimize costs?",
+    "What's the runway outlook?",
+  ],
 };
 
 const rolePlaceholders: Record<AppRole, string> = {
@@ -46,6 +52,7 @@ const rolePlaceholders: Record<AppRole, string> = {
   functional_head: "Ask KAI about your domain performance...",
   project_manager: "Ask KAI about task risks or team bottlenecks...",
   team_member: "Ask KAI what to focus on next...",
+  cfo: "Ask KAI about financial data, burn, or forecasts...",
 };
 
 interface AskKaiProps {

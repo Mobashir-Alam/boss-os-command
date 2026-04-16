@@ -23,6 +23,9 @@ const roleNavItems: Record<string, { label: string; path: string }[]> = {
   team_member: [
     { label: "My Work", path: "/my-work" },
   ],
+  cfo: [
+    { label: "Financial Command", path: "/cfo" },
+  ],
 };
 
 const NavTabs = () => {

@@ -8,6 +8,7 @@ const roleDefaultRoutes: Record<string, string> = {
   functional_head: "/my-domain",
   project_manager: "/project-board",
   team_member: "/my-work",
+  cfo: "/cfo",
 };
 
 const roleAllowedRoutes: Record<string, string[]> = {
@@ -16,6 +17,7 @@ const roleAllowedRoutes: Record<string, string[]> = {
   functional_head: ["/my-domain", "/decisions"],
   project_manager: ["/pm", "/project-board"],
   team_member: ["/my-work"],
+  cfo: ["/cfo"],
 };
 
 const AuthGuard = ({ children }: { children: React.ReactNode }) => {
