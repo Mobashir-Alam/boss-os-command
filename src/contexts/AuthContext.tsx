@@ -2,7 +2,9 @@ import { createContext, useContext, useEffect, useState, ReactNode } from "react
 import { supabase } from "@/integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
 
-type AppRole = "founder" | "mfo" | "functional_head" | "project_manager" | "team_member" | "cfo";
+type AppRole = "founder" | "mfo" | "functional_head" | "project_manager" | "team_member";
+
+type Department = "finance" | "hr" | "technology" | "marketing" | "operations" | null;
 
 interface Profile {
   id: string;
@@ -10,6 +12,7 @@ interface Profile {
   email: string | null;
   avatar_url: string | null;
   role: AppRole;
+  department: Department;
 }
 
 interface AuthContextType {
@@ -17,12 +20,13 @@ interface AuthContextType {
   session: Session | null;
   profile: Profile | null;
   role: AppRole | null;
+  department: Department;
   loading: boolean;
   isFounder: boolean;
   isMfo: boolean;
   isPm: boolean;
   isTeamMember: boolean;
-  isCfo: boolean;
+  isFunctionalHead: boolean;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
@@ -82,6 +86,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const role = profile?.role ?? null;
+  const department = profile?.department as Department ?? null;
 
   return (
     <AuthContext.Provider
@@ -90,12 +95,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         session,
         profile,
         role,
+        department,
         loading,
         isFounder: role === "founder",
         isMfo: role === "mfo",
         isPm: role === "project_manager",
         isTeamMember: role === "team_member",
-        isCfo: role === "cfo",
+        isFunctionalHead: role === "functional_head",
         signOut,
         refreshProfile,
       }}

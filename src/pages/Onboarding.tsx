@@ -14,9 +14,11 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-type Role = "founder" | "mfo" | "functional_head" | "project_manager" | "team_member" | "cfo";
+type Role = "founder" | "mfo" | "functional_head" | "project_manager" | "team_member";
 
-type Step = "role" | "startup" | "walkthrough" | "first-action" | "invite" | "kai-intro";
+type Department = "finance" | "hr" | "technology" | "marketing" | "operations" | "";
+
+type Step = "role" | "department" | "startup" | "walkthrough" | "first-action" | "invite" | "kai-intro";
 
 const roleOptions: { value: Role; label: string; desc: string; icon: React.ReactNode }[] = [
   { value: "founder", label: "Founder / CEO", desc: "Full access to all startups and data", icon: <Rocket className="h-5 w-5" /> },
@@ -24,7 +26,14 @@ const roleOptions: { value: Role; label: string; desc: string; icon: React.React
   { value: "project_manager", label: "Project Manager", desc: "Own execution and delivery for assigned startups", icon: <Target className="h-5 w-5" /> },
   { value: "functional_head", label: "Functional Head / C-Suite", desc: "Domain-specific leadership and metrics", icon: <Briefcase className="h-5 w-5" /> },
   { value: "team_member", label: "Team Member", desc: "Focus on assigned tasks and execution", icon: <Users className="h-5 w-5" /> },
-  { value: "cfo", label: "CFO / Finance Manager", desc: "Manage financial data, expenses, and forecasts", icon: <Briefcase className="h-5 w-5" /> },
+];
+
+const departmentOptions: { value: string; label: string; desc: string }[] = [
+  { value: "finance", label: "CFO / Finance", desc: "Financial data, expenses, burn, and forecasts" },
+  { value: "hr", label: "CHRO / People & HR", desc: "Team management, hiring, and efficiency" },
+  { value: "technology", label: "CTO / Technology", desc: "Tech health, product delivery, and engineering" },
+  { value: "marketing", label: "CMO / Marketing", desc: "Growth, campaigns, and channel performance" },
+  { value: "operations", label: "COO / Operations", desc: "Execution, priorities, and process optimization" },
 ];
 
 const roleRedirects: Record<Role, string> = {
@@ -33,10 +42,8 @@ const roleRedirects: Record<Role, string> = {
   functional_head: "/my-domain",
   project_manager: "/pm",
   team_member: "/my-tasks",
-  cfo: "/cfo",
 };
 
-// Role-specific walkthrough tips
 const walkthroughByRole: Record<Role, { icon: React.ReactNode; title: string; desc: string }[]> = {
   founder: [
     { icon: <LayoutDashboard className="h-5 w-5" />, title: "Dashboard", desc: "See what needs attention across your startups" },
@@ -63,21 +70,14 @@ const walkthroughByRole: Record<Role, { icon: React.ReactNode; title: string; de
     { icon: <CheckCircle2 className="h-5 w-5" />, title: "Actions", desc: "Start tasks, mark done, report blockers" },
     { icon: <Brain className="h-5 w-5" />, title: "KAI Tips", desc: "Simple execution guidance — what to do next" },
   ],
-  cfo: [
-    { icon: <LayoutDashboard className="h-5 w-5" />, title: "Financial Command", desc: "Manage expenses, cash flow, and burn across startups" },
-    { icon: <Target className="h-5 w-5" />, title: "Forecasts", desc: "Build and update financial projections" },
-    { icon: <Brain className="h-5 w-5" />, title: "KAI Finance Intel", desc: "Cost optimization and cash flow risk insights" },
-  ],
 };
 
-// KAI intro messages by role
 const kaiIntroByRole: Record<Role, string> = {
   founder: "Your AI co-founder. KAI will surface insights, predict risks, and recommend actions — automatically.",
   mfo: "Your execution intelligence. KAI helps you spot bottlenecks, track SLAs, and escalate issues before they become problems.",
   functional_head: "Your domain advisor. KAI surfaces cross-startup patterns in your function and recommends where to focus.",
   project_manager: "Your delivery partner. KAI highlights blockers, dependencies, and priorities so nothing slips.",
   team_member: "Your task assistant. KAI tells you what to do next and flags if your work is blocking others.",
-  cfo: "Your financial intelligence. KAI helps you track burn, optimize costs, and forecast cash flow risks.",
 };
 
 const Onboarding = () => {
@@ -85,13 +85,13 @@ const Onboarding = () => {
   const { user, refreshProfile } = useAuth();
   const [step, setStep] = useState<Step>("role");
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
+  const [selectedDepartment, setSelectedDepartment] = useState<Department>("");
   const [startupName, setStartupName] = useState("");
   const [startupStage, setStartupStage] = useState("");
   const [runway, setRunway] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
   const [saving, setSaving] = useState(false);
 
-  // Determine which steps to show based on role
   const steps = useMemo<Step[]>(() => {
     if (!selectedRole) return ["role"];
     switch (selectedRole) {
@@ -100,7 +100,7 @@ const Onboarding = () => {
       case "mfo":
         return ["role", "walkthrough", "invite", "kai-intro"];
       case "functional_head":
-        return ["role", "walkthrough", "kai-intro"];
+        return ["role", "department", "walkthrough", "kai-intro"];
       case "project_manager":
         return ["role", "walkthrough", "kai-intro"];
       case "team_member":
@@ -124,12 +124,32 @@ const Onboarding = () => {
     if (!selectedRole || !user) return;
     setSaving(true);
     try {
-      await supabase.from("profiles").update({ role: selectedRole }).eq("id", user.id);
-      await supabase.from("user_roles").upsert({ user_id: user.id, role: selectedRole }, { onConflict: "user_id,role" });
+      await supabase.from("profiles").update({
+        role: selectedRole,
+        department: selectedRole !== "functional_head" ? null : undefined,
+      }).eq("id", user.id);
+      await supabase.from("user_roles").upsert(
+        [{ user_id: user.id, role: selectedRole }],
+        { onConflict: "user_id,role" }
+      );
       await refreshProfile();
       nextStep();
     } catch {
       toast.error("Failed to save role");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDepartmentSelect = async () => {
+    if (!selectedDepartment || !user) return;
+    setSaving(true);
+    try {
+      await supabase.from("profiles").update({ department: selectedDepartment }).eq("id", user.id);
+      await refreshProfile();
+      nextStep();
+    } catch {
+      toast.error("Failed to save department");
     } finally {
       setSaving(false);
     }
@@ -143,10 +163,10 @@ const Onboarding = () => {
     const onboardingStartup = {
       name: startupName,
       stage: startupStage || "Seed",
-      runway: runway || "Unknown",
+      runway: runway || "",
     };
     localStorage.setItem("onboarding_startup", JSON.stringify(onboardingStartup));
-    toast.success(`${startupName} added!`);
+    toast.success("Startup saved — you'll set it up after onboarding");
     nextStep();
   };
 
@@ -179,7 +199,6 @@ const Onboarding = () => {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      {/* Progress bar */}
       <div className="h-1 bg-muted">
         <div
           className="h-full bg-foreground transition-all duration-500 ease-out"
@@ -229,6 +248,48 @@ const Onboarding = () => {
                 className="w-full h-11"
                 disabled={!selectedRole || saving}
                 onClick={handleRoleSelect}
+              >
+                Continue <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </div>
+          )}
+
+          {/* STEP: Department Selection (Functional Head only) */}
+          {step === "department" && (
+            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-400">
+              <div className="text-center space-y-2">
+                <div className="mx-auto w-10 h-10 rounded-lg bg-foreground flex items-center justify-center">
+                  <Briefcase className="h-5 w-5 text-background" />
+                </div>
+                <h1 className="text-2xl font-bold tracking-tight">What's your department?</h1>
+                <p className="text-sm text-muted-foreground">We'll customize your dashboard and KAI insights</p>
+              </div>
+              <div className="space-y-3">
+                {departmentOptions.map((opt) => (
+                  <button
+                    key={opt.value}
+                    onClick={() => setSelectedDepartment(opt.value as Department)}
+                    className={cn(
+                      "w-full flex items-center gap-4 rounded-xl border p-4 text-left transition-all",
+                      selectedDepartment === opt.value
+                        ? "border-foreground bg-accent shadow-sm"
+                        : "border-border hover:border-foreground/30 hover:bg-accent/50"
+                    )}
+                  >
+                    <div>
+                      <p className="font-medium text-sm">{opt.label}</p>
+                      <p className="text-xs text-muted-foreground">{opt.desc}</p>
+                    </div>
+                    {selectedDepartment === opt.value && (
+                      <CheckCircle2 className="ml-auto h-5 w-5 text-foreground" />
+                    )}
+                  </button>
+                ))}
+              </div>
+              <Button
+                className="w-full h-11"
+                disabled={!selectedDepartment || saving}
+                onClick={handleDepartmentSelect}
               >
                 Continue <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
@@ -323,13 +384,13 @@ const Onboarding = () => {
               <div className="rounded-xl border border-border p-5 space-y-3 bg-card">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium">⚠️ Retention ↓12% this week</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">Nasheedio • Detected 3 hours ago</p>
+                    <p className="text-sm font-medium">Warning: Retention down 12% this week</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">Nasheedio - Detected 3 hours ago</p>
                   </div>
                   <Button size="sm" variant="outline" className="text-xs" disabled>Fix</Button>
                 </div>
                 <p className="text-xs text-muted-foreground italic">
-                  → You'll assign an owner, add instructions, and set a deadline
+                  You will assign an owner, add instructions, and set a deadline
                 </p>
               </div>
               <Button className="w-full h-11" onClick={nextStep}>

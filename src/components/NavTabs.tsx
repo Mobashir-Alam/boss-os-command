@@ -7,7 +7,7 @@ const roleNavItems: Record<string, { label: string; path: string }[]> = {
     { label: "Dashboard", path: "/" },
     { label: "Focus", path: "/focus" },
     { label: "Decisions", path: "/decisions" },
-    { label: "Finances", path: "/cfo" },
+    { label: "Finances", path: "/finances" },
     { label: "People", path: "/people" },
   ],
   mfo: [
@@ -26,9 +26,6 @@ const roleNavItems: Record<string, { label: string; path: string }[]> = {
   team_member: [
     { label: "My Work", path: "/my-work" },
   ],
-  cfo: [
-    { label: "Financial Command", path: "/cfo" },
-  ],
 };
 
 const NavTabs = () => {
@@ -37,7 +34,6 @@ const NavTabs = () => {
 
   const navItems = roleNavItems[role || "founder"] || roleNavItems.founder;
 
-  // Don't render pill container for single-tab roles
   if (navItems.length <= 1) return null;
 
   return (
