@@ -172,6 +172,7 @@ const StartupDetail = () => {
         {/* Hub Tab Content */}
         {hubTab && dbStartup && (
           <section className="mb-10">
+            {hubTab === "finances" && <FinancesTab startupId={dbStartup.id} />}
             {hubTab === "priorities" && <PrioritiesTab startupId={dbStartup.slug} startupName={startup.name} />}
             {hubTab === "people" && <PeopleTab startupId={dbStartup.id} />}
             {hubTab === "memories" && <KaiMemoriesTab startupId={dbStartup.id} />}
