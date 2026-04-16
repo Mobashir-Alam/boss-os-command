@@ -279,16 +279,6 @@ const StartupDetail = () => {
           <AskKai startupContext={startupContext} />
         </section>
 
-        {/* Plan placeholder */}
-        <section className="mb-10">
-          <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-4">Plan</h2>
-          <div className="rounded-xl border border-border/60 bg-card p-6">
-            <div className="flex items-center gap-3 text-sm text-muted-foreground">
-              <FileText className="h-4 w-4" />
-              <span>Strategic plan and OKRs will appear here</span>
-            </div>
-          </div>
-        </section>
       </main>
     </div>
   );
