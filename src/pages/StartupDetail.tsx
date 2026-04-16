@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Clock, CheckCircle2, CalendarClock, BarChart3, FileText, MessageSquare, Activity, PieChart } from "lucide-react";
+import { ArrowLeft, Clock, CheckCircle2, CalendarClock, BarChart3, FileText, MessageSquare, Activity } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
@@ -115,14 +115,9 @@ const StartupDetail = () => {
             </div>
             <p className="text-muted-foreground mt-1">{startup.insight}</p>
           </div>
-          <div className="flex items-center gap-3 text-xs text-muted-foreground">
-            <Button size="sm" variant="outline" className="gap-1.5 text-xs" onClick={() => navigate(`/startup/${id}/ownership`)}>
-              <PieChart className="h-3.5 w-3.5" /> Equity & Control
-            </Button>
-            <div className="flex items-center gap-2">
-              <Clock className="h-3.5 w-3.5" />
-              Last updated {startup.lastUpdated}
-            </div>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Clock className="h-3.5 w-3.5" />
+            Last updated {startup.lastUpdated}
           </div>
         </div>
 
