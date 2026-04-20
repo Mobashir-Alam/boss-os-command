@@ -331,3 +331,36 @@ The branch is now the active integration branch for:
 - reviewing the Lovable UI quality
 - checking schema overlap between the existing founder migration and the new Lovable migration
 - refining any UX or data wiring gaps before merging back to `main`
+
+---
+
+## Snapshot: 2026-04-20 - Founder Workflow Progress Check
+
+### Current Position
+
+The project is now between Phase 2 and Phase 3 of the founder roadmap.
+
+What is already in place:
+
+- founder product definition and scope docs
+- founder schema and migration planning
+- founder UI redesign pass from Lovable merged into the integration branch
+- startup detail document and department surfaces present in the app
+- build verification passing on the integration branch
+
+### What Is Still Partial
+
+Several founder-facing surfaces still rely partly on static or heuristic data rather than a fully real founder data layer.
+
+Current gaps still include:
+
+- founder command center still mixes real startup and people data with static KAI/demo data
+- company intelligence is not yet backed by production KAI flows
+- schema overlap between the local founder migration and Lovable migration still needs consolidation
+- end-to-end CRUD and seeded usage for department updates and document workflows still need hardening
+
+### Immediate Next Work
+
+The highest-leverage next step is:
+
+- stabilize the merged branch by reconciling migrations and wiring founder UI sections to real data as much as possible before moving into KAI integration
