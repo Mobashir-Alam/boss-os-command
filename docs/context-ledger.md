@@ -364,3 +364,31 @@ Current gaps still include:
 The highest-leverage next step is:
 
 - stabilize the merged branch by reconciling migrations and wiring founder UI sections to real data as much as possible before moving into KAI integration
+
+---
+
+## Snapshot: 2026-04-20 - Founder Schema Reconciliation Started
+
+### What Was Decided
+
+For the founder integration branch, the app-facing schema shape from the current UI and generated Supabase types is now treated as the final target.
+
+That means the final founder schema expects:
+
+- `startup_departments.name`
+- `startup_departments.lead_person_id`
+- `department_updates` without a required `startup_department_id`
+- `department_updates` list fields as `text[]`
+- `startup_documents` to keep the richer founder metadata plus upload-related fields
+
+### What Was Changed
+
+The later Lovable migration was converted into a defensive reconciliation migration so it can:
+
+- work after the earlier founder foundation migration
+- provision the final app-compatible schema on fresh environments
+- create or enforce the private `startup-documents` storage bucket and policies
+
+### Why This Matters
+
+Without this reconciliation, a fresh database setup could fail because the two founder-related migrations define overlapping tables with incompatible column names and shapes.
