@@ -16,7 +16,17 @@ import { cn } from "@/lib/utils";
 
 type Role = "founder" | "mfo" | "functional_head" | "project_manager" | "team_member";
 
-type Department = "finance" | "hr" | "technology" | "marketing" | "operations" | "";
+type Department =
+  | "social_media"
+  | "video_production_editing"
+  | "content_management"
+  | "studio"
+  | "tech"
+  | "creators_brands_outreach"
+  | "hr"
+  | "graphic_designing"
+  | "office_management"
+  | "";
 
 type Step = "role" | "department" | "startup" | "walkthrough" | "first-action" | "invite" | "kai-intro";
 
@@ -29,11 +39,15 @@ const roleOptions: { value: Role; label: string; desc: string; icon: React.React
 ];
 
 const departmentOptions: { value: string; label: string; desc: string }[] = [
-  { value: "finance", label: "CFO / Finance", desc: "Financial data, expenses, burn, and forecasts" },
-  { value: "hr", label: "CHRO / People & HR", desc: "Team management, hiring, and efficiency" },
-  { value: "technology", label: "CTO / Technology", desc: "Tech health, product delivery, and engineering" },
-  { value: "marketing", label: "CMO / Marketing", desc: "Growth, campaigns, and channel performance" },
-  { value: "operations", label: "COO / Operations", desc: "Execution, priorities, and process optimization" },
+  { value: "social_media", label: "Social Media", desc: "Social presence, channel updates, and campaign execution" },
+  { value: "video_production_editing", label: "Video Production / Editing", desc: "Video pipeline, edits, and production delivery" },
+  { value: "content_management", label: "Content Management", desc: "Content calendar, publishing flow, and content operations" },
+  { value: "studio", label: "Studio Dept.", desc: "Studio operations, recording flow, and production coordination" },
+  { value: "tech", label: "Tech Dept.", desc: "Technology, product delivery, and technical health" },
+  { value: "creators_brands_outreach", label: "Creators / Brands Outreach", desc: "Creator relations, brand outreach, and partnerships" },
+  { value: "hr", label: "HR Dept.", desc: "Hiring, team management, and people operations" },
+  { value: "graphic_designing", label: "Graphic Designing Dept.", desc: "Visual design, asset delivery, and creative support" },
+  { value: "office_management", label: "Office Management", desc: "Office operations, administration, and internal coordination" },
 ];
 
 const roleRedirects: Record<Role, string> = {

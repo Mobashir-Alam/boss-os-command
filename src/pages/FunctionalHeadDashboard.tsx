@@ -40,9 +40,17 @@ function detectDomain(profile: { full_name?: string | null; email?: string | nul
     const deptMap: Record<string, Domain> = {
       finance: "finance",
       hr: "hr",
+      social_media: "marketing",
+      video_production_editing: "marketing",
+      content_management: "marketing",
+      studio: "marketing",
+      tech: "product",
+      creators_brands_outreach: "marketing",
+      graphic_designing: "marketing",
+      office_management: "hr",
       technology: "product",
       marketing: "marketing",
-      operations: "hr", // fallback to hr for ops
+      operations: "hr",
     };
     return deptMap[profile.department] || "hr";
   }
