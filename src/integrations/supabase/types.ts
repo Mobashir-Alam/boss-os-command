@@ -146,6 +146,69 @@ export type Database = {
           },
         ]
       }
+      department_updates: {
+        Row: {
+          asks: string[]
+          blockers: string[]
+          created_at: string
+          created_by: string | null
+          department_key: string
+          id: string
+          owner_person_id: string | null
+          risks: string[]
+          startup_id: string
+          summary: string
+          update_date: string
+          updated_at: string
+          wins: string[]
+        }
+        Insert: {
+          asks?: string[]
+          blockers?: string[]
+          created_at?: string
+          created_by?: string | null
+          department_key: string
+          id?: string
+          owner_person_id?: string | null
+          risks?: string[]
+          startup_id: string
+          summary?: string
+          update_date?: string
+          updated_at?: string
+          wins?: string[]
+        }
+        Update: {
+          asks?: string[]
+          blockers?: string[]
+          created_at?: string
+          created_by?: string | null
+          department_key?: string
+          id?: string
+          owner_person_id?: string | null
+          risks?: string[]
+          startup_id?: string
+          summary?: string
+          update_date?: string
+          updated_at?: string
+          wins?: string[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "department_updates_owner_person_id_fkey"
+            columns: ["owner_person_id"]
+            isOneToOne: false
+            referencedRelation: "people"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "department_updates_startup_id_fkey"
+            columns: ["startup_id"]
+            isOneToOne: false
+            referencedRelation: "startups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_send_log: {
         Row: {
           created_at: string
@@ -1145,32 +1208,110 @@ export type Database = {
         }
         Relationships: []
       }
-      startup_documents: {
+      startup_departments: {
         Row: {
           created_at: string
-          doc_type: string
-          file_name: string
-          file_url: string
+          created_by: string | null
+          department_key: string
+          headcount: number
           id: string
+          lead_person_id: string | null
+          name: string
           startup_id: string
-          uploaded_by: string | null
+          status: string
+          summary: string
+          updated_at: string
         }
         Insert: {
           created_at?: string
-          doc_type?: string
-          file_name: string
-          file_url: string
+          created_by?: string | null
+          department_key: string
+          headcount?: number
           id?: string
+          lead_person_id?: string | null
+          name: string
           startup_id: string
-          uploaded_by?: string | null
+          status?: string
+          summary?: string
+          updated_at?: string
         }
         Update: {
           created_at?: string
+          created_by?: string | null
+          department_key?: string
+          headcount?: number
+          id?: string
+          lead_person_id?: string | null
+          name?: string
+          startup_id?: string
+          status?: string
+          summary?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "startup_departments_lead_person_id_fkey"
+            columns: ["lead_person_id"]
+            isOneToOne: false
+            referencedRelation: "people"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "startup_departments_startup_id_fkey"
+            columns: ["startup_id"]
+            isOneToOne: false
+            referencedRelation: "startups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      startup_documents: {
+        Row: {
+          category: string
+          created_at: string
+          department: string | null
+          doc_type: string
+          document_date: string | null
+          file_name: string
+          file_url: string
+          id: string
+          mime_type: string | null
+          size_bytes: number | null
+          startup_id: string
+          storage_path: string | null
+          title: string | null
+          uploaded_by: string | null
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          department?: string | null
           doc_type?: string
+          document_date?: string | null
+          file_name: string
+          file_url: string
+          id?: string
+          mime_type?: string | null
+          size_bytes?: number | null
+          startup_id: string
+          storage_path?: string | null
+          title?: string | null
+          uploaded_by?: string | null
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          department?: string | null
+          doc_type?: string
+          document_date?: string | null
           file_name?: string
           file_url?: string
           id?: string
+          mime_type?: string | null
+          size_bytes?: number | null
           startup_id?: string
+          storage_path?: string | null
+          title?: string | null
           uploaded_by?: string | null
         }
         Relationships: []
