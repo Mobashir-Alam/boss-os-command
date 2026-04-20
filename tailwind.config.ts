@@ -13,11 +13,18 @@ export default {
       },
     },
     extend: {
+      fontFamily: {
+        display: ['Fraunces', 'Iowan Old Style', 'Georgia', 'serif'],
+        sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        mono: ['JetBrains Mono', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
+      },
       colors: {
         border: "hsl(var(--border))",
+        "border-strong": "hsl(var(--border-strong))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
         background: "hsl(var(--background))",
+        paper: "hsl(var(--paper))",
         foreground: "hsl(var(--foreground))",
         primary: {
           DEFAULT: "hsl(var(--primary))",
@@ -38,6 +45,15 @@ export default {
         accent: {
           DEFAULT: "hsl(var(--accent))",
           foreground: "hsl(var(--accent-foreground))",
+          soft: "hsl(var(--accent-soft))",
+        },
+        signal: {
+          positive: "hsl(var(--signal-positive))",
+          "positive-soft": "hsl(var(--signal-positive-soft))",
+          warning: "hsl(var(--signal-warning))",
+          "warning-soft": "hsl(var(--signal-warning-soft))",
+          critical: "hsl(var(--signal-critical))",
+          "critical-soft": "hsl(var(--signal-critical-soft))",
         },
         popover: {
           DEFAULT: "hsl(var(--popover))",
