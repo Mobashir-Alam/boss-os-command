@@ -25,7 +25,7 @@ The founder needs to:
 
 - see all companies in one place
 - understand company health quickly
-- inspect five key departments inside each company
+- inspect the core operating departments inside each company
 - review finance and runway
 - inspect ownership and funding context
 - review company documents like rental bills, purchase bills, invoices, legal files, and company records
@@ -167,7 +167,7 @@ Include:
 
 This is one of the most important new sections.
 
-Design a strong department panel that shows the five company departments:
+Design a strong department panel that shows the company departments:
 
 - social media
 - video production/editing
@@ -255,6 +255,20 @@ Use:
 - expressive but professional typography
 - muted neutrals with carefully chosen accent colors
 
+### Aesthetic To Commit To
+
+Commit to:
+
+- Editorial / FT-inspired
+
+Implementation notes:
+
+- prefer warm off-white, parchment, stone, ink, charcoal, and restrained ochre/amber accents
+- use serif display typography selectively for key executive headings only
+- keep body and operational UI copy in a clean modern sans serif
+- preserve strong readability and avoid making the product feel like a newspaper novelty
+- keep data surfaces crisp, minimal, and business-grade
+
 ## UX Constraints
 
 - desktop-first but responsive
@@ -271,6 +285,12 @@ Generate a UI redesign for:
 - startup detail page
 - department updates section
 - document repository section
+
+Scope decision:
+
+- redesign all four surfaces in one Phase 2 pass
+- keep them visually cohesive as one connected founder workflow
+- do not defer the department layer or document repository to a later aesthetic pass
 
 The result should feel like a cohesive CEO operating system, not a collection of unrelated widgets.
 

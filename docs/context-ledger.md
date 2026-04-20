@@ -189,3 +189,145 @@ Before pulling or applying Lovable UI changes:
 ### Why This Matters
 
 This keeps generated UI work away from `main`, makes the diff easier to review, and avoids mixing future Lovable imports with an already dirty default branch.
+
+---
+
+## Snapshot: 2026-04-20 - Lovable Uses Main Branch
+
+### New Workflow Constraint
+
+Lovable will apply UI changes against `main`.
+
+That means `main` must be treated as the handoff branch for generated UI work rather than the place for ongoing manual backend implementation.
+
+### Recommended Branch Roles
+
+- `main` = latest Lovable output and approved shared baseline
+- `feature/founder-phase1-foundation` = backend, schema, docs, and product foundation checkpoint
+- integration branch from latest `main` = place to merge backend foundation with Lovable UI output
+
+### Safe Operating Model
+
+When a new Lovable UI pass is ready:
+
+- pull the latest `main`
+- create or refresh an integration branch from that updated `main`
+- merge the founder foundation branch into the integration branch
+- resolve conflicts and test there
+- merge back into `main` only after validation
+
+### Why This Model Fits
+
+This keeps `main` compatible with Lovable, prevents backend work from blocking UI generation, and gives us a safe branch for conflict resolution and final integration.
+
+---
+
+## Snapshot: 2026-04-20 - Lovable Schema Decision For Founder UI
+
+### Recommended Answer
+
+For the founder/CEO phase, Lovable should use:
+
+- `Add the missing tables (full fidelity)`
+
+### Why
+
+The current product direction and local implementation already assume:
+
+- `startup_departments`
+- `department_updates`
+- richer `startup_documents` metadata
+
+Choosing a reduced-schema path would weaken the department command layer and document repository, and would create unnecessary rework during integration.
+
+### Prompt Correction
+
+The Lovable founder UI prompt was also corrected to remove outdated references to "five departments" so it now aligns with the canonical 9-department taxonomy.
+
+---
+
+## Snapshot: 2026-04-20 - Founder UI Aesthetic Direction
+
+### Chosen Direction
+
+For the founder/CEO UI, the chosen visual direction is:
+
+- `Editorial / FT-inspired`
+
+### Why This Was Chosen
+
+This best matches the desired product tone:
+
+- premium
+- executive
+- strategic
+- restrained
+- distinct from generic SaaS dashboards
+
+### Implementation Guidance
+
+- use serif display typography only for major executive headings
+- keep operational UI copy in a clean sans serif
+- favor warm off-white, ink, charcoal, and restrained ochre accents
+- keep data modules crisp and implementation-friendly
+- avoid turning the interface into a novelty newspaper aesthetic
+
+---
+
+## Snapshot: 2026-04-20 - Founder UI Scope For Lovable Phase 2
+
+### Chosen Scope
+
+For the next Lovable pass, the selected scope is:
+
+- `All four surfaces`
+
+### Included Surfaces
+
+- founder command center
+- startup detail
+- department command layer
+- document repository
+
+### Why This Was Chosen
+
+The startup detail experience depends on the department layer and document repository to feel complete.
+
+If those are deferred, the result will likely feel visually fragmented and will create a second round of UI rework for one of the most important founder workflows.
+
+---
+
+## Snapshot: 2026-04-20 - Lovable Phase 2 UI Merged Into Integration Branch
+
+### Branch State
+
+Latest Lovable UI changes were fetched from remote `main` and merged into:
+
+- `feature/founder-ui-phase2`
+
+The merge completed cleanly without conflicts.
+
+### What Arrived From Lovable
+
+The incoming UI pass touched founder-facing surfaces including:
+
+- founder command center
+- startup detail
+- department layer related components
+- document repository related components
+- styling and theme files
+- an additional Supabase migration from Lovable
+
+### Verification
+
+Production build verification completed successfully after the merge with:
+
+- `npm.cmd run build`
+
+### Known Follow-Up
+
+The branch is now the active integration branch for:
+
+- reviewing the Lovable UI quality
+- checking schema overlap between the existing founder migration and the new Lovable migration
+- refining any UX or data wiring gaps before merging back to `main`
