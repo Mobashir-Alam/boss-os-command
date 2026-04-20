@@ -4,7 +4,18 @@ import type { User, Session } from "@supabase/supabase-js";
 
 type AppRole = "founder" | "mfo" | "functional_head" | "project_manager" | "team_member";
 
-type Department = "finance" | "hr" | "technology" | "marketing" | "operations" | null;
+type Department =
+  | "social_media"
+  | "video_production_editing"
+  | "content_management"
+  | "studio"
+  | "tech"
+  | "creators_brands_outreach"
+  | "hr"
+  | "graphic_designing"
+  | "office_management"
+  | "finance"
+  | null;
 
 interface Profile {
   id: string;

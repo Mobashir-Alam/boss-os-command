@@ -1,8 +1,66 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import type { Tables } from "@/integrations/supabase/types";
 import { toast } from "sonner";
 
-// ─── KAI Memories ───
+type StartupDocumentRow = Tables<"startup_documents">;
+type StartupDepartmentRow = Tables<"startup_departments">;
+type DepartmentUpdateRow = Tables<"department_updates">;
+type PersonSummary = Pick<Tables<"people">, "id" | "full_name" | "department" | "role">;
+
+export type DocumentCategory =
+  | "finance"
+  | "legal"
+  | "company_record"
+  | "operations"
+  | "hr"
+  | "compliance";
+
+export const startupDepartmentCatalog = [
+  { key: "social_media", name: "Social Media" },
+  { key: "video_production_editing", name: "Video Production / Editing" },
+  { key: "content_management", name: "Content Management" },
+  { key: "studio", name: "Studio Dept." },
+  { key: "tech", name: "Tech" },
+  { key: "creators_brands_outreach", name: "Creators / Brands Outreach" },
+  { key: "hr", name: "HR" },
+  { key: "graphic_designing", name: "Graphic Designing" },
+  { key: "office_management", name: "Office Management" },
+] as const;
+
+export type StartupDepartmentKey = (typeof startupDepartmentCatalog)[number]["key"];
+
+const legacyDocTypeToCategory = (docType?: string | null): DocumentCategory => {
+  switch (docType) {
+    case "financials":
+      return "finance";
+    case "legal":
+      return "legal";
+    case "pitch-deck":
+      return "company_record";
+    default:
+      return "operations";
+  }
+};
+
+const categoryToLegacyDocType = (category: DocumentCategory): string => {
+  switch (category) {
+    case "finance":
+      return "financials";
+    case "legal":
+      return "legal";
+    case "company_record":
+      return "pitch-deck";
+    default:
+      return "other";
+  }
+};
+
+const asStringArray = (value: unknown): string[] => {
+  if (!Array.isArray(value)) return [];
+  return value.filter((item): item is string => typeof item === "string");
+};
+
 export function useKaiMemories(startupId: string) {
   const qc = useQueryClient();
   const key = ["kai_memories", startupId];
@@ -23,7 +81,9 @@ export function useKaiMemories(startupId: string) {
 
   const add = useMutation({
     mutationFn: async (input: { memory: string; category: string }) => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       const { error } = await supabase.from("kai_memories").insert({
         startup_id: startupId,
         memory: input.memory,
@@ -32,7 +92,10 @@ export function useKaiMemories(startupId: string) {
       });
       if (error) throw error;
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: key }); toast.success("Memory saved"); },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: key });
+      toast.success("Memory saved");
+    },
     onError: () => toast.error("Failed to save memory"),
   });
 
@@ -41,14 +104,16 @@ export function useKaiMemories(startupId: string) {
       const { error } = await supabase.from("kai_memories").delete().eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: key }); toast.success("Memory removed"); },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: key });
+      toast.success("Memory removed");
+    },
     onError: () => toast.error("Failed to remove memory"),
   });
 
   return { memories: query.data ?? [], loading: query.isLoading, add, remove };
 }
 
-// ─── Startup Notes ───
 export function useStartupNotes(startupId: string) {
   const qc = useQueryClient();
   const key = ["startup_notes", startupId];
@@ -69,7 +134,9 @@ export function useStartupNotes(startupId: string) {
 
   const add = useMutation({
     mutationFn: async (content: string) => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       const { error } = await supabase.from("startup_notes").insert({
         startup_id: startupId,
         content,
@@ -77,7 +144,10 @@ export function useStartupNotes(startupId: string) {
       });
       if (error) throw error;
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: key }); toast.success("Note added"); },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: key });
+      toast.success("Note added");
+    },
     onError: () => toast.error("Failed to add note"),
   });
 
@@ -86,14 +156,16 @@ export function useStartupNotes(startupId: string) {
       const { error } = await supabase.from("startup_notes").delete().eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: key }); toast.success("Note removed"); },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: key });
+      toast.success("Note removed");
+    },
     onError: () => toast.error("Failed to remove note"),
   });
 
   return { notes: query.data ?? [], loading: query.isLoading, add, remove };
 }
 
-// ─── Milestones ───
 export function useStartupMilestones(startupId: string) {
   const qc = useQueryClient();
   const key = ["startup_milestones", startupId];
@@ -114,7 +186,9 @@ export function useStartupMilestones(startupId: string) {
 
   const add = useMutation({
     mutationFn: async (input: { title: string; description?: string; deadline?: string }) => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       const { error } = await supabase.from("startup_milestones").insert({
         startup_id: startupId,
         title: input.title,
@@ -124,15 +198,25 @@ export function useStartupMilestones(startupId: string) {
       });
       if (error) throw error;
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: key }); toast.success("Milestone added"); },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: key });
+      toast.success("Milestone added");
+    },
     onError: () => toast.error("Failed to add milestone"),
   });
 
   const toggleStatus = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      const next: Record<string, string> = { pending: "in-progress", "in-progress": "done", done: "pending" };
+      const next: Record<string, string> = {
+        pending: "in-progress",
+        "in-progress": "done",
+        done: "pending",
+      };
       const newStatus = next[status] || "pending";
-      const { error } = await supabase.from("startup_milestones").update({ status: newStatus }).eq("id", id);
+      const { error } = await supabase
+        .from("startup_milestones")
+        .update({ status: newStatus })
+        .eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: key }),
@@ -144,14 +228,16 @@ export function useStartupMilestones(startupId: string) {
       const { error } = await supabase.from("startup_milestones").delete().eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: key }); toast.success("Milestone removed"); },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: key });
+      toast.success("Milestone removed");
+    },
     onError: () => toast.error("Failed to remove milestone"),
   });
 
   return { milestones: query.data ?? [], loading: query.isLoading, add, toggleStatus, remove };
 }
 
-// ─── Contacts ───
 export function useStartupContacts(startupId: string) {
   const qc = useQueryClient();
   const key = ["startup_contacts", startupId];
@@ -172,7 +258,9 @@ export function useStartupContacts(startupId: string) {
 
   const add = useMutation({
     mutationFn: async (input: { name: string; role: string; email?: string; phone?: string; notes?: string }) => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       const { error } = await supabase.from("startup_contacts").insert({
         startup_id: startupId,
         name: input.name,
@@ -184,7 +272,10 @@ export function useStartupContacts(startupId: string) {
       });
       if (error) throw error;
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: key }); toast.success("Contact added"); },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: key });
+      toast.success("Contact added");
+    },
     onError: () => toast.error("Failed to add contact"),
   });
 
@@ -193,14 +284,21 @@ export function useStartupContacts(startupId: string) {
       const { error } = await supabase.from("startup_contacts").delete().eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: key }); toast.success("Contact removed"); },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: key });
+      toast.success("Contact removed");
+    },
     onError: () => toast.error("Failed to remove contact"),
   });
 
   return { contacts: query.data ?? [], loading: query.isLoading, add, remove };
 }
 
-// ─── Startup Documents ───
+export type StartupDocument = StartupDocumentRow & {
+  access_url: string;
+  resolved_category: DocumentCategory;
+};
+
 export function useStartupDocuments(startupId: string) {
   const qc = useQueryClient();
   const key = ["startup_documents", startupId];
@@ -212,18 +310,59 @@ export function useStartupDocuments(startupId: string) {
         .from("startup_documents")
         .select("*")
         .eq("startup_id", startupId)
+        .order("document_date", { ascending: false, nullsFirst: false })
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data;
+
+      const documents = (data ?? []) as StartupDocumentRow[];
+
+      return Promise.all(
+        documents.map(async (document) => {
+          let accessUrl = document.file_url;
+
+          if (document.storage_path) {
+            const { data: signedData, error: signedError } = await supabase.storage
+              .from("startup-documents")
+              .createSignedUrl(document.storage_path, 60 * 60);
+
+            if (!signedError && signedData?.signedUrl) {
+              accessUrl = signedData.signedUrl;
+            }
+          }
+
+          return {
+            ...document,
+            access_url: accessUrl,
+            resolved_category:
+              (document.category as DocumentCategory | null) ?? legacyDocTypeToCategory(document.doc_type),
+          } satisfies StartupDocument;
+        })
+      );
     },
     enabled: !!startupId,
   });
 
   const upload = useMutation({
-    mutationFn: async (input: { file: File; docType: string }) => {
-      const { data: { user } } = await supabase.auth.getUser();
-      const path = `${startupId}/${Date.now()}-${input.file.name}`;
-      const { error: uploadError } = await supabase.storage.from("startup-documents").upload(path, input.file);
+    mutationFn: async (input: {
+      file: File;
+      category?: DocumentCategory;
+      docType?: string;
+      title?: string;
+      subcategory?: string | null;
+      department?: string | null;
+      notes?: string | null;
+    }) => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      const category = input.category ?? legacyDocTypeToCategory(input.docType);
+      const legacyDocType = input.docType ?? categoryToLegacyDocType(category);
+      const sanitizedFileName = input.file.name.replace(/\s+/g, "-");
+      const path = `${startupId}/${category}/${Date.now()}-${sanitizedFileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("startup-documents")
+        .upload(path, input.file);
       if (uploadError) throw uploadError;
 
       const { data: urlData } = supabase.storage.from("startup-documents").getPublicUrl(path);
@@ -232,28 +371,221 @@ export function useStartupDocuments(startupId: string) {
         startup_id: startupId,
         file_name: input.file.name,
         file_url: urlData.publicUrl,
-        doc_type: input.docType,
+        storage_path: path,
+        title: input.title ?? input.file.name,
+        doc_type: legacyDocType,
+        category,
+        subcategory: input.subcategory ?? null,
+        department: input.department ?? null,
+        notes: input.notes ?? null,
         uploaded_by: user?.id,
       });
       if (error) throw error;
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: key }); toast.success("Document uploaded"); },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: key });
+      toast.success("Document uploaded");
+    },
     onError: () => toast.error("Failed to upload document"),
   });
 
   const remove = useMutation({
-    mutationFn: async (id: string) => {
+    mutationFn: async (input: string | Pick<StartupDocumentRow, "id" | "storage_path">) => {
+      const id = typeof input === "string" ? input : input.id;
+      const storagePath = typeof input === "string" ? null : input.storage_path;
+
+      if (storagePath) {
+        const { error: storageError } = await supabase.storage
+          .from("startup-documents")
+          .remove([storagePath]);
+        if (storageError) throw storageError;
+      }
+
       const { error } = await supabase.from("startup_documents").delete().eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: key }); toast.success("Document removed"); },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: key });
+      toast.success("Document removed");
+    },
     onError: () => toast.error("Failed to remove document"),
   });
 
   return { documents: query.data ?? [], loading: query.isLoading, upload, remove };
 }
 
-// ─── People (startup_assignments + profiles) ───
+export type StartupDepartment = StartupDepartmentRow & {
+  lead: PersonSummary | null;
+};
+
+export function useStartupDepartments(startupId: string) {
+  const qc = useQueryClient();
+  const key = ["startup_departments", startupId];
+
+  const query = useQuery({
+    queryKey: key,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("startup_departments")
+        .select("*")
+        .eq("startup_id", startupId)
+        .order("department_name", { ascending: true });
+
+      if (error) throw error;
+
+      const departments = (data ?? []) as StartupDepartmentRow[];
+      const leadIds = departments
+        .map((department) => department.department_lead_person_id)
+        .filter((id): id is string => !!id);
+
+      let leads: PersonSummary[] = [];
+      if (leadIds.length > 0) {
+        const { data: leadRows, error: leadError } = await supabase
+          .from("people")
+          .select("id, full_name, department, role")
+          .in("id", leadIds);
+
+        if (leadError) throw leadError;
+        leads = (leadRows ?? []) as PersonSummary[];
+      }
+
+      return departments.map((department) => ({
+        ...department,
+        lead: leads.find((lead) => lead.id === department.department_lead_person_id) ?? null,
+      })) satisfies StartupDepartment[];
+    },
+    enabled: !!startupId,
+  });
+
+  const upsert = useMutation({
+    mutationFn: async (
+      input: Partial<StartupDepartmentRow> &
+      Pick<StartupDepartmentRow, "startup_id" | "department_key" | "department_name">
+    ) => {
+      if (input.id) {
+        const { error } = await supabase.from("startup_departments").update(input).eq("id", input.id);
+        if (error) throw error;
+        return;
+      }
+
+      const { error } = await supabase.from("startup_departments").insert(input);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: key });
+      toast.success("Department saved");
+    },
+    onError: () => toast.error("Failed to save department"),
+  });
+
+  return {
+    departments: query.data ?? [],
+    loading: query.isLoading,
+    upsert,
+  };
+}
+
+export type DepartmentUpdate = DepartmentUpdateRow & {
+  owner: PersonSummary | null;
+  wins_list: string[];
+  blockers_list: string[];
+  risks_list: string[];
+  asks_list: string[];
+};
+
+export function useDepartmentUpdates(startupId: string, departmentKey?: string) {
+  const qc = useQueryClient();
+  const key = ["department_updates", startupId, departmentKey ?? "all"];
+
+  const query = useQuery({
+    queryKey: key,
+    queryFn: async () => {
+      let builder = supabase
+        .from("department_updates")
+        .select("*")
+        .eq("startup_id", startupId)
+        .order("update_date", { ascending: false })
+        .order("created_at", { ascending: false });
+
+      if (departmentKey) {
+        builder = builder.eq("department_key", departmentKey);
+      }
+
+      const { data, error } = await builder;
+      if (error) throw error;
+
+      const updates = (data ?? []) as DepartmentUpdateRow[];
+      const ownerIds = updates
+        .map((update) => update.owner_person_id)
+        .filter((id): id is string => !!id);
+
+      let owners: PersonSummary[] = [];
+      if (ownerIds.length > 0) {
+        const { data: ownerRows, error: ownerError } = await supabase
+          .from("people")
+          .select("id, full_name, department, role")
+          .in("id", ownerIds);
+
+        if (ownerError) throw ownerError;
+        owners = (ownerRows ?? []) as PersonSummary[];
+      }
+
+      return updates.map((update) => ({
+        ...update,
+        owner: owners.find((owner) => owner.id === update.owner_person_id) ?? null,
+        wins_list: asStringArray(update.wins),
+        blockers_list: asStringArray(update.blockers),
+        risks_list: asStringArray(update.risks),
+        asks_list: asStringArray(update.asks),
+      })) satisfies DepartmentUpdate[];
+    },
+    enabled: !!startupId,
+  });
+
+  const add = useMutation({
+    mutationFn: async (input: {
+      startupDepartmentId: string;
+      departmentKey: string;
+      summary: string;
+      updateDate?: string;
+      wins?: string[];
+      blockers?: string[];
+      risks?: string[];
+      asks?: string[];
+      ownerPersonId?: string | null;
+    }) => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      const { error } = await supabase.from("department_updates").insert({
+        startup_department_id: input.startupDepartmentId,
+        startup_id: startupId,
+        department_key: input.departmentKey,
+        summary: input.summary,
+        update_date: input.updateDate ?? new Date().toISOString().slice(0, 10),
+        wins: input.wins ?? [],
+        blockers: input.blockers ?? [],
+        risks: input.risks ?? [],
+        asks: input.asks ?? [],
+        owner_person_id: input.ownerPersonId ?? null,
+        created_by: user?.id,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: key });
+      toast.success("Department update added");
+    },
+    onError: () => toast.error("Failed to add department update"),
+  });
+
+  return {
+    updates: query.data ?? [],
+    loading: query.isLoading,
+    add,
+  };
+}
+
 export function useStartupPeople(startupId: string) {
   const qc = useQueryClient();
   const key = ["startup_people", startupId];
@@ -269,15 +601,15 @@ export function useStartupPeople(startupId: string) {
 
       if (!assignments || assignments.length === 0) return [];
 
-      const userIds = assignments.map((a) => a.user_id);
+      const userIds = assignments.map((assignment) => assignment.user_id);
       const { data: profiles } = await supabase
         .from("profiles")
         .select("id, full_name, email, avatar_url, role")
         .in("id", userIds);
 
-      return assignments.map((a) => ({
-        ...a,
-        profile: profiles?.find((p) => p.id === a.user_id) || null,
+      return assignments.map((assignment) => ({
+        ...assignment,
+        profile: profiles?.find((profile) => profile.id === assignment.user_id) || null,
       }));
     },
     enabled: !!startupId,
@@ -285,7 +617,9 @@ export function useStartupPeople(startupId: string) {
 
   const assign = useMutation({
     mutationFn: async (userId: string) => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       const { error } = await supabase.from("startup_assignments").insert({
         startup_id: startupId,
         user_id: userId,
@@ -293,7 +627,10 @@ export function useStartupPeople(startupId: string) {
       });
       if (error) throw error;
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: key }); toast.success("Person assigned"); },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: key });
+      toast.success("Person assigned");
+    },
     onError: () => toast.error("Failed to assign person"),
   });
 
@@ -302,7 +639,10 @@ export function useStartupPeople(startupId: string) {
       const { error } = await supabase.from("startup_assignments").delete().eq("id", assignmentId);
       if (error) throw error;
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: key }); toast.success("Person removed"); },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: key });
+      toast.success("Person removed");
+    },
     onError: () => toast.error("Failed to remove person"),
   });
 

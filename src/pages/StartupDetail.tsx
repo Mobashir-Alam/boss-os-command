@@ -32,6 +32,7 @@ import FinancesTab from "@/components/startup-hub/FinancesTab";
 import TeamEfficiencyEngine from "@/components/startup-hub/TeamEfficiencyEngine";
 import GrowthEngine from "@/components/startup-hub/GrowthEngine";
 import ProductEngine from "@/components/startup-hub/ProductEngine";
+import DepartmentUpdatesPanel from "@/components/startup-hub/DepartmentUpdatesPanel";
 import { useStartups } from "@/hooks/useStartups";
 import { startupKaiData, startupSignals } from "@/data/kai";
 import { assigneeOptions } from "@/data/tasks";
@@ -237,6 +238,13 @@ const StartupDetail = () => {
               </div>
             </div>
           </div>
+        </section>
+
+        <section className="mb-10">
+          <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-4">
+            Department Command Layer
+          </h2>
+          {dbStartup ? <DepartmentUpdatesPanel startupId={dbStartup.id} /> : null}
         </section>
 
         {/* Problems */}
