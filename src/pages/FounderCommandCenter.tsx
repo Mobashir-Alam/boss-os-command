@@ -1,28 +1,61 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Navbar from "@/components/Navbar";
 import { useStartups } from "@/hooks/useStartups";
 import { usePeople } from "@/hooks/usePeople";
 import { useTaskContext } from "@/contexts/TaskContext";
-import { useAuth } from "@/contexts/AuthContext";
 import {
   weeklyBrief, founderPatterns, founderTimeAllocation,
   startupSignals, crossStartupInsights, capitalAllocations,
 } from "@/data/kai";
 import { statusConfig, criticalAlerts } from "@/data/startups";
+import { startupDepartmentCatalog } from "@/hooks/useStartupHub";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
 import {
-  AlertTriangle, CheckCircle2, Clock, TrendingUp, TrendingDown,
-  Users, DollarSign, Shield, Rocket, Zap, Eye, Crosshair,
-  ChevronRight, ListTodo, Target, Brain, ArrowRight, Gauge
+  AlertTriangle, ArrowUpRight, ArrowDownRight, Crosshair, Gauge,
+  ChevronRight, ArrowRight, Eye,
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import SparkLine from "@/components/SparkLine";
 
 type Mode = "founder" | "operator";
+
+const todayLabel = new Date().toLocaleDateString("en-US", {
+  weekday: "long",
+  month: "long",
+  day: "numeric",
+});
+
+const statusToTone = (status: string): "positive" | "warning" | "critical" | "neutral" => {
+  if (status === "critical") return "critical";
+  if (status === "at-risk") return "warning";
+  if (status === "healthy") return "positive";
+  return "neutral";
+};
+
+const toneStyles: Record<string, { dot: string; chip: string; text: string }> = {
+  positive: {
+    dot: "bg-signal-positive",
+    chip: "bg-signal-positive-soft text-signal-positive border-signal-positive/20",
+    text: "text-signal-positive",
+  },
+  warning: {
+    dot: "bg-signal-warning",
+    chip: "bg-signal-warning-soft text-signal-warning border-signal-warning/20",
+    text: "text-signal-warning",
+  },
+  critical: {
+    dot: "bg-signal-critical",
+    chip: "bg-signal-critical-soft text-signal-critical border-signal-critical/20",
+    text: "text-signal-critical",
+  },
+  neutral: {
+    dot: "bg-muted-foreground",
+    chip: "bg-muted text-muted-foreground border-border",
+    text: "text-muted-foreground",
+  },
+};
 
 const FounderCommandCenter = () => {
   const [mode, setMode] = useState<Mode>("founder");
@@ -39,15 +72,34 @@ const FounderCommandCenter = () => {
     : 0;
 
   const blockedTasks = tasks.filter(t => t.status === "blocked");
-  const inProgressTasks = tasks.filter(t => t.status === "in-progress");
 
   const criticalStartups = startups.filter(s => s.status === "critical");
   const atRiskStartups = startups.filter(s => s.status === "at-risk");
+  const healthyStartups = startups.filter(s => s.status === "healthy");
 
-  const statusColor = (status: string) => {
-    const c = statusConfig[status as keyof typeof statusConfig];
-    return c?.color ?? "hsl(var(--muted-foreground))";
-  };
+  // Department-aware cross-portfolio synthesis (heuristic from people.department)
+  const departmentIntel = useMemo(() => {
+    return startupDepartmentCatalog.map(({ key, name }) => {
+      const matchers = key.split("_");
+      const matched = activePeople.filter((p) =>
+        matchers.some((m) => p.department?.toLowerCase().includes(m))
+      );
+      const headcount = matched.length;
+      const avgScore = matched.length
+        ? Math.round(matched.reduce((s, p) => s + p.productivity_score, 0) / matched.length)
+        : 0;
+      const tone: "positive" | "warning" | "critical" | "neutral" =
+        headcount === 0 ? "neutral"
+        : avgScore >= 70 ? "positive"
+        : avgScore >= 50 ? "warning"
+        : "critical";
+      return { key, name, headcount, avgScore, tone };
+    });
+  }, [activePeople]);
+
+  const portfolioStatusLine = criticalStartups.length > 0
+    ? `${criticalStartups.length} critical · ${atRiskStartups.length} at risk · ${healthyStartups.length} healthy`
+    : `All ${startups.length} companies operational`;
 
   const handleAcceptDecision = (d: string) => {
     toast.success("Decision accepted", { description: d });
@@ -56,404 +108,371 @@ const FounderCommandCenter = () => {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <main className="mx-auto max-w-7xl px-4 sm:px-6 py-6">
 
-        {/* Header + Mode Switch */}
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-xl font-bold tracking-tight">Command Center</h1>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              {criticalStartups.length > 0
-                ? `${criticalStartups.length} critical, ${atRiskStartups.length} at risk`
-                : "All systems operational"}
-            </p>
+      {/* EXECUTIVE BAR */}
+      <header className="border-b border-border-strong/40 bg-paper">
+        <div className="mx-auto max-w-7xl px-6 py-6">
+          <div className="flex items-center justify-between gap-6">
+            <div className="flex items-baseline gap-4">
+              <span className="eyebrow">Founder Edition · {todayLabel}</span>
+            </div>
+            <div className="flex items-center gap-1 rounded-md border border-border bg-card p-0.5">
+              <button
+                onClick={() => setMode("founder")}
+                className={cn(
+                  "px-3 py-1 rounded-sm text-[11px] font-semibold uppercase tracking-wider transition-all",
+                  mode === "founder"
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <Crosshair className="h-3 w-3 inline mr-1.5" />Strategic
+              </button>
+              <button
+                onClick={() => setMode("operator")}
+                className={cn(
+                  "px-3 py-1 rounded-sm text-[11px] font-semibold uppercase tracking-wider transition-all",
+                  mode === "operator"
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <Gauge className="h-3 w-3 inline mr-1.5" />Operator
+              </button>
+            </div>
           </div>
-          <div className="flex items-center gap-1 rounded-lg border border-border/50 bg-muted/30 p-0.5">
-            <button
-              onClick={() => setMode("founder")}
-              className={cn(
-                "px-3 py-1.5 rounded-md text-xs font-medium transition-all",
-                mode === "founder"
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              <Crosshair className="h-3 w-3 inline mr-1" />Founder
-            </button>
-            <button
-              onClick={() => setMode("operator")}
-              className={cn(
-                "px-3 py-1.5 rounded-md text-xs font-medium transition-all",
-                mode === "operator"
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              <Gauge className="h-3 w-3 inline mr-1" />Operator
-            </button>
+
+          <div className="mt-4 flex items-end justify-between gap-6 flex-wrap">
+            <div>
+              <h1 className="font-display text-5xl font-semibold leading-none tracking-tight">
+                The Command Brief
+              </h1>
+              <p className="mt-3 text-sm text-muted-foreground max-w-2xl">
+                {portfolioStatusLine}. Synthesised across {startups.length} portfolio companies and {activePeople.length} active operators.
+              </p>
+            </div>
+            <dl className="flex items-end gap-8 text-right">
+              <Stat label="Companies" value={startups.length.toString()} />
+              <Stat label="Headcount" value={activePeople.length.toString()} />
+              <Stat label="Salary / mo" value={`₹${(totalSalaryBurn / 100000).toFixed(1)}L`} />
+              <Stat label="Avg Efficiency" value={`${avgEfficiency}%`} tone={avgEfficiency >= 70 ? "positive" : avgEfficiency >= 50 ? "warning" : "critical"} />
+            </dl>
           </div>
         </div>
+      </header>
 
-        {/* CRITICAL SIGNALS */}
+      <main className="mx-auto max-w-7xl px-6 py-8 space-y-10">
+
+        {/* CRITICAL TICKER */}
         {criticalAlerts.filter(a => a.severity === "critical").length > 0 && (
-          <div className="mb-5 space-y-1.5">
-            {criticalAlerts
-              .filter(a => a.severity === "critical")
-              .map(a => (
-                <div key={a.id} className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-2.5">
-                  <span className="text-sm">{a.icon}</span>
-                  <span className="text-sm font-medium text-destructive flex-1">{a.text}</span>
-                  <Link to={`/startup/${a.startupId}`}>
-                    <Button variant="ghost" size="sm" className="h-6 text-xs text-destructive">
-                      View <ChevronRight className="h-3 w-3 ml-0.5" />
-                    </Button>
+          <section className="border-y border-signal-critical/30 bg-signal-critical-soft -mx-6 px-6 py-3">
+            <div className="mx-auto max-w-7xl flex items-center gap-4 flex-wrap">
+              <span className="eyebrow text-signal-critical">Live · Critical</span>
+              <div className="flex items-center gap-6 flex-wrap text-sm">
+                {criticalAlerts.filter(a => a.severity === "critical").map(a => (
+                  <Link key={a.id} to={`/startup/${a.startupId}`} className="group flex items-center gap-2 text-signal-critical hover:underline underline-offset-4">
+                    <AlertTriangle className="h-3.5 w-3.5" />
+                    <span className="font-medium">{a.text}</span>
+                    <ChevronRight className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
                   </Link>
-                </div>
-              ))}
-          </div>
+                ))}
+              </div>
+            </div>
+          </section>
         )}
 
-        {/* KAI COMMAND CORE — Founder Mode */}
+        {/* KAI STRATEGIC BRIEF — Hero */}
         {mode === "founder" && (
-          <Card className="mb-5 border-primary/20 bg-primary/[0.02]">
-            <CardHeader className="pb-3 pt-4 px-5">
-              <div className="flex items-center gap-2">
-                <Brain className="h-4 w-4 text-primary" />
-                <CardTitle className="text-sm">KAI Weekly Brief</CardTitle>
+          <section className="grid grid-cols-12 gap-6">
+            <div className="col-span-12 lg:col-span-8 paper-card-elevated p-8">
+              <div className="flex items-center justify-between mb-5">
+                <span className="eyebrow">KAI Strategic Brief</span>
+                <span className="text-[10px] text-muted-foreground font-mono">UPDATED 06:00</span>
               </div>
-            </CardHeader>
-            <CardContent className="px-5 pb-4 space-y-3">
-              <p className="text-sm text-foreground/80">{weeklyBrief.status}</p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="rounded-lg bg-destructive/5 border border-destructive/20 px-3 py-2">
-                  <span className="text-[10px] uppercase tracking-wider text-destructive/70 font-semibold">Biggest Risk</span>
-                  <p className="text-xs mt-1 text-foreground/80">{weeklyBrief.biggestRisk}</p>
+
+              <p className="font-display text-2xl leading-snug text-foreground/90 mb-6">
+                {weeklyBrief.status}
+              </p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-px bg-border mb-6">
+                <div className="bg-card p-5">
+                  <span className="eyebrow text-signal-critical">Biggest Risk</span>
+                  <p className="mt-2 text-sm text-foreground/85 leading-relaxed">{weeklyBrief.biggestRisk}</p>
                 </div>
-                <div className="rounded-lg bg-emerald-500/5 border border-emerald-500/20 px-3 py-2">
-                  <span className="text-[10px] uppercase tracking-wider text-emerald-600/70 font-semibold">Biggest Opportunity</span>
-                  <p className="text-xs mt-1 text-foreground/80">{weeklyBrief.biggestOpportunity}</p>
+                <div className="bg-card p-5">
+                  <span className="eyebrow text-signal-positive">Biggest Opportunity</span>
+                  <p className="mt-2 text-sm text-foreground/85 leading-relaxed">{weeklyBrief.biggestOpportunity}</p>
                 </div>
               </div>
+
               <div>
-                <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Top Decisions</span>
-                <div className="mt-1.5 space-y-1">
+                <span className="eyebrow mb-2 block">Top Decisions Awaiting You</span>
+                <ul className="divide-y divide-border">
                   {weeklyBrief.strategicDecisions.slice(0, 3).map((d, i) => (
-                    <div key={i} className="flex items-center justify-between gap-2 rounded-md bg-muted/30 px-3 py-1.5">
-                      <span className="text-xs text-foreground/80 flex-1">{d}</span>
+                    <li key={i} className="flex items-center justify-between gap-3 py-2.5">
+                      <span className="text-sm text-foreground/85 flex-1">
+                        <span className="font-mono text-[10px] text-muted-foreground mr-2">{String(i + 1).padStart(2, "0")}</span>
+                        {d}
+                      </span>
                       <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-5 px-2 text-[10px] text-primary"
+                        variant="ghost" size="sm"
+                        className="h-7 px-2 text-[11px] font-semibold uppercase tracking-wider text-accent hover:bg-accent-soft"
                         onClick={() => handleAcceptDecision(d)}
                       >
-                        Accept
+                        Accept →
                       </Button>
-                    </div>
+                    </li>
                   ))}
-                </div>
+                </ul>
               </div>
-              {/* Founder Focus */}
-              <div className="flex items-start gap-2 rounded-lg bg-amber-500/5 border border-amber-500/20 px-3 py-2">
-                <Target className="h-3.5 w-3.5 text-amber-500 mt-0.5 shrink-0" />
-                <p className="text-xs text-foreground/70">{founderTimeAllocation.insight}</p>
-              </div>
-            </CardContent>
-          </Card>
+            </div>
+
+            {/* Founder Focus sidebar */}
+            <aside className="col-span-12 lg:col-span-4 paper-card p-6 bg-paper">
+              <span className="eyebrow text-accent">Founder Focus</span>
+              <p className="font-display text-xl leading-snug mt-3 mb-5">
+                Where your hours are going this week.
+              </p>
+              <p className="text-sm text-foreground/75 leading-relaxed border-l-2 border-accent pl-4">
+                {founderTimeAllocation.insight}
+              </p>
+              <div className="editorial-rule my-5" />
+              <span className="eyebrow mb-2 block">Pattern Watch</span>
+              <ul className="space-y-3">
+                {founderPatterns.slice(0, 2).map((p, i) => (
+                  <li key={i} className="text-xs text-foreground/75 leading-relaxed">
+                    <span className="font-display italic text-foreground/60">{p.pattern}</span>
+                    <span className="block mt-1 text-accent font-medium">→ {p.suggestion}</span>
+                  </li>
+                ))}
+              </ul>
+            </aside>
+          </section>
         )}
 
-        {/* PORTFOLIO HEALTH */}
-        <div className="mb-5">
-          <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-3">Portfolio Health</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        {/* PORTFOLIO HEALTH GRID */}
+        <section>
+          <div className="flex items-end justify-between mb-4">
+            <div>
+              <span className="eyebrow">Portfolio Health</span>
+              <h2 className="font-display text-2xl mt-1">{startups.length} Companies, One Console</h2>
+            </div>
+            <span className="text-[11px] text-muted-foreground font-mono uppercase tracking-wider">Tap any card →</span>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-px bg-border border border-border">
             {startups.map(s => {
               const signal = startupSignals[s.id];
+              const tone = statusToTone(s.status);
+              const ts = toneStyles[tone];
+              const cfg = statusConfig[s.status as keyof typeof statusConfig];
+              const trendUp = s.growthDirection === "up";
               return (
-                <Link key={s.id} to={`/startup/${s.id}`}>
-                  <Card className="hover:border-primary/30 transition-colors cursor-pointer h-full">
-                    <CardContent className="p-4 space-y-2.5">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-semibold">{s.name}</span>
-                        <div
-                          className="h-2 w-2 rounded-full"
-                          style={{ backgroundColor: statusColor(s.status) }}
-                        />
-                      </div>
-                      <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                        <span>🕐 {s.runway}</span>
-                        <span className={s.growthDirection === "up" ? "text-emerald-500" : "text-destructive"}>
-                          {s.growthDirection === "up" ? "↑" : "↓"} {s.growth}
+                <Link key={s.id} to={`/startup/${s.id}`} className="group bg-card p-5 hover:bg-paper transition-colors">
+                  <div className="flex items-start justify-between mb-3">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className={cn("h-1.5 w-1.5 rounded-full", ts.dot)} />
+                        <span className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
+                          {cfg?.label ?? s.status}
                         </span>
                       </div>
-                      <div className="h-6">
-                        <SparkLine data={s.sparkData} color={statusColor(s.status)} />
-                      </div>
-                      {signal && (
-                        <Badge
-                          variant="outline"
-                          className={cn(
-                            "text-[10px]",
-                            signal.signal === "double-down" && "border-emerald-500/40 text-emerald-500",
-                            signal.signal === "maintain" && "border-amber-500/40 text-amber-500",
-                            signal.signal === "kill" && "border-destructive/40 text-destructive"
-                          )}
-                        >
-                          {signal.signal === "double-down" ? "Double Down" : signal.signal === "maintain" ? "Maintain" : "Kill"}
-                        </Badge>
-                      )}
-                    </CardContent>
-                  </Card>
+                      <h3 className="font-display text-xl mt-1.5 leading-tight group-hover:text-accent transition-colors">
+                        {s.name}
+                      </h3>
+                    </div>
+                    {signal && (
+                      <span className={cn(
+                        "text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded-sm border",
+                        signal.signal === "double-down" && "border-signal-positive/30 text-signal-positive bg-signal-positive-soft",
+                        signal.signal === "maintain" && "border-signal-warning/30 text-signal-warning bg-signal-warning-soft",
+                        signal.signal === "kill" && "border-signal-critical/30 text-signal-critical bg-signal-critical-soft",
+                      )}>
+                        {signal.signal === "double-down" ? "2×" : signal.signal === "maintain" ? "Hold" : "Kill"}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="my-4 h-8 -mx-1">
+                    <SparkLine data={s.sparkData} color={`hsl(var(--signal-${tone === "neutral" ? "warning" : tone}))`} width={200} height={32} />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 pt-3 border-t border-border/60">
+                    <div>
+                      <span className="block text-[9px] uppercase tracking-wider text-muted-foreground">Runway</span>
+                      <span className="numeric text-base mt-0.5 block">{s.runway}</span>
+                    </div>
+                    <div>
+                      <span className="block text-[9px] uppercase tracking-wider text-muted-foreground">Growth</span>
+                      <span className={cn("numeric text-base mt-0.5 flex items-center gap-1", trendUp ? "text-signal-positive" : "text-signal-critical")}>
+                        {trendUp ? <ArrowUpRight className="h-3.5 w-3.5" /> : <ArrowDownRight className="h-3.5 w-3.5" />}
+                        {s.growth}
+                      </span>
+                    </div>
+                  </div>
+
+                  <p className="mt-3 text-[11px] text-muted-foreground line-clamp-2 leading-relaxed">
+                    {s.insight}
+                  </p>
                 </Link>
               );
             })}
           </div>
-        </div>
+        </section>
 
-        {/* EXECUTION + FINANCIAL + TEAM — Operator Mode gets more detail */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-5">
-
-          {/* EXECUTION STATUS */}
-          <Card>
-            <CardHeader className="pb-2 pt-4 px-4">
-              <div className="flex items-center gap-2">
-                <ListTodo className="h-3.5 w-3.5 text-blue-500" />
-                <CardTitle className="text-xs">Execution</CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent className="px-4 pb-4 space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">In Progress</span>
-                <span className="font-medium">{stats.inProgress}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Completed</span>
-                <span className="font-medium text-emerald-500">{stats.completed}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Blocked</span>
-                <span className="font-medium text-amber-500">{blockedTasks.length}</span>
-              </div>
-              {stats.overdue > 0 && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-destructive">Overdue</span>
-                  <span className="font-semibold text-destructive">{stats.overdue}</span>
-                </div>
-              )}
-              {mode === "operator" && blockedTasks.length > 0 && (
-                <div className="mt-2 pt-2 border-t border-border/50 space-y-1">
-                  <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Blocked</span>
-                  {blockedTasks.slice(0, 3).map(t => (
-                    <div key={t.id} className="text-xs text-foreground/70 truncate">• {t.title}</div>
-                  ))}
-                </div>
-              )}
-              <Link to="/my-work">
-                <Button variant="ghost" size="sm" className="w-full h-7 text-xs mt-1">
-                  View All <ArrowRight className="h-3 w-3 ml-1" />
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
-
-          {/* FINANCIAL POSITION */}
-          <Card>
-            <CardHeader className="pb-2 pt-4 px-4">
-              <div className="flex items-center gap-2">
-                <DollarSign className="h-3.5 w-3.5 text-emerald-500" />
-                <CardTitle className="text-xs">Financial Position</CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent className="px-4 pb-4 space-y-2">
-              {startups.map(s => (
-                <div key={s.id} className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">{s.name}</span>
-                  <span className="font-medium">{s.runway}</span>
-                </div>
-              ))}
-              <div className="pt-2 border-t border-border/50 flex justify-between text-sm">
-                <span className="text-muted-foreground">Salary Burn</span>
-                <span className="font-medium">₹{(totalSalaryBurn / 100000).toFixed(1)}L/mo</span>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* TEAM SNAPSHOT */}
-          <Card>
-            <CardHeader className="pb-2 pt-4 px-4">
-              <div className="flex items-center gap-2">
-                <Users className="h-3.5 w-3.5 text-violet-500" />
-                <CardTitle className="text-xs">Team</CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent className="px-4 pb-4 space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Team Size</span>
-                <span className="font-medium">{activePeople.length}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Salary Burn</span>
-                <span className="font-medium">₹{(totalSalaryBurn / 100000).toFixed(1)}L/mo</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Avg Efficiency</span>
-                <span className={cn("font-medium", avgEfficiency >= 70 ? "text-emerald-500" : avgEfficiency >= 50 ? "text-amber-500" : "text-destructive")}>
-                  {avgEfficiency}%
-                </span>
-              </div>
-              <Link to="/people">
-                <Button variant="ghost" size="sm" className="w-full h-7 text-xs mt-1">
-                  People OS <ArrowRight className="h-3 w-3 ml-1" />
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* GROWTH + PRODUCT + OWNERSHIP SIGNALS */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-5">
-
-          {/* GROWTH SIGNALS */}
-          <Card>
-            <CardHeader className="pb-2 pt-4 px-4">
-              <div className="flex items-center gap-2">
-                <TrendingUp className="h-3.5 w-3.5 text-emerald-500" />
-                <CardTitle className="text-xs">Growth Signals</CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent className="px-4 pb-4 space-y-2">
-              {startups.map(s => (
-                <div key={s.id} className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">{s.name}</span>
-                  <span className={cn("font-medium", s.growthDirection === "up" ? "text-emerald-500" : "text-destructive")}>
-                    {s.growth}
-                  </span>
-                </div>
-              ))}
-              {crossStartupInsights.slice(0, 1).map(ci => (
-                <div key={ci.id} className="mt-2 pt-2 border-t border-border/50">
-                  <div className="flex items-start gap-1.5">
-                    <Zap className="h-3 w-3 text-primary mt-0.5 shrink-0" />
-                    <p className="text-[11px] text-foreground/70">{ci.insight}</p>
+        {/* DEPARTMENT-AWARE INTELLIGENCE */}
+        <section>
+          <div className="flex items-end justify-between mb-4">
+            <div>
+              <span className="eyebrow">Cross-Portfolio Departments</span>
+              <h2 className="font-display text-2xl mt-1">Departmental health, at a glance</h2>
+            </div>
+          </div>
+          <div className="paper-card overflow-hidden">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 divide-x divide-y divide-border">
+              {departmentIntel.map((d) => {
+                const ts = toneStyles[d.tone];
+                return (
+                  <div key={d.key} className="p-4 flex items-start justify-between gap-3 bg-card">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className={cn("h-1 w-1 rounded-full", ts.dot)} />
+                        <span className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground truncate">
+                          {d.name}
+                        </span>
+                      </div>
+                      <div className="mt-1 flex items-baseline gap-2">
+                        <span className="numeric text-2xl">{d.headcount}</span>
+                        <span className="text-[10px] text-muted-foreground uppercase tracking-wider">people</span>
+                      </div>
+                    </div>
+                    {d.headcount > 0 && (
+                      <div className="text-right">
+                        <span className={cn("numeric text-sm", ts.text)}>{d.avgScore}%</span>
+                        <span className="block text-[9px] uppercase tracking-wider text-muted-foreground mt-0.5">Output</span>
+                      </div>
+                    )}
                   </div>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
+                );
+              })}
+            </div>
+          </div>
+        </section>
 
-          {/* PRODUCT SIGNALS */}
-          <Card>
-            <CardHeader className="pb-2 pt-4 px-4">
-              <div className="flex items-center gap-2">
-                <Rocket className="h-3.5 w-3.5 text-blue-500" />
-                <CardTitle className="text-xs">Product Signals</CardTitle>
+        {/* CAPITAL ALLOCATION + PATTERN SIGNALS — Founder mode */}
+        {mode === "founder" && (
+          <section className="grid grid-cols-12 gap-6">
+            <div className="col-span-12 lg:col-span-7 paper-card p-6">
+              <div className="flex items-center justify-between mb-4">
+                <span className="eyebrow">Capital Allocation Signals</span>
+                <span className="text-[10px] text-muted-foreground font-mono">ROI EST.</span>
               </div>
-            </CardHeader>
-            <CardContent className="px-4 pb-4 space-y-2">
-              {startups.slice(0, 4).map(s => (
-                <Link key={s.id} to={`/startup/${s.id}`} className="flex items-center justify-between text-sm hover:text-primary transition-colors">
-                  <span className="text-muted-foreground">{s.name}</span>
-                  <ChevronRight className="h-3 w-3 text-muted-foreground" />
-                </Link>
-              ))}
-              <div className="mt-2 pt-2 border-t border-border/50">
-                <div className="flex items-start gap-1.5">
-                  <Zap className="h-3 w-3 text-primary mt-0.5 shrink-0" />
-                  <p className="text-[11px] text-foreground/70">View Product Engine per startup for feature impact & tech risks.</p>
-                </div>
+              <div className="divide-y divide-border">
+                {capitalAllocations.map((ca, i) => (
+                  <div key={i} className="flex items-center justify-between py-3 gap-4">
+                    <div className="flex items-baseline gap-3 min-w-0">
+                      <span className="font-mono text-[10px] text-muted-foreground w-6">{String(i + 1).padStart(2, "0")}</span>
+                      <div className="min-w-0">
+                        <p className="font-display text-base leading-tight">{ca.startup}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5 truncate">{ca.action}</p>
+                      </div>
+                    </div>
+                    <span className="numeric text-base text-signal-positive shrink-0">{ca.roi}</span>
+                  </div>
+                ))}
               </div>
-            </CardContent>
-          </Card>
+            </div>
 
-          {/* OWNERSHIP SIGNALS */}
-          <Card>
-            <CardHeader className="pb-2 pt-4 px-4">
-              <div className="flex items-center gap-2">
-                <Shield className="h-3.5 w-3.5 text-amber-500" />
-                <CardTitle className="text-xs">Ownership Signals</CardTitle>
+            <div className="col-span-12 lg:col-span-5 paper-card p-6 bg-paper">
+              <div className="flex items-center gap-2 mb-4">
+                <Eye className="h-3.5 w-3.5 text-accent" />
+                <span className="eyebrow text-accent">Cross-Portfolio Patterns</span>
               </div>
-            </CardHeader>
-            <CardContent className="px-4 pb-4 space-y-2">
-              {startups.slice(0, 4).map(s => (
-                <Link key={s.id} to={`/startup/${s.id}/ownership`} className="flex items-center justify-between text-sm hover:text-primary transition-colors">
-                  <span className="text-muted-foreground">{s.name}</span>
-                  <ChevronRight className="h-3 w-3 text-muted-foreground" />
-                </Link>
-              ))}
-              <div className="mt-2 pt-2 border-t border-border/50">
-                <div className="flex items-start gap-1.5">
-                  <Shield className="h-3 w-3 text-amber-500 mt-0.5 shrink-0" />
-                  <p className="text-[11px] text-foreground/70">Check dilution & control risk per startup in Ownership Engine.</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* OPERATOR MODE — Overdue & Blocked detail */}
-        {mode === "operator" && overdueTasks.length > 0 && (
-          <Card className="mb-5 border-destructive/20">
-            <CardHeader className="pb-2 pt-4 px-4">
-              <div className="flex items-center gap-2">
-                <Clock className="h-3.5 w-3.5 text-destructive" />
-                <CardTitle className="text-xs text-destructive">Overdue Tasks</CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent className="px-4 pb-4 space-y-1.5">
-              {overdueTasks.slice(0, 5).map(t => (
-                <div key={t.id} className="flex items-center justify-between rounded-md bg-destructive/5 px-3 py-1.5">
-                  <span className="text-xs text-foreground/80 truncate flex-1">{t.title}</span>
-                  <span className="text-[10px] text-muted-foreground ml-2">{t.assignee}</span>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
+              <ul className="space-y-4">
+                {crossStartupInsights.slice(0, 3).map((ci) => (
+                  <li key={ci.id} className="border-l-2 border-accent pl-4">
+                    <p className="text-sm text-foreground/85 leading-snug">{ci.insight}</p>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </section>
         )}
 
-        {/* CAPITAL ALLOCATION — Founder mode */}
-        {mode === "founder" && (
-          <Card className="mb-5">
-            <CardHeader className="pb-2 pt-4 px-4">
-              <div className="flex items-center gap-2">
-                <DollarSign className="h-3.5 w-3.5 text-primary" />
-                <CardTitle className="text-xs">Capital Allocation</CardTitle>
+        {/* OPERATOR DETAIL */}
+        {mode === "operator" && (
+          <section className="grid grid-cols-12 gap-6">
+            <div className="col-span-12 lg:col-span-8 paper-card p-6">
+              <div className="flex items-center justify-between mb-4">
+                <span className="eyebrow">Execution Ledger</span>
+                <Link to="/my-work" className="text-[11px] text-accent hover:underline underline-offset-2 font-semibold uppercase tracking-wider">
+                  Open My Work →
+                </Link>
               </div>
-            </CardHeader>
-            <CardContent className="px-4 pb-4 space-y-1.5">
-              {capitalAllocations.map((ca, i) => (
-                <div key={i} className="flex items-center justify-between rounded-md bg-muted/20 px-3 py-2">
-                  <div className="flex-1 min-w-0">
-                    <span className="text-xs font-medium">{ca.startup}</span>
-                    <p className="text-[11px] text-muted-foreground truncate">{ca.action}</p>
-                  </div>
-                  <span className="text-[10px] text-emerald-500 font-medium ml-3 shrink-0">{ca.roi}</span>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        )}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-border">
+                <LedgerStat label="In Progress" value={stats.inProgress} />
+                <LedgerStat label="Completed" value={stats.completed} tone="positive" />
+                <LedgerStat label="Blocked" value={blockedTasks.length} tone="warning" />
+                <LedgerStat label="Overdue" value={stats.overdue} tone={stats.overdue > 0 ? "critical" : "neutral"} />
+              </div>
 
-        {/* FOUNDER PATTERNS — Founder mode */}
-        {mode === "founder" && (
-          <Card className="mb-5 border-amber-500/20">
-            <CardHeader className="pb-2 pt-4 px-4">
-              <div className="flex items-center gap-2">
-                <Eye className="h-3.5 w-3.5 text-amber-500" />
-                <CardTitle className="text-xs">Founder Patterns</CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent className="px-4 pb-4 space-y-2">
-              {founderPatterns.map((p, i) => (
-                <div key={i} className="rounded-md bg-muted/20 px-3 py-2">
-                  <p className="text-xs text-foreground/80">{p.pattern}</p>
-                  <p className="text-[11px] text-primary mt-1">→ {p.suggestion}</p>
+              {overdueTasks.length > 0 && (
+                <div className="mt-5">
+                  <span className="eyebrow text-signal-critical mb-2 block">Overdue items</span>
+                  <ul className="divide-y divide-border">
+                    {overdueTasks.slice(0, 5).map(t => (
+                      <li key={t.id} className="py-2 flex items-center justify-between gap-3">
+                        <span className="text-sm text-foreground/85 truncate">{t.title}</span>
+                        <span className="text-[10px] text-muted-foreground font-mono uppercase">{t.assignee}</span>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
-              ))}
-            </CardContent>
-          </Card>
+              )}
+            </div>
+
+            <div className="col-span-12 lg:col-span-4 paper-card p-6 bg-paper">
+              <span className="eyebrow">Runway By Company</span>
+              <ul className="mt-4 divide-y divide-border">
+                {startups.map(s => (
+                  <li key={s.id} className="py-2.5 flex items-center justify-between">
+                    <Link to={`/startup/${s.id}`} className="text-sm hover:text-accent transition-colors">{s.name}</Link>
+                    <span className="numeric text-sm">{s.runway}</span>
+                  </li>
+                ))}
+              </ul>
+              <div className="editorial-rule my-4" />
+              <Link to="/people" className="flex items-center justify-between text-[11px] uppercase tracking-wider font-semibold text-accent hover:underline underline-offset-2">
+                People OS <ArrowRight className="h-3 w-3" />
+              </Link>
+            </div>
+          </section>
         )}
 
       </main>
     </div>
   );
 };
+
+function Stat({ label, value, tone }: { label: string; value: string; tone?: "positive" | "warning" | "critical" }) {
+  const ts = tone ? toneStyles[tone] : null;
+  return (
+    <div>
+      <dt className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{label}</dt>
+      <dd className={cn("numeric text-2xl mt-0.5", ts?.text)}>{value}</dd>
+    </div>
+  );
+}
+
+function LedgerStat({
+  label, value, tone = "neutral",
+}: { label: string; value: number; tone?: "positive" | "warning" | "critical" | "neutral" }) {
+  const ts = toneStyles[tone];
+  return (
+    <div className="bg-card p-4">
+      <span className="eyebrow">{label}</span>
+      <p className={cn("numeric text-3xl mt-1", ts.text)}>{value}</p>
+    </div>
+  );
+}
 
 export default FounderCommandCenter;

@@ -367,7 +367,7 @@ export function useStartupDocuments(startupId: string) {
 
       const { data: urlData } = supabase.storage.from("startup-documents").getPublicUrl(path);
 
-      const { error } = await supabase.from("startup_documents").insert({
+      const { error } = await supabase.from("startup_documents").insert([{
         startup_id: startupId,
         file_name: input.file.name,
         file_url: urlData.publicUrl,
@@ -375,11 +375,12 @@ export function useStartupDocuments(startupId: string) {
         title: input.title ?? input.file.name,
         doc_type: legacyDocType,
         category,
-        subcategory: input.subcategory ?? null,
         department: input.department ?? null,
-        notes: input.notes ?? null,
+        document_date: new Date().toISOString().slice(0, 10),
+        mime_type: input.file.type || null,
+        size_bytes: input.file.size,
         uploaded_by: user?.id,
-      });
+      }]);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -429,13 +430,13 @@ export function useStartupDepartments(startupId: string) {
         .from("startup_departments")
         .select("*")
         .eq("startup_id", startupId)
-        .order("department_name", { ascending: true });
+        .order("name", { ascending: true });
 
       if (error) throw error;
 
       const departments = (data ?? []) as StartupDepartmentRow[];
       const leadIds = departments
-        .map((department) => department.department_lead_person_id)
+        .map((department) => department.lead_person_id)
         .filter((id): id is string => !!id);
 
       let leads: PersonSummary[] = [];
@@ -451,7 +452,7 @@ export function useStartupDepartments(startupId: string) {
 
       return departments.map((department) => ({
         ...department,
-        lead: leads.find((lead) => lead.id === department.department_lead_person_id) ?? null,
+        lead: leads.find((lead) => lead.id === department.lead_person_id) ?? null,
       })) satisfies StartupDepartment[];
     },
     enabled: !!startupId,
@@ -460,7 +461,7 @@ export function useStartupDepartments(startupId: string) {
   const upsert = useMutation({
     mutationFn: async (
       input: Partial<StartupDepartmentRow> &
-      Pick<StartupDepartmentRow, "startup_id" | "department_key" | "department_name">
+      Pick<StartupDepartmentRow, "startup_id" | "department_key" | "name">
     ) => {
       if (input.id) {
         const { error } = await supabase.from("startup_departments").update(input).eq("id", input.id);
@@ -468,7 +469,7 @@ export function useStartupDepartments(startupId: string) {
         return;
       }
 
-      const { error } = await supabase.from("startup_departments").insert(input);
+      const { error } = await supabase.from("startup_departments").insert([input]);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -544,7 +545,6 @@ export function useDepartmentUpdates(startupId: string, departmentKey?: string) 
 
   const add = useMutation({
     mutationFn: async (input: {
-      startupDepartmentId: string;
       departmentKey: string;
       summary: string;
       updateDate?: string;
@@ -557,8 +557,7 @@ export function useDepartmentUpdates(startupId: string, departmentKey?: string) 
       const {
         data: { user },
       } = await supabase.auth.getUser();
-      const { error } = await supabase.from("department_updates").insert({
-        startup_department_id: input.startupDepartmentId,
+      const { error } = await supabase.from("department_updates").insert([{
         startup_id: startupId,
         department_key: input.departmentKey,
         summary: input.summary,
@@ -569,7 +568,7 @@ export function useDepartmentUpdates(startupId: string, departmentKey?: string) 
         asks: input.asks ?? [],
         owner_person_id: input.ownerPersonId ?? null,
         created_by: user?.id,
-      });
+      }]);
       if (error) throw error;
     },
     onSuccess: () => {

@@ -148,49 +148,49 @@ export type Database = {
       }
       department_updates: {
         Row: {
-          asks: Json
-          blockers: Json
+          asks: string[]
+          blockers: string[]
           created_at: string
           created_by: string | null
           department_key: string
           id: string
           owner_person_id: string | null
-          risks: Json
-          startup_department_id: string
+          risks: string[]
           startup_id: string
           summary: string
           update_date: string
-          wins: Json
+          updated_at: string
+          wins: string[]
         }
         Insert: {
-          asks?: Json
-          blockers?: Json
+          asks?: string[]
+          blockers?: string[]
           created_at?: string
           created_by?: string | null
           department_key: string
           id?: string
           owner_person_id?: string | null
-          risks?: Json
-          startup_department_id: string
+          risks?: string[]
           startup_id: string
-          summary: string
+          summary?: string
           update_date?: string
-          wins?: Json
+          updated_at?: string
+          wins?: string[]
         }
         Update: {
-          asks?: Json
-          blockers?: Json
+          asks?: string[]
+          blockers?: string[]
           created_at?: string
           created_by?: string | null
           department_key?: string
           id?: string
           owner_person_id?: string | null
-          risks?: Json
-          startup_department_id?: string
+          risks?: string[]
           startup_id?: string
           summary?: string
           update_date?: string
-          wins?: Json
+          updated_at?: string
+          wins?: string[]
         }
         Relationships: [
           {
@@ -198,13 +198,6 @@ export type Database = {
             columns: ["owner_person_id"]
             isOneToOne: false
             referencedRelation: "people"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "department_updates_startup_department_id_fkey"
-            columns: ["startup_department_id"]
-            isOneToOne: false
-            referencedRelation: "startup_departments"
             referencedColumns: ["id"]
           },
           {
@@ -1220,45 +1213,45 @@ export type Database = {
           created_at: string
           created_by: string | null
           department_key: string
-          department_lead_person_id: string | null
-          department_name: string
           headcount: number
           id: string
+          lead_person_id: string | null
+          name: string
           startup_id: string
           status: string
-          summary: string | null
+          summary: string
           updated_at: string
         }
         Insert: {
           created_at?: string
           created_by?: string | null
           department_key: string
-          department_lead_person_id?: string | null
-          department_name: string
           headcount?: number
           id?: string
+          lead_person_id?: string | null
+          name: string
           startup_id: string
           status?: string
-          summary?: string | null
+          summary?: string
           updated_at?: string
         }
         Update: {
           created_at?: string
           created_by?: string | null
           department_key?: string
-          department_lead_person_id?: string | null
-          department_name?: string
           headcount?: number
           id?: string
+          lead_person_id?: string | null
+          name?: string
           startup_id?: string
           status?: string
-          summary?: string | null
+          summary?: string
           updated_at?: string
         }
         Relationships: [
           {
-            foreignKeyName: "startup_departments_department_lead_person_id_fkey"
-            columns: ["department_lead_person_id"]
+            foreignKeyName: "startup_departments_lead_person_id_fkey"
+            columns: ["lead_person_id"]
             isOneToOne: false
             referencedRelation: "people"
             referencedColumns: ["id"]
@@ -1274,110 +1267,54 @@ export type Database = {
       }
       startup_documents: {
         Row: {
-          amount: number | null
-          category: string | null
+          category: string
           created_at: string
-          currency: string
           department: string | null
           doc_type: string
           document_date: string | null
           file_name: string
           file_url: string
           id: string
-          linked_financial_entry_id: string | null
-          linked_funding_round_id: string | null
-          linked_stakeholder_id: string | null
-          notes: string | null
-          status: string
-          storage_path: string | null
-          subcategory: string | null
+          mime_type: string | null
+          size_bytes: number | null
           startup_id: string
-          tags: Json
+          storage_path: string | null
           title: string | null
-          updated_at: string
           uploaded_by: string | null
-          vendor_name: string | null
         }
         Insert: {
-          amount?: number | null
-          category?: string | null
+          category?: string
           created_at?: string
-          currency?: string
           department?: string | null
           doc_type?: string
           document_date?: string | null
           file_name: string
           file_url: string
           id?: string
-          linked_financial_entry_id?: string | null
-          linked_funding_round_id?: string | null
-          linked_stakeholder_id?: string | null
-          notes?: string | null
-          status?: string
-          storage_path?: string | null
-          subcategory?: string | null
+          mime_type?: string | null
+          size_bytes?: number | null
           startup_id: string
-          tags?: Json
+          storage_path?: string | null
           title?: string | null
-          updated_at?: string
           uploaded_by?: string | null
-          vendor_name?: string | null
         }
         Update: {
-          amount?: number | null
-          category?: string | null
+          category?: string
           created_at?: string
-          currency?: string
           department?: string | null
           doc_type?: string
           document_date?: string | null
           file_name?: string
           file_url?: string
           id?: string
-          linked_financial_entry_id?: string | null
-          linked_funding_round_id?: string | null
-          linked_stakeholder_id?: string | null
-          notes?: string | null
-          status?: string
-          storage_path?: string | null
-          subcategory?: string | null
+          mime_type?: string | null
+          size_bytes?: number | null
           startup_id?: string
-          tags?: Json
+          storage_path?: string | null
           title?: string | null
-          updated_at?: string
           uploaded_by?: string | null
-          vendor_name?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "startup_documents_linked_financial_entry_id_fkey"
-            columns: ["linked_financial_entry_id"]
-            isOneToOne: false
-            referencedRelation: "financial_entries"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "startup_documents_linked_funding_round_id_fkey"
-            columns: ["linked_funding_round_id"]
-            isOneToOne: false
-            referencedRelation: "funding_rounds"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "startup_documents_linked_stakeholder_id_fkey"
-            columns: ["linked_stakeholder_id"]
-            isOneToOne: false
-            referencedRelation: "stakeholders"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "startup_documents_startup_id_fkey"
-            columns: ["startup_id"]
-            isOneToOne: false
-            referencedRelation: "startups"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       startup_milestones: {
         Row: {
