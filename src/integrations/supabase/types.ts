@@ -146,76 +146,6 @@ export type Database = {
           },
         ]
       }
-      department_updates: {
-        Row: {
-          asks: Json
-          blockers: Json
-          created_at: string
-          created_by: string | null
-          department_key: string
-          id: string
-          owner_person_id: string | null
-          risks: Json
-          startup_department_id: string
-          startup_id: string
-          summary: string
-          update_date: string
-          wins: Json
-        }
-        Insert: {
-          asks?: Json
-          blockers?: Json
-          created_at?: string
-          created_by?: string | null
-          department_key: string
-          id?: string
-          owner_person_id?: string | null
-          risks?: Json
-          startup_department_id: string
-          startup_id: string
-          summary: string
-          update_date?: string
-          wins?: Json
-        }
-        Update: {
-          asks?: Json
-          blockers?: Json
-          created_at?: string
-          created_by?: string | null
-          department_key?: string
-          id?: string
-          owner_person_id?: string | null
-          risks?: Json
-          startup_department_id?: string
-          startup_id?: string
-          summary?: string
-          update_date?: string
-          wins?: Json
-        }
-        Relationships: [
-          {
-            foreignKeyName: "department_updates_owner_person_id_fkey"
-            columns: ["owner_person_id"]
-            isOneToOne: false
-            referencedRelation: "people"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "department_updates_startup_department_id_fkey"
-            columns: ["startup_department_id"]
-            isOneToOne: false
-            referencedRelation: "startup_departments"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "department_updates_startup_id_fkey"
-            columns: ["startup_id"]
-            isOneToOne: false
-            referencedRelation: "startups"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       email_send_log: {
         Row: {
           created_at: string
@@ -1215,169 +1145,35 @@ export type Database = {
         }
         Relationships: []
       }
-      startup_departments: {
-        Row: {
-          created_at: string
-          created_by: string | null
-          department_key: string
-          department_lead_person_id: string | null
-          department_name: string
-          headcount: number
-          id: string
-          startup_id: string
-          status: string
-          summary: string | null
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          created_by?: string | null
-          department_key: string
-          department_lead_person_id?: string | null
-          department_name: string
-          headcount?: number
-          id?: string
-          startup_id: string
-          status?: string
-          summary?: string | null
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          created_by?: string | null
-          department_key?: string
-          department_lead_person_id?: string | null
-          department_name?: string
-          headcount?: number
-          id?: string
-          startup_id?: string
-          status?: string
-          summary?: string | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "startup_departments_department_lead_person_id_fkey"
-            columns: ["department_lead_person_id"]
-            isOneToOne: false
-            referencedRelation: "people"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "startup_departments_startup_id_fkey"
-            columns: ["startup_id"]
-            isOneToOne: false
-            referencedRelation: "startups"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       startup_documents: {
         Row: {
-          amount: number | null
-          category: string | null
           created_at: string
-          currency: string
-          department: string | null
           doc_type: string
-          document_date: string | null
           file_name: string
           file_url: string
           id: string
-          linked_financial_entry_id: string | null
-          linked_funding_round_id: string | null
-          linked_stakeholder_id: string | null
-          notes: string | null
-          status: string
-          storage_path: string | null
-          subcategory: string | null
           startup_id: string
-          tags: Json
-          title: string | null
-          updated_at: string
           uploaded_by: string | null
-          vendor_name: string | null
         }
         Insert: {
-          amount?: number | null
-          category?: string | null
           created_at?: string
-          currency?: string
-          department?: string | null
           doc_type?: string
-          document_date?: string | null
           file_name: string
           file_url: string
           id?: string
-          linked_financial_entry_id?: string | null
-          linked_funding_round_id?: string | null
-          linked_stakeholder_id?: string | null
-          notes?: string | null
-          status?: string
-          storage_path?: string | null
-          subcategory?: string | null
           startup_id: string
-          tags?: Json
-          title?: string | null
-          updated_at?: string
           uploaded_by?: string | null
-          vendor_name?: string | null
         }
         Update: {
-          amount?: number | null
-          category?: string | null
           created_at?: string
-          currency?: string
-          department?: string | null
           doc_type?: string
-          document_date?: string | null
           file_name?: string
           file_url?: string
           id?: string
-          linked_financial_entry_id?: string | null
-          linked_funding_round_id?: string | null
-          linked_stakeholder_id?: string | null
-          notes?: string | null
-          status?: string
-          storage_path?: string | null
-          subcategory?: string | null
           startup_id?: string
-          tags?: Json
-          title?: string | null
-          updated_at?: string
           uploaded_by?: string | null
-          vendor_name?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "startup_documents_linked_financial_entry_id_fkey"
-            columns: ["linked_financial_entry_id"]
-            isOneToOne: false
-            referencedRelation: "financial_entries"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "startup_documents_linked_funding_round_id_fkey"
-            columns: ["linked_funding_round_id"]
-            isOneToOne: false
-            referencedRelation: "funding_rounds"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "startup_documents_linked_stakeholder_id_fkey"
-            columns: ["linked_stakeholder_id"]
-            isOneToOne: false
-            referencedRelation: "stakeholders"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "startup_documents_startup_id_fkey"
-            columns: ["startup_id"]
-            isOneToOne: false
-            referencedRelation: "startups"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       startup_milestones: {
         Row: {
