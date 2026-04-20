@@ -1,4 +1,4 @@
-import { Building2, CircleAlert, CircleCheckBig, Clock3 } from "lucide-react";
+import { CircleAlert, CircleCheckBig, Clock3, Users } from "lucide-react";
 import {
   startupDepartmentCatalog,
   useDepartmentUpdates,
@@ -6,14 +6,23 @@ import {
 } from "@/hooks/useStartupHub";
 import { cn } from "@/lib/utils";
 
-const statusStyles: Record<string, string> = {
-  good: "border-emerald-500/30 bg-emerald-500/5 text-emerald-600",
-  watch: "border-amber-500/30 bg-amber-500/5 text-amber-600",
-  critical: "border-destructive/30 bg-destructive/5 text-destructive",
+const statusStyles: Record<string, { chip: string; dot: string }> = {
+  good: {
+    chip: "bg-signal-positive-soft text-signal-positive border-signal-positive/30",
+    dot: "bg-signal-positive",
+  },
+  watch: {
+    chip: "bg-signal-warning-soft text-signal-warning border-signal-warning/30",
+    dot: "bg-signal-warning",
+  },
+  critical: {
+    chip: "bg-signal-critical-soft text-signal-critical border-signal-critical/30",
+    dot: "bg-signal-critical",
+  },
 };
 
 const statusLabels: Record<string, string> = {
-  good: "Good",
+  good: "On track",
   watch: "Watch",
   critical: "Critical",
 };
@@ -39,76 +48,110 @@ export default function DepartmentUpdatesPanel({ startupId }: { startupId: strin
       status: department?.status ?? "watch",
       headcount: department?.headcount ?? 0,
       leadName: department?.lead?.full_name ?? null,
-      summary: latestUpdate?.summary ?? department?.summary ?? "No department update yet.",
+      summary: latestUpdate?.summary ?? department?.summary ?? null,
       blockers: latestUpdate?.blockers_list ?? [],
+      wins: latestUpdate?.wins_list ?? [],
       updatedAt: latestUpdate?.update_date ?? null,
     };
   });
 
   if (departmentsLoading || updatesLoading) {
-    return <div className="text-sm text-muted-foreground">Loading department updates...</div>;
+    return <div className="text-sm text-muted-foreground">Loading department radar…</div>;
   }
 
+  // Aggregate header stats
+  const totalCritical = departmentCards.filter((d) => d.status === "critical").length;
+  const totalWatch = departmentCards.filter((d) => d.status === "watch").length;
+  const totalGood = departmentCards.filter((d) => d.status === "good").length;
+  const totalPeople = departmentCards.reduce((s, d) => s + d.headcount, 0);
+
   return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <Building2 className="h-4 w-4 text-primary" />
+    <div className="paper-card overflow-hidden">
+      {/* Editorial header strip */}
+      <div className="flex items-center justify-between border-b border-border bg-paper px-5 py-4">
         <div>
-          <h3 className="text-sm font-semibold">Department Updates</h3>
-          <p className="text-xs text-muted-foreground">
-            CEO-facing summaries from the current company department structure.
+          <span className="eyebrow">Department Operations Radar</span>
+          <p className="font-display text-lg leading-tight mt-1">
+            {departmentCards.length} departments · {totalPeople} operators
           </p>
+        </div>
+        <div className="flex items-center gap-4 text-[11px] uppercase tracking-wider font-semibold">
+          {totalCritical > 0 && (
+            <span className="flex items-center gap-1.5 text-signal-critical">
+              <span className="h-1.5 w-1.5 rounded-full bg-signal-critical" />
+              {totalCritical} critical
+            </span>
+          )}
+          {totalWatch > 0 && (
+            <span className="flex items-center gap-1.5 text-signal-warning">
+              <span className="h-1.5 w-1.5 rounded-full bg-signal-warning" />
+              {totalWatch} watch
+            </span>
+          )}
+          {totalGood > 0 && (
+            <span className="flex items-center gap-1.5 text-signal-positive">
+              <span className="h-1.5 w-1.5 rounded-full bg-signal-positive" />
+              {totalGood} on track
+            </span>
+          )}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-        {departmentCards.map((department) => (
-          <div key={department.key} className="rounded-xl border border-border/60 bg-card p-4 space-y-3">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-sm font-semibold">{department.name}</p>
-                <div className="flex flex-wrap items-center gap-2 mt-1 text-[11px] text-muted-foreground">
-                  <span>{department.headcount} people</span>
-                  <span>{department.leadName ? `Lead: ${department.leadName}` : "Lead not assigned"}</span>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-px bg-border">
+        {departmentCards.map((department) => {
+          const styles = statusStyles[department.status] ?? statusStyles.watch;
+          const topBlocker = department.blockers[0];
+          return (
+            <article key={department.key} className="bg-card p-5 flex flex-col gap-3 min-h-[180px]">
+              <header className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className={cn("h-1.5 w-1.5 rounded-full", styles.dot)} />
+                    <span className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
+                      {statusLabels[department.status] ?? "Watch"}
+                    </span>
+                  </div>
+                  <h3 className="font-display text-base mt-1 leading-tight">{department.name}</h3>
                 </div>
+                <span className="numeric text-xl text-foreground/80 shrink-0">{department.headcount}</span>
+              </header>
+
+              <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                <Users className="h-3 w-3" />
+                {department.leadName ? `Lead · ${department.leadName}` : "Lead unassigned"}
               </div>
-              <span
-                className={cn(
-                  "rounded-full border px-2 py-1 text-[10px] font-medium",
-                  statusStyles[department.status] ?? statusStyles.watch
-                )}
-              >
-                {statusLabels[department.status] ?? "Watch"}
-              </span>
-            </div>
 
-            <p className="text-sm text-foreground/80">{department.summary}</p>
+              {department.summary ? (
+                <p className="text-xs text-foreground/75 leading-relaxed line-clamp-3 flex-1">
+                  {department.summary}
+                </p>
+              ) : (
+                <p className="text-xs text-muted-foreground italic flex-1">No update logged yet.</p>
+              )}
 
-            {department.blockers.length > 0 ? (
-              <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-2">
-                <div className="flex items-center gap-1.5 text-[11px] font-medium text-amber-600 mb-1">
-                  <CircleAlert className="h-3 w-3" />
-                  Top blocker
+              {topBlocker ? (
+                <div className="flex items-start gap-1.5 border-t border-border pt-2.5 text-[11px] text-signal-critical">
+                  <CircleAlert className="h-3 w-3 mt-px shrink-0" />
+                  <span className="line-clamp-2">{topBlocker}</span>
                 </div>
-                <p className="text-xs text-foreground/75">{department.blockers[0]}</p>
-              </div>
-            ) : (
-              <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-3 py-2">
-                <div className="flex items-center gap-1.5 text-[11px] font-medium text-emerald-600">
-                  <CircleCheckBig className="h-3 w-3" />
-                  No blockers reported
+              ) : department.wins[0] ? (
+                <div className="flex items-start gap-1.5 border-t border-border pt-2.5 text-[11px] text-signal-positive">
+                  <CircleCheckBig className="h-3 w-3 mt-px shrink-0" />
+                  <span className="line-clamp-2">{department.wins[0]}</span>
                 </div>
-              </div>
-            )}
+              ) : (
+                <div className="border-t border-border pt-2.5" />
+              )}
 
-            <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-              <Clock3 className="h-3 w-3" />
-              {department.updatedAt
-                ? `Latest update: ${new Date(department.updatedAt).toLocaleDateString()}`
-                : "No dated department update yet"}
-            </div>
-          </div>
-        ))}
+              <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground font-mono uppercase tracking-wider">
+                <Clock3 className="h-3 w-3" />
+                {department.updatedAt
+                  ? new Date(department.updatedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+                  : "No update"}
+              </div>
+            </article>
+          );
+        })}
       </div>
     </div>
   );
