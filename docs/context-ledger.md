@@ -392,3 +392,45 @@ The later Lovable migration was converted into a defensive reconciliation migrat
 ### Why This Matters
 
 Without this reconciliation, a fresh database setup could fail because the two founder-related migrations define overlapping tables with incompatible column names and shapes.
+
+---
+
+## Snapshot: 2026-04-20 - Founder Surfaces Moved To Real Derived Data
+
+### What Changed
+
+Two core founder-facing surfaces were moved away from static/demo intelligence and onto real derived summary hooks:
+
+- `FounderCommandCenter`
+- `StartupDetail`
+
+### New Summary Layers
+
+New hooks were introduced for this:
+
+- `src/hooks/useFounderOverview.ts`
+- `src/hooks/useStartupExecutiveOverview.ts`
+
+These hooks now derive signals from real repo data where available, including:
+
+- startups
+- people
+- tasks
+- startup_departments
+- department_updates
+- startup_documents
+- financial tables
+- stakeholders
+- funding_rounds
+
+### Practical Result
+
+The founder command center no longer depends on the old static KAI portfolio brief file for its main executive summary.
+
+The startup detail page no longer depends on hardcoded startup-specific KAI or problem fixtures for its main strategic panels.
+
+### Verification
+
+Production build verification passed after these changes with:
+
+- `npm.cmd run build`
