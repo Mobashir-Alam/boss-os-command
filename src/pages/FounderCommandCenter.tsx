@@ -172,26 +172,46 @@ const FounderCommandCenter = () => {
       </header>
 
       <main className="mx-auto max-w-7xl space-y-10 px-6 py-8">
-        {overview.alerts.filter((alert) => alert.severity === "critical").length > 0 && (
-          <section className="-mx-6 border-y border-signal-critical/30 bg-signal-critical-soft px-6 py-3">
-            <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-4">
-              <span className="eyebrow text-signal-critical">Live / Critical</span>
-              <div className="flex flex-wrap items-center gap-6 text-sm">
-                {overview.alerts
-                  .filter((alert) => alert.severity === "critical")
-                  .map((alert) => (
-                    <Link
-                      key={alert.id}
-                      to={`/startup/${alert.startupSlug}`}
-                      className="group flex items-center gap-2 text-signal-critical hover:underline underline-offset-4"
+        {overview.alerts.filter((alert) => alert.severity === "critical" || alert.severity === "warning").length > 0 && (
+          <section className="space-y-2">
+            {overview.alerts
+              .filter((alert) => alert.severity === "critical" || alert.severity === "warning")
+              .slice(0, 4)
+              .map((alert) => {
+                const isCritical = alert.severity === "critical";
+                return (
+                  <Link
+                    key={alert.id}
+                    to={`/startup/${alert.startupSlug}`}
+                    className={cn(
+                      "group flex items-center justify-between gap-3 rounded-md border px-4 py-3 transition-colors",
+                      isCritical
+                        ? "border-signal-critical/30 bg-signal-critical-soft hover:bg-signal-critical-soft/80"
+                        : "border-signal-warning/30 bg-signal-warning-soft hover:bg-signal-warning-soft/80",
+                    )}
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="text-base leading-none">{isCritical ? "🔥" : "⚠️"}</span>
+                      <span
+                        className={cn(
+                          "text-sm font-medium",
+                          isCritical ? "text-signal-critical" : "text-signal-warning",
+                        )}
+                      >
+                        {alert.text}
+                      </span>
+                    </div>
+                    <span
+                      className={cn(
+                        "flex items-center gap-1 text-xs font-medium",
+                        isCritical ? "text-signal-critical" : "text-signal-warning",
+                      )}
                     >
-                      <AlertTriangle className="h-3.5 w-3.5" />
-                      <span className="font-medium">{alert.text}</span>
-                      <ChevronRight className="h-3 w-3 opacity-0 transition-opacity group-hover:opacity-100" />
-                    </Link>
-                  ))}
-              </div>
-            </div>
+                      View <ChevronRight className="h-3.5 w-3.5" />
+                    </span>
+                  </Link>
+                );
+              })}
           </section>
         )}
 
