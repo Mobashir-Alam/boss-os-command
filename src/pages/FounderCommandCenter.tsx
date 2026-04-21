@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
+import AskKai from "@/components/AskKai";
 import {
   AlertTriangle,
   ArrowDownRight,
@@ -74,6 +75,22 @@ const FounderCommandCenter = () => {
   const handleAcceptDecision = (decision: string) => {
     toast.success("Decision captured", { description: decision });
   };
+
+  const portfolioContext = useMemo(() => {
+    if (!overview || overview.isLoading) return "";
+    const parts = [
+      `Portfolio: ${overview.totalCompanies} companies in view`,
+      overview.portfolioStatusLine,
+      overview.biggestRisk ? `Biggest portfolio risk: ${overview.biggestRisk}` : null,
+      overview.biggestOpportunity ? `Biggest opportunity: ${overview.biggestOpportunity}` : null,
+      overview.companies?.length > 0
+        ? `Companies: ${overview.companies.map((c: any) => `${c.name} (${c.status})`).join(", ")}`
+        : null,
+      stats.overdue > 0 ? `${stats.overdue} overdue tasks across portfolio` : null,
+      blockedTasks.length > 0 ? `${blockedTasks.length} blocked tasks need founder decision` : null,
+    ].filter(Boolean).join(". ");
+    return parts;
+  }, [overview, stats, blockedTasks]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -530,6 +547,12 @@ const FounderCommandCenter = () => {
             </div>
           </section>
         )}
+
+        {/* KAI Portfolio Intelligence */}
+        <section className="mb-10">
+          <h2 className="eyebrow mb-4">Ask KAI</h2>
+          <AskKai startupContext={portfolioContext} />
+        </section>
       </main>
     </div>
   );

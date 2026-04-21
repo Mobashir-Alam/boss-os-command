@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { Target, ClipboardList, PenLine, ChevronDown, ChevronUp, Loader2 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import PriorityCard from "@/components/PriorityCard";
@@ -8,14 +7,12 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { lowerPriorities, activityUpdates, severityConfig } from "@/data/focus";
+import { severityConfig } from "@/data/focus";
 import { useTaskContext } from "@/contexts/TaskContext";
 import { usePriorities } from "@/hooks/usePriorities";
 import { useAuth } from "@/contexts/AuthContext";
-import { cn } from "@/lib/utils";
 
 const Focus = () => {
-  const navigate = useNavigate();
   const { role } = useAuth();
   const [viewMode, setViewMode] = useState<"founder" | "manager">("founder");
   const [showLower, setShowLower] = useState(false);
@@ -110,45 +107,53 @@ const Focus = () => {
           </button>
           {showLower && (
             <div className="space-y-3 animate-in fade-in-0 slide-in-from-top-2 duration-200">
-              {lowerPriorities.map((lp) => {
-                const cfg = severityConfig[lp.severity];
-                return (
-                  <div key={lp.id} className="flex items-center justify-between rounded-xl border border-border/40 bg-card px-5 py-4 transition-all duration-150 hover:border-border/60 hover:shadow-sm">
-                    <div className="flex items-center gap-3">
-                      <span className="text-xs">{cfg.icon}</span>
-                      <div>
-                        <p className="text-sm font-medium">{lp.startupName} — <span className="text-muted-foreground">{lp.tag}</span></p>
-                        <p className="text-xs text-muted-foreground mt-0.5">{lp.problem}</p>
+              {priorities.filter((p) => p.severity === "monitor").length === 0 ? (
+                <p className="text-sm text-muted-foreground px-1">No lower-priority items right now.</p>
+              ) : (
+                priorities.filter((p) => p.severity === "monitor").map((lp) => {
+                  const cfg = severityConfig[lp.severity as keyof typeof severityConfig];
+                  return (
+                    <div key={lp.id} className="flex items-center justify-between rounded-xl border border-border/40 bg-card px-5 py-4 transition-all duration-150 hover:border-border/60 hover:shadow-sm">
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs">{cfg?.icon}</span>
+                        <div>
+                          <p className="text-sm font-medium">{lp.startupName} — <span className="text-muted-foreground">{lp.tag}</span></p>
+                          <p className="text-xs text-muted-foreground mt-0.5">{lp.problem}</p>
+                        </div>
                       </div>
+                      <span className="text-xs text-muted-foreground">{lp.owner}</span>
                     </div>
-                    <span className="text-xs text-muted-foreground">{lp.owner}</span>
-                  </div>
-                );
-              })}
+                  );
+                })
+              )}
             </div>
           )}
         </section>
 
-        {/* Manager View: MFO Tasks */}
+        {/* Manager View: in-progress priorities as activity */}
         {viewMode === "manager" && (
           <section className="mb-12 animate-in fade-in-0 duration-200">
-            <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-5">Latest Updates</h2>
+            <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-5">In Progress</h2>
             <div className="space-y-1">
-              {activityUpdates.map((update) => (
-                <div key={update.id} className="flex items-start gap-4 rounded-xl px-5 py-4 transition-colors duration-150 hover:bg-muted/40">
-                  <div className="flex-shrink-0 h-8 w-8 rounded-full bg-muted flex items-center justify-center">
-                    <span className="text-xs font-semibold">{update.person.charAt(0)}</span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-sm font-semibold">{update.person}</span>
-                      <span className="text-xs text-muted-foreground">· {update.startupName}</span>
+              {priorities.filter((p) => p.executionStatus === "in-progress").length === 0 ? (
+                <p className="text-sm text-muted-foreground px-1">No items currently in progress.</p>
+              ) : (
+                priorities.filter((p) => p.executionStatus === "in-progress").map((p) => (
+                  <div key={p.id} className="flex items-start gap-4 rounded-xl px-5 py-4 transition-colors duration-150 hover:bg-muted/40">
+                    <div className="flex-shrink-0 h-8 w-8 rounded-full bg-muted flex items-center justify-center">
+                      <span className="text-xs font-semibold">{(p.owner ?? "?").charAt(0)}</span>
                     </div>
-                    <p className="text-sm text-muted-foreground mt-0.5">{update.message}</p>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-sm font-semibold">{p.owner ?? "Unassigned"}</span>
+                        <span className="text-xs text-muted-foreground">· {p.startupName}</span>
+                      </div>
+                      <p className="text-sm text-muted-foreground mt-0.5">{p.problem}</p>
+                    </div>
+                    <span className="text-[11px] text-muted-foreground flex-shrink-0 mt-0.5">{p.deadlineIn}</span>
                   </div>
-                  <span className="text-[11px] text-muted-foreground flex-shrink-0 mt-0.5">{update.timestamp}</span>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </section>
         )}

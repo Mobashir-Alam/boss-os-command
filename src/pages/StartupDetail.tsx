@@ -114,7 +114,21 @@ const StartupDetail = () => {
   const problems = executiveOverview.problems;
   const kaiData = executiveOverview.kaiData;
   const signal = executiveOverview.signal;
-  const startupContext = `Startup: ${startup.name}. Status: ${config.label}. Runway: ${startup.runway}. Growth: ${startup.growth}. Insight: ${kaiData?.insight ?? startup.insight}.`;
+  const startupContext = [
+    `Company: ${startup.name}`,
+    `Status: ${config.label}`,
+    `Runway: ${startup.runway}`,
+    `Growth: ${startup.growth} (${startup.growthDirection})`,
+    kaiData?.insight ? `Strategic insight: ${kaiData.insight}` : null,
+    kaiData?.recommendation?.action ? `Recommended action: ${kaiData.recommendation.action}` : null,
+    kaiData?.recommendation?.why ? `Why it matters: ${kaiData.recommendation.why}` : null,
+    kaiData?.predictions?.[0]?.prediction ? `Near-term prediction: ${kaiData.predictions[0].prediction}` : null,
+    problems.length > 0
+      ? `Top problems: ${problems.slice(0, 3).map((p) => p.problem).join("; ")}`
+      : null,
+  ]
+    .filter(Boolean)
+    .join(". ");
 
   const completedTasks = startupTasks.filter((task) => task.status === "completed").length;
   const totalTasks = startupTasks.length;

@@ -21,6 +21,7 @@ import {
   crossStartupInsights, capitalAllocations,
   weeklyBrief, founderPatterns, founderTimeAllocation,
 } from "@/data/kai";
+import { usePriorities } from "@/hooks/usePriorities";
 import { useTaskContext } from "@/contexts/TaskContext";
 import { toast } from "sonner";
 import { AlertTriangle, CheckCircle2, Clock, ListTodo } from "lucide-react";
@@ -32,6 +33,10 @@ const Index = () => {
   const { getTaskStats, getActiveIssueCount } = useTaskContext();
   const stats = getTaskStats();
   const activeIssues = getActiveIssueCount();
+  const { priorities } = usePriorities();
+  const topUrgentPriorities = priorities
+    .filter((p) => p.severity === "critical" || p.severity === "at-risk")
+    .slice(0, 2);
 
   return (
     <div className="min-h-screen bg-background">
@@ -96,19 +101,19 @@ const Index = () => {
           </div>
           <KaiPortfolioIntel crossInsights={crossStartupInsights} capitalAllocations={capitalAllocations} />
           <KaiRoleInsights role="founder" className="mt-4" />
-          {/* Predictive Intelligence */}
-          <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <KaiPredictiveIntel
-              issueTitle="Nasheedio retention dropping 12% week-over-week"
-              startupName="Nasheedio"
-              kpiData="Retention: 62% (was 74%), Creator uploads down 30%, Churn rate: 4.2%"
-            />
-            <KaiPredictiveIntel
-              issueTitle="Project X runway critically low at 73 days"
-              startupName="Project X"
-              kpiData="Burn: $48K/mo, Runway: 73 days, Revenue: $0, Team: 5 FTE"
-            />
-          </div>
+          {/* Predictive Intelligence — driven by real priorities */}
+          {topUrgentPriorities.length > 0 && (
+            <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {topUrgentPriorities.map((p) => (
+                <KaiPredictiveIntel
+                  key={p.id}
+                  issueTitle={p.problem}
+                  startupName={p.startupName}
+                  kpiData={`Impact: ${p.impactLevel}. ${p.why} ${p.mfoSuggestion ?? ""}`}
+                />
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Escalation Log */}
