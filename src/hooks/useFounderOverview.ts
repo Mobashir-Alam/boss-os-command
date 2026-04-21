@@ -9,7 +9,6 @@ import {
   startupDepartmentCatalog,
   type StartupDepartmentKey,
 } from "@/hooks/useStartupHub";
-import type { StartupStatus } from "@/data/startups";
 
 type StartupDepartmentRow = Tables<"startup_departments">;
 type DepartmentUpdateRow = Tables<"department_updates">;
@@ -51,7 +50,7 @@ type FounderCompanyOverview = {
   startupSlug: string;
   startupUuid: string;
   name: string;
-  status: StartupStatus;
+  status: string;
   runwayLabel: string;
   runwayMonths: number | null;
   growthLabel: string;

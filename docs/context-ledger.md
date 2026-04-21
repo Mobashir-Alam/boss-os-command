@@ -473,67 +473,66 @@ The founder command center and startup detail pages now have a concrete demo com
 
 ---
 
-## Snapshot: 2026-04-21 - Integration Complete, KAI Wired, Phase 3 Done
+## Snapshot: 2026-04-21 - Current Main Flow Status
 
 ### Current Branch State
 
-Active branch: `main` (all work merged)
+Active branch:
 
-Latest key commits on main:
+- `feature/founder-ui-phase2`
 
-- `efc5bfb feat: wire KAI to real data across all main surfaces`
-- `66c81aa fix: delete dummy startup and strengthen people filter`
-- `b287efe feat: founder phase 1+2 — schema, UI, and Nasheedio demo seed (PR merged)`
+Local branch status:
 
-### What Was Completed This Session
+- clean working tree
+- ahead of remote by 4 commits
 
-#### Supabase / Data Layer
+Latest key commits:
 
-- `feature/founder-ui-phase2` was merged to `main` via PR
-- Seed was packaged as migration `20260421000000_nasheedio_demo_seed.sql` for auto-apply
-- Lovable was prompted to apply the seed migration — confirmed working
-- Cleanup migration `20260421100000_cleanup_dummy_startup.sql` pushed to main to delete "Dummy Nasheedio" (a test company created through the Lovable UI that was duplicating Nasheedio in the portfolio view)
+- `fa091b6 feat: seed nasheedio founder demo data`
+- `54316d6 feat: derive founder and startup executive summaries`
+- `f9e7269 fix: reconcile founder schema migrations`
 
-#### Bug Fixes
+### Main Flow Position
 
-- `PeopleTab.tsx`: filter now matches `linked_startups` by both UUID and slug — people now correctly show under Nasheedio
-- Unused `ArrowUpDown` import removed from PeopleTab
+The project is currently between:
 
-#### KAI Integration (Phase 4 — Substantially Complete)
+- Phase 2: CEO command center around real data
+- Phase 3: company drill-down stabilization
 
-Two edge functions already existed and were calling Lovable's AI gateway (`https://ai.gateway.lovable.dev`):
+Completed enough for first live end-to-end data testing:
 
-- `supabase/functions/kai-ask/index.ts` — role-aware conversational KAI
-- `supabase/functions/kai-predict/index.ts` — predictive intelligence per issue
+- founder/CEO planning and schema direction
+- Lovable Phase 2 UI merged into integration branch
+- migration reconciliation completed
+- founder command center moved to derived live-data hook
+- startup detail moved to derived company intelligence hook
+- Nasheedio demo seed added for real company data
+- production build passing
 
-These were wired to real data:
+### Still Not Complete
 
-- `StartupDetail.tsx`: `startupContext` string now includes strategic insight, recommendation, predictions, and top problems from `useStartupExecutiveOverview`
-- `FounderCommandCenter.tsx`: `AskKai` component added with full portfolio context built from `useFounderOverview` (companies, status, risk, opportunity, blockers, overdue tasks)
-- `Index.tsx` (`/portfolio`): `KaiPredictiveIntel` cards now pull real critical/at-risk priorities from DB via `usePriorities`
-- `Focus.tsx`: static `lowerPriorities` replaced with real `monitor`-severity priorities; static `activityUpdates` replaced with real in-progress priorities
+The following are still open:
 
-### Live App State (Confirmed in Browser)
+- Supabase migrations have not yet been applied/verified against the live Supabase project from this environment
+- `supabase/seed.sql` has not yet been executed against live Supabase
+- browser QA has not yet been completed with seeded Nasheedio data
+- department update, document, finance, people/payroll, and ownership CRUD flows still need end-to-end testing
+- GPT-backed KAI integration has not started yet
 
-- Founder Command Center: real portfolio data, AskKai now present with portfolio context
-- Nasheedio startup detail: all tabs working — departments (9), people, documents, finances, ownership, priorities, tasks, milestones, KAI memories
-- Focus page: real priorities from DB, no static data
-- Departments show headcounts, leads, summaries from seed
-- Documents tab shows 2 real uploaded files + seed metadata
+### Immediate Next Steps
 
-### Supabase / Lovable Workflow Confirmed
+Next implementation flow:
 
-- Lovable controls Supabase entirely — no direct CLI or dashboard access
-- Migrations are applied by prompting Lovable to apply pending migrations
-- Seed was applied this way successfully
-- `LOVABLE_API_KEY` secret in Lovable must be set for KAI edge functions to respond — this is the last blocker for live AI responses
-
-### Remaining Open Items
-
-- Confirm `LOVABLE_API_KEY` is set in Lovable project secrets so KAI edge functions actually call the AI gateway
-- "Dummy Nasheedio" cleanup migration (`20260421100000`) — needs Lovable to apply it (still showing 4 companies in last browser check)
-- Phase 5: decisions, escalations, founder actions — not yet started
-- `Index.tsx` (`/portfolio` route) still has some static KAI strings (globalKaiInsight, weeklyBrief, etc.) — lower priority since `/portfolio` is not the main landing page (`/` goes to FounderCommandCenter)
+- push or safely integrate `feature/founder-ui-phase2` according to the Lovable/main workflow
+- apply Supabase migrations to the live project
+- run `supabase/seed.sql` against the live project
+- open the app and test the core CEO path:
+  - Founder Command Center
+  - Nasheedio company card
+  - Startup Detail
+  - Department layer
+  - Document repository
+  - Finance summary
   - Ownership/funding context
   - Priorities/tasks
 - fix any real-data schema or UI issues discovered during QA
