@@ -97,11 +97,12 @@ const FounderCommandCenter = () => {
   }, [overview, stats, blockedTasks]);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-white text-foreground">
       <Navbar />
 
-      <header className="border-b border-border-strong/40 bg-paper">
-        <div className="mx-auto max-w-7xl px-6 py-6">
+      <header className="border-b border-border/60 bg-white">
+        <div className="mx-auto max-w-7xl px-6 pt-8 pb-6">
+          {/* eyebrow row removed for cleaner heading */}
           <div className="flex items-center justify-between gap-6">
             <div className="flex items-baseline gap-4">
               <span className="eyebrow">Founder Edition / {todayLabel}</span>
@@ -136,13 +137,24 @@ const FounderCommandCenter = () => {
 
           <div className="mt-4 flex flex-wrap items-end justify-between gap-6">
             <div>
-              <h1 className="font-display text-5xl font-semibold leading-none tracking-tight">
-                The Command Brief
+              <h1 className="text-3xl font-bold tracking-tight" style={{ fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif' }}>
+                Command Center
               </h1>
-              <p className="mt-3 max-w-2xl text-sm text-muted-foreground">
-                {overview.portfolioStatusLine}. Synthesized across {overview.totalCompanies} portfolio companies and{" "}
-                {overview.totalHeadcount} active operators.
-              </p>
+              {(() => {
+                const crit = overview.alerts.filter((a) => a.severity === "critical").length;
+                const warn = overview.alerts.filter((a) => a.severity === "warning").length;
+                const parts = [
+                  crit > 0 ? `${crit} critical` : null,
+                  warn > 0 ? `${warn} at risk` : null,
+                ].filter(Boolean);
+                return (
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    {parts.length > 0
+                      ? parts.join(", ")
+                      : `${overview.totalCompanies} companies in view`}
+                  </p>
+                );
+              })()}
             </div>
             <dl className="flex items-end gap-8 text-right">
               <Stat label="Companies" value={overview.totalCompanies.toString()} />
@@ -165,53 +177,80 @@ const FounderCommandCenter = () => {
       </header>
 
       <main className="mx-auto max-w-7xl space-y-10 px-6 py-8">
-        {overview.alerts.filter((alert) => alert.severity === "critical").length > 0 && (
-          <section className="-mx-6 border-y border-signal-critical/30 bg-signal-critical-soft px-6 py-3">
-            <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-4">
-              <span className="eyebrow text-signal-critical">Live / Critical</span>
-              <div className="flex flex-wrap items-center gap-6 text-sm">
-                {overview.alerts
-                  .filter((alert) => alert.severity === "critical")
-                  .map((alert) => (
-                    <Link
-                      key={alert.id}
-                      to={`/startup/${alert.startupSlug}`}
-                      className="group flex items-center gap-2 text-signal-critical hover:underline underline-offset-4"
+        {overview.alerts.filter((alert) => alert.severity === "critical" || alert.severity === "warning").length > 0 && (
+          <section className="space-y-2">
+            {overview.alerts
+              .filter((alert) => alert.severity === "critical" || alert.severity === "warning")
+              .slice(0, 4)
+              .map((alert) => {
+                const isCritical = alert.severity === "critical";
+                return (
+                  <Link
+                    key={alert.id}
+                    to={`/startup/${alert.startupSlug}`}
+                    className={cn(
+                      "group flex items-center justify-between gap-3 rounded-md border px-4 py-3 transition-colors",
+                      isCritical
+                        ? "border-signal-critical/30 bg-signal-critical-soft hover:bg-signal-critical-soft/80"
+                        : "border-signal-warning/30 bg-signal-warning-soft hover:bg-signal-warning-soft/80",
+                    )}
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="text-base leading-none">{isCritical ? "🔥" : "⚠️"}</span>
+                      <span
+                        className={cn(
+                          "text-sm font-medium",
+                          isCritical ? "text-signal-critical" : "text-signal-warning",
+                        )}
+                      >
+                        {alert.text}
+                      </span>
+                    </div>
+                    <span
+                      className={cn(
+                        "flex items-center gap-1 text-xs font-medium",
+                        isCritical ? "text-signal-critical" : "text-signal-warning",
+                      )}
                     >
-                      <AlertTriangle className="h-3.5 w-3.5" />
-                      <span className="font-medium">{alert.text}</span>
-                      <ChevronRight className="h-3 w-3 opacity-0 transition-opacity group-hover:opacity-100" />
-                    </Link>
-                  ))}
-              </div>
-            </div>
+                      View <ChevronRight className="h-3.5 w-3.5" />
+                    </span>
+                  </Link>
+                );
+              })}
           </section>
         )}
 
         {mode === "founder" && (
           <>
             <section className="grid grid-cols-12 gap-6">
-              <div className="paper-card-elevated col-span-12 p-8 lg:col-span-8">
-                <div className="mb-5 flex items-center justify-between">
-                  <span className="eyebrow">KAI Strategic Brief</span>
+              <div className="paper-card-elevated col-span-12 p-6 lg:col-span-8 lg:p-8">
+                <div className="mb-4 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-base">🧠</span>
+                    <h2 className="text-base font-semibold tracking-tight">KAI Weekly Brief</h2>
+                  </div>
                   <span className="font-mono text-[10px] text-muted-foreground">
                     {overview.loading ? "UPDATING" : "LIVE PORTFOLIO"}
                   </span>
                 </div>
 
-                <p className="mb-6 font-display text-2xl leading-snug text-foreground/90">
+                <p className="mb-6 text-base leading-relaxed text-foreground/85">
                   {overview.strategicBrief.status}
                 </p>
 
-                <div className="mb-6 grid grid-cols-1 gap-px bg-border sm:grid-cols-2">
-                  <div className="bg-card p-5">
-                    <span className="eyebrow text-signal-critical">Biggest Risk</span>
+                <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div className="rounded-md border border-signal-critical/20 bg-signal-critical-soft p-4">
+                    <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-signal-critical">
+                      Biggest Risk
+                    </span>
                     <p className="mt-2 text-sm leading-relaxed text-foreground/85">
                       {overview.strategicBrief.biggestRisk}
                     </p>
                   </div>
-                  <div className="bg-card p-5">
-                    <span className="eyebrow text-signal-positive">Biggest Opportunity</span>
+                  <div className="rounded-md border border-signal-positive/20 bg-signal-positive-soft p-4">
+                    <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-signal-positive">
+                      Biggest Opportunity
+                    </span>
                     <p className="mt-2 text-sm leading-relaxed text-foreground/85">
                       {overview.strategicBrief.biggestOpportunity}
                     </p>
@@ -219,7 +258,7 @@ const FounderCommandCenter = () => {
                 </div>
 
                 <div>
-                  <span className="eyebrow mb-2 block">Top Decisions Awaiting You</span>
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground mb-2 block">Top Decisions</span>
                   <ul className="divide-y divide-border">
                     {overview.strategicBrief.topDecisions.length > 0 ? (
                       overview.strategicBrief.topDecisions.map((decision, index) => (

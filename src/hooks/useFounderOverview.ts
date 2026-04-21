@@ -50,7 +50,7 @@ type FounderCompanyOverview = {
   startupSlug: string;
   startupUuid: string;
   name: string;
-  status: string;
+  status: import("@/data/startups").StartupStatus;
   runwayLabel: string;
   runwayMonths: number | null;
   growthLabel: string;
