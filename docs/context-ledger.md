@@ -434,3 +434,39 @@ The startup detail page no longer depends on hardcoded startup-specific KAI or p
 Production build verification passed after these changes with:
 
 - `npm.cmd run build`
+
+---
+
+## Snapshot: 2026-04-21 - Nasheedio Demo Data Seed Added
+
+### Source Received
+
+The user provided a local PDF:
+
+- `C:\Users\user\OneDrive\Desktop\Ceo Web App Dummy Data - Nasheedio.pdf`
+
+The PDF was successfully decoded locally and extracted into:
+
+- `docs/nasheedio-demo-data.md`
+
+### Main Flow Data Added
+
+A repeatable Supabase seed was added:
+
+- `supabase/seed.sql`
+
+The seed maps Nasheedio demo data into the founder/CEO workflow tables:
+
+- company profile
+- 9 operating departments
+- sample employee/payroll rows
+- department updates
+- finance, burn, cash flow, and forecast rows
+- cap table and funding rounds
+- document repository metadata
+- CEO priorities and tasks
+- milestones, notes, and KAI memories
+
+### Why This Matters
+
+The founder command center and startup detail pages now have a concrete demo company that exercises the main flow end to end once the seed is applied to Supabase.
