@@ -331,3 +331,209 @@ The branch is now the active integration branch for:
 - reviewing the Lovable UI quality
 - checking schema overlap between the existing founder migration and the new Lovable migration
 - refining any UX or data wiring gaps before merging back to `main`
+
+---
+
+## Snapshot: 2026-04-20 - Founder Workflow Progress Check
+
+### Current Position
+
+The project is now between Phase 2 and Phase 3 of the founder roadmap.
+
+What is already in place:
+
+- founder product definition and scope docs
+- founder schema and migration planning
+- founder UI redesign pass from Lovable merged into the integration branch
+- startup detail document and department surfaces present in the app
+- build verification passing on the integration branch
+
+### What Is Still Partial
+
+Several founder-facing surfaces still rely partly on static or heuristic data rather than a fully real founder data layer.
+
+Current gaps still include:
+
+- founder command center still mixes real startup and people data with static KAI/demo data
+- company intelligence is not yet backed by production KAI flows
+- schema overlap between the local founder migration and Lovable migration still needs consolidation
+- end-to-end CRUD and seeded usage for department updates and document workflows still need hardening
+
+### Immediate Next Work
+
+The highest-leverage next step is:
+
+- stabilize the merged branch by reconciling migrations and wiring founder UI sections to real data as much as possible before moving into KAI integration
+
+---
+
+## Snapshot: 2026-04-20 - Founder Schema Reconciliation Started
+
+### What Was Decided
+
+For the founder integration branch, the app-facing schema shape from the current UI and generated Supabase types is now treated as the final target.
+
+That means the final founder schema expects:
+
+- `startup_departments.name`
+- `startup_departments.lead_person_id`
+- `department_updates` without a required `startup_department_id`
+- `department_updates` list fields as `text[]`
+- `startup_documents` to keep the richer founder metadata plus upload-related fields
+
+### What Was Changed
+
+The later Lovable migration was converted into a defensive reconciliation migration so it can:
+
+- work after the earlier founder foundation migration
+- provision the final app-compatible schema on fresh environments
+- create or enforce the private `startup-documents` storage bucket and policies
+
+### Why This Matters
+
+Without this reconciliation, a fresh database setup could fail because the two founder-related migrations define overlapping tables with incompatible column names and shapes.
+
+---
+
+## Snapshot: 2026-04-20 - Founder Surfaces Moved To Real Derived Data
+
+### What Changed
+
+Two core founder-facing surfaces were moved away from static/demo intelligence and onto real derived summary hooks:
+
+- `FounderCommandCenter`
+- `StartupDetail`
+
+### New Summary Layers
+
+New hooks were introduced for this:
+
+- `src/hooks/useFounderOverview.ts`
+- `src/hooks/useStartupExecutiveOverview.ts`
+
+These hooks now derive signals from real repo data where available, including:
+
+- startups
+- people
+- tasks
+- startup_departments
+- department_updates
+- startup_documents
+- financial tables
+- stakeholders
+- funding_rounds
+
+### Practical Result
+
+The founder command center no longer depends on the old static KAI portfolio brief file for its main executive summary.
+
+The startup detail page no longer depends on hardcoded startup-specific KAI or problem fixtures for its main strategic panels.
+
+### Verification
+
+Production build verification passed after these changes with:
+
+- `npm.cmd run build`
+
+---
+
+## Snapshot: 2026-04-21 - Nasheedio Demo Data Seed Added
+
+### Source Received
+
+The user provided a local PDF:
+
+- `C:\Users\user\OneDrive\Desktop\Ceo Web App Dummy Data - Nasheedio.pdf`
+
+The PDF was successfully decoded locally and extracted into:
+
+- `docs/nasheedio-demo-data.md`
+
+### Main Flow Data Added
+
+A repeatable Supabase seed was added:
+
+- `supabase/seed.sql`
+
+The seed maps Nasheedio demo data into the founder/CEO workflow tables:
+
+- company profile
+- 9 operating departments
+- sample employee/payroll rows
+- department updates
+- finance, burn, cash flow, and forecast rows
+- cap table and funding rounds
+- document repository metadata
+- CEO priorities and tasks
+- milestones, notes, and KAI memories
+
+### Why This Matters
+
+The founder command center and startup detail pages now have a concrete demo company that exercises the main flow end to end once the seed is applied to Supabase.
+
+---
+
+## Snapshot: 2026-04-21 - Current Main Flow Status
+
+### Current Branch State
+
+Active branch:
+
+- `feature/founder-ui-phase2`
+
+Local branch status:
+
+- clean working tree
+- ahead of remote by 4 commits
+
+Latest key commits:
+
+- `fa091b6 feat: seed nasheedio founder demo data`
+- `54316d6 feat: derive founder and startup executive summaries`
+- `f9e7269 fix: reconcile founder schema migrations`
+
+### Main Flow Position
+
+The project is currently between:
+
+- Phase 2: CEO command center around real data
+- Phase 3: company drill-down stabilization
+
+Completed enough for first live end-to-end data testing:
+
+- founder/CEO planning and schema direction
+- Lovable Phase 2 UI merged into integration branch
+- migration reconciliation completed
+- founder command center moved to derived live-data hook
+- startup detail moved to derived company intelligence hook
+- Nasheedio demo seed added for real company data
+- production build passing
+
+### Still Not Complete
+
+The following are still open:
+
+- Supabase migrations have not yet been applied/verified against the live Supabase project from this environment
+- `supabase/seed.sql` has not yet been executed against live Supabase
+- browser QA has not yet been completed with seeded Nasheedio data
+- department update, document, finance, people/payroll, and ownership CRUD flows still need end-to-end testing
+- GPT-backed KAI integration has not started yet
+
+### Immediate Next Steps
+
+Next implementation flow:
+
+- push or safely integrate `feature/founder-ui-phase2` according to the Lovable/main workflow
+- apply Supabase migrations to the live project
+- run `supabase/seed.sql` against the live project
+- open the app and test the core CEO path:
+  - Founder Command Center
+  - Nasheedio company card
+  - Startup Detail
+  - Department layer
+  - Document repository
+  - Finance summary
+  - Ownership/funding context
+  - Priorities/tasks
+- fix any real-data schema or UI issues discovered during QA
+- only after this live data pass, begin Phase 4 KAI GPT integration
