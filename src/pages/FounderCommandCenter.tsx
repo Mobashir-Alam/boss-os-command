@@ -132,13 +132,24 @@ const FounderCommandCenter = () => {
 
           <div className="mt-4 flex flex-wrap items-end justify-between gap-6">
             <div>
-              <h1 className="font-display text-5xl font-semibold leading-none tracking-tight">
-                The Command Brief
+              <h1 className="font-display text-4xl font-semibold leading-none tracking-tight">
+                Command Center
               </h1>
-              <p className="mt-3 max-w-2xl text-sm text-muted-foreground">
-                {overview.portfolioStatusLine}. Synthesized across {overview.totalCompanies} portfolio companies and{" "}
-                {overview.totalHeadcount} active operators.
-              </p>
+              {(() => {
+                const crit = overview.alerts.filter((a) => a.severity === "critical").length;
+                const warn = overview.alerts.filter((a) => a.severity === "warning").length;
+                const parts = [
+                  crit > 0 ? `${crit} critical` : null,
+                  warn > 0 ? `${warn} at risk` : null,
+                ].filter(Boolean);
+                return (
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    {parts.length > 0
+                      ? parts.join(", ")
+                      : `${overview.totalCompanies} companies in view`}
+                  </p>
+                );
+              })()}
             </div>
             <dl className="flex items-end gap-8 text-right">
               <Stat label="Companies" value={overview.totalCompanies.toString()} />
