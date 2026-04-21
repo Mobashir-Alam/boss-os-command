@@ -470,3 +470,70 @@ The seed maps Nasheedio demo data into the founder/CEO workflow tables:
 ### Why This Matters
 
 The founder command center and startup detail pages now have a concrete demo company that exercises the main flow end to end once the seed is applied to Supabase.
+
+---
+
+## Snapshot: 2026-04-21 - Current Main Flow Status
+
+### Current Branch State
+
+Active branch:
+
+- `feature/founder-ui-phase2`
+
+Local branch status:
+
+- clean working tree
+- ahead of remote by 4 commits
+
+Latest key commits:
+
+- `fa091b6 feat: seed nasheedio founder demo data`
+- `54316d6 feat: derive founder and startup executive summaries`
+- `f9e7269 fix: reconcile founder schema migrations`
+
+### Main Flow Position
+
+The project is currently between:
+
+- Phase 2: CEO command center around real data
+- Phase 3: company drill-down stabilization
+
+Completed enough for first live end-to-end data testing:
+
+- founder/CEO planning and schema direction
+- Lovable Phase 2 UI merged into integration branch
+- migration reconciliation completed
+- founder command center moved to derived live-data hook
+- startup detail moved to derived company intelligence hook
+- Nasheedio demo seed added for real company data
+- production build passing
+
+### Still Not Complete
+
+The following are still open:
+
+- Supabase migrations have not yet been applied/verified against the live Supabase project from this environment
+- `supabase/seed.sql` has not yet been executed against live Supabase
+- browser QA has not yet been completed with seeded Nasheedio data
+- department update, document, finance, people/payroll, and ownership CRUD flows still need end-to-end testing
+- GPT-backed KAI integration has not started yet
+
+### Immediate Next Steps
+
+Next implementation flow:
+
+- push or safely integrate `feature/founder-ui-phase2` according to the Lovable/main workflow
+- apply Supabase migrations to the live project
+- run `supabase/seed.sql` against the live project
+- open the app and test the core CEO path:
+  - Founder Command Center
+  - Nasheedio company card
+  - Startup Detail
+  - Department layer
+  - Document repository
+  - Finance summary
+  - Ownership/funding context
+  - Priorities/tasks
+- fix any real-data schema or UI issues discovered during QA
+- only after this live data pass, begin Phase 4 KAI GPT integration
