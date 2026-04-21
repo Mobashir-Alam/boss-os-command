@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Progress } from "@/components/ui/progress";
 import {
   Users, Plus, Search, TrendingUp, TrendingDown, DollarSign, Brain,
-  ArrowUpDown, Pencil, Trash2, ChevronDown, ChevronRight, BarChart3,
+  Pencil, Trash2, ChevronDown, ChevronRight, BarChart3,
   AlertTriangle, UserPlus, UserMinus, Zap
 } from "lucide-react";
 import AddPersonModal from "@/components/people/AddPersonModal";
@@ -36,7 +36,7 @@ const EMP_LABELS: Record<string, string> = {
 
 type ViewMode = "overview" | "structure" | "profiles" | "productivity" | "cost";
 
-export default function PeopleTab({ startupId }: { startupId: string }) {
+export default function PeopleTab({ startupId, startupSlug }: { startupId: string; startupSlug?: string }) {
   const { people: allPeople, isLoading, addPerson, updatePerson, deletePerson } = usePeople();
   const [search, setSearch] = useState("");
   const [view, setView] = useState<ViewMode>("overview");
@@ -46,8 +46,11 @@ export default function PeopleTab({ startupId }: { startupId: string }) {
 
   // Filter people linked to this startup
   const people = useMemo(() =>
-    allPeople.filter((p) => p.linked_startups?.includes(startupId)),
-    [allPeople, startupId]
+    allPeople.filter((p) =>
+      p.linked_startups?.includes(startupId) ||
+      (startupSlug && p.linked_startups?.includes(startupSlug))
+    ),
+    [allPeople, startupId, startupSlug]
   );
 
   const filtered = useMemo(() => {

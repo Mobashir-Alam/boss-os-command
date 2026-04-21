@@ -250,7 +250,7 @@ const StartupDetail = () => {
             {hubTab === "priorities" && (
               <PrioritiesTab startupId={dbStartup.slug} startupName={startup.name} />
             )}
-            {hubTab === "people" && <PeopleTab startupId={dbStartup.id} />}
+            {hubTab === "people" && <PeopleTab startupId={dbStartup.id} startupSlug={dbStartup.slug} />}
             {hubTab === "memories" && <KaiMemoriesTab startupId={dbStartup.id} />}
             {hubTab === "documents" && <DocumentsTab startupId={dbStartup.id} />}
             {hubTab === "notes" && <NotesTab startupId={dbStartup.id} />}
