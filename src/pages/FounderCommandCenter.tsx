@@ -77,12 +77,12 @@ const FounderCommandCenter = () => {
   };
 
   const portfolioContext = useMemo(() => {
-    if (!overview || overview.isLoading) return "";
+    if (!overview || overview.loading) return "";
     const parts = [
       `Portfolio: ${overview.totalCompanies} companies in view`,
       overview.portfolioStatusLine,
-      overview.biggestRisk ? `Biggest portfolio risk: ${overview.biggestRisk}` : null,
-      overview.biggestOpportunity ? `Biggest opportunity: ${overview.biggestOpportunity}` : null,
+      overview.strategicBrief?.biggestRisk ? `Biggest portfolio risk: ${overview.strategicBrief.biggestRisk}` : null,
+      overview.strategicBrief?.biggestOpportunity ? `Biggest opportunity: ${overview.strategicBrief.biggestOpportunity}` : null,
       overview.companies?.length > 0
         ? `Companies: ${overview.companies.map((c: any) => `${c.name} (${c.status})`).join(", ")}`
         : null,
