@@ -218,27 +218,34 @@ const FounderCommandCenter = () => {
         {mode === "founder" && (
           <>
             <section className="grid grid-cols-12 gap-6">
-              <div className="paper-card-elevated col-span-12 p-8 lg:col-span-8">
-                <div className="mb-5 flex items-center justify-between">
-                  <span className="eyebrow">KAI Strategic Brief</span>
+              <div className="paper-card-elevated col-span-12 p-6 lg:col-span-8 lg:p-8">
+                <div className="mb-4 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-base">🧠</span>
+                    <h2 className="font-display text-lg font-semibold">KAI Weekly Brief</h2>
+                  </div>
                   <span className="font-mono text-[10px] text-muted-foreground">
                     {overview.loading ? "UPDATING" : "LIVE PORTFOLIO"}
                   </span>
                 </div>
 
-                <p className="mb-6 font-display text-2xl leading-snug text-foreground/90">
+                <p className="mb-6 text-base leading-relaxed text-foreground/85">
                   {overview.strategicBrief.status}
                 </p>
 
-                <div className="mb-6 grid grid-cols-1 gap-px bg-border sm:grid-cols-2">
-                  <div className="bg-card p-5">
-                    <span className="eyebrow text-signal-critical">Biggest Risk</span>
+                <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div className="rounded-md border border-signal-critical/20 bg-signal-critical-soft p-4">
+                    <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-signal-critical">
+                      Biggest Risk
+                    </span>
                     <p className="mt-2 text-sm leading-relaxed text-foreground/85">
                       {overview.strategicBrief.biggestRisk}
                     </p>
                   </div>
-                  <div className="bg-card p-5">
-                    <span className="eyebrow text-signal-positive">Biggest Opportunity</span>
+                  <div className="rounded-md border border-signal-positive/20 bg-signal-positive-soft p-4">
+                    <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-signal-positive">
+                      Biggest Opportunity
+                    </span>
                     <p className="mt-2 text-sm leading-relaxed text-foreground/85">
                       {overview.strategicBrief.biggestOpportunity}
                     </p>
