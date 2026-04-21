@@ -133,7 +133,7 @@ const FounderCommandCenter = () => {
 
           <div className="mt-4 flex flex-wrap items-end justify-between gap-6">
             <div>
-              <h1 className="font-display text-4xl font-semibold leading-none tracking-tight">
+              <h1 className="text-3xl font-bold tracking-tight" style={{ fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif' }}>
                 Command Center
               </h1>
               {(() => {
