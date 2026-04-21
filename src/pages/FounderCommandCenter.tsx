@@ -93,11 +93,12 @@ const FounderCommandCenter = () => {
   }, [overview, stats, blockedTasks]);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-white text-foreground">
       <Navbar />
 
-      <header className="border-b border-border-strong/40 bg-paper">
-        <div className="mx-auto max-w-7xl px-6 py-6">
+      <header className="border-b border-border/60 bg-white">
+        <div className="mx-auto max-w-7xl px-6 pt-8 pb-6">
+          {/* eyebrow row removed for cleaner heading */}
           <div className="flex items-center justify-between gap-6">
             <div className="flex items-baseline gap-4">
               <span className="eyebrow">Founder Edition / {todayLabel}</span>
@@ -132,7 +133,7 @@ const FounderCommandCenter = () => {
 
           <div className="mt-4 flex flex-wrap items-end justify-between gap-6">
             <div>
-              <h1 className="font-display text-4xl font-semibold leading-none tracking-tight">
+              <h1 className="text-3xl font-bold tracking-tight" style={{ fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif' }}>
                 Command Center
               </h1>
               {(() => {
@@ -222,7 +223,7 @@ const FounderCommandCenter = () => {
                 <div className="mb-4 flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="text-base">🧠</span>
-                    <h2 className="font-display text-lg font-semibold">KAI Weekly Brief</h2>
+                    <h2 className="text-base font-semibold tracking-tight">KAI Weekly Brief</h2>
                   </div>
                   <span className="font-mono text-[10px] text-muted-foreground">
                     {overview.loading ? "UPDATING" : "LIVE PORTFOLIO"}
