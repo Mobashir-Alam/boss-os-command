@@ -93,11 +93,12 @@ const FounderCommandCenter = () => {
   }, [overview, stats, blockedTasks]);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-white text-foreground">
       <Navbar />
 
-      <header className="border-b border-border-strong/40 bg-paper">
-        <div className="mx-auto max-w-7xl px-6 py-6">
+      <header className="border-b border-border/60 bg-white">
+        <div className="mx-auto max-w-7xl px-6 pt-8 pb-6">
+          {/* eyebrow row removed for cleaner heading */}
           <div className="flex items-center justify-between gap-6">
             <div className="flex items-baseline gap-4">
               <span className="eyebrow">Founder Edition / {todayLabel}</span>
