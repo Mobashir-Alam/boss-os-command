@@ -253,7 +253,7 @@ const FounderCommandCenter = () => {
                 </div>
 
                 <div>
-                  <span className="eyebrow mb-2 block">Top Decisions Awaiting You</span>
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground mb-2 block">Top Decisions</span>
                   <ul className="divide-y divide-border">
                     {overview.strategicBrief.topDecisions.length > 0 ? (
                       overview.strategicBrief.topDecisions.map((decision, index) => (
