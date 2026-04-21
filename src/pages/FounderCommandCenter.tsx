@@ -223,7 +223,7 @@ const FounderCommandCenter = () => {
                 <div className="mb-4 flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="text-base">🧠</span>
-                    <h2 className="font-display text-lg font-semibold">KAI Weekly Brief</h2>
+                    <h2 className="text-base font-semibold tracking-tight">KAI Weekly Brief</h2>
                   </div>
                   <span className="font-mono text-[10px] text-muted-foreground">
                     {overview.loading ? "UPDATING" : "LIVE PORTFOLIO"}
