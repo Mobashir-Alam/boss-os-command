@@ -77,15 +77,19 @@ const FounderCommandCenter = () => {
   };
 
   const portfolioContext = useMemo(() => {
-    if (!overview || overview.isLoading) return "";
+    if (!overview || overview.loading) return "";
+    const companyLines = overview.companies?.map((c: any) =>
+      `${c.name}: ${c.headcount ?? 0} people, runway=${c.runwayLabel}, growth=${c.growthLabel}, burn=${c.monthlyBurn}, signal=${c.signal}`
+    ) ?? [];
     const parts = [
-      `Portfolio: ${overview.totalCompanies} companies in view`,
+      `Portfolio: ${overview.totalCompanies} companies, ${overview.totalHeadcount} total active people`,
       overview.portfolioStatusLine,
-      overview.biggestRisk ? `Biggest portfolio risk: ${overview.biggestRisk}` : null,
-      overview.biggestOpportunity ? `Biggest opportunity: ${overview.biggestOpportunity}` : null,
-      overview.companies?.length > 0
-        ? `Companies: ${overview.companies.map((c: any) => `${c.name} (${c.status})`).join(", ")}`
+      overview.executiveSummaries?.finance
+        ? `Finance: ${overview.executiveSummaries.finance.primary} burn, ${overview.executiveSummaries.finance.secondary}`
         : null,
+      overview.strategicBrief?.biggestRisk ? `Biggest risk: ${overview.strategicBrief.biggestRisk}` : null,
+      overview.strategicBrief?.biggestOpportunity ? `Biggest opportunity: ${overview.strategicBrief.biggestOpportunity}` : null,
+      companyLines.length > 0 ? `Companies — ${companyLines.join(" | ")}` : null,
       stats.overdue > 0 ? `${stats.overdue} overdue tasks across portfolio` : null,
       blockedTasks.length > 0 ? `${blockedTasks.length} blocked tasks need founder decision` : null,
     ].filter(Boolean).join(". ");

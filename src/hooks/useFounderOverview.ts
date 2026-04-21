@@ -64,6 +64,7 @@ type FounderCompanyOverview = {
   blockedTasks: number;
   financeDocs: number;
   monthlyBurn: number;
+  headcount: number;
 };
 
 type FounderDepartmentIntel = {
@@ -451,6 +452,7 @@ export function useFounderOverview() {
           blockedTasks,
           financeDocs,
           monthlyBurn: startupBurn || expenses || outflow,
+          headcount: startupPeople.length,
         } satisfies FounderCompanyOverview;
       })
       .filter((company): company is FounderCompanyOverview => !!company)

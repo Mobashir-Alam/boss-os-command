@@ -119,6 +119,14 @@ const StartupDetail = () => {
     `Status: ${config.label}`,
     `Runway: ${startup.runway}`,
     `Growth: ${startup.growth} (${startup.growthDirection})`,
+    `Total active people: ${executiveOverview.activePeopleCount ?? 0}`,
+    executiveOverview.departmentContextLines?.length > 0
+      ? `Departments: ${executiveOverview.departmentContextLines.join(" | ")}`
+      : null,
+    executiveOverview.financials
+      ? `Monthly burn: ${executiveOverview.financials.burn}, Revenue: ${executiveOverview.financials.revenue}, Expenses: ${executiveOverview.financials.expenses}`
+      : null,
+    `Tasks: ${completedTasks} completed of ${totalTasks} total`,
     kaiData?.insight ? `Strategic insight: ${kaiData.insight}` : null,
     kaiData?.recommendation?.action ? `Recommended action: ${kaiData.recommendation.action}` : null,
     kaiData?.recommendation?.why ? `Why it matters: ${kaiData.recommendation.why}` : null,

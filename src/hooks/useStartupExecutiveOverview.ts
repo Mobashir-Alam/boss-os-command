@@ -457,10 +457,21 @@ export function useStartupExecutiveOverview(
             },
     };
 
+    const departmentContextLines = support.startupDepartments.map((d) => {
+      const latestUpdate = latestUpdatesByDepartment.get(d.department_key);
+      const parts = [`${d.name}: ${d.headcount ?? 0} people`];
+      if (d.status && d.status !== "healthy") parts.push(`status=${d.status}`);
+      if (latestUpdate?.summary) parts.push(latestUpdate.summary.slice(0, 80));
+      return parts.join(", ");
+    });
+
     return {
       signal,
       kaiData,
       problems: problems.slice(0, 4),
+      activePeopleCount: activePeople.length,
+      departmentContextLines,
+      financials: { burn, revenue, expenses, inflow, outflow },
     };
   }, [dbStartup, getTasksByStartup, people, startup, supportQuery.data]);
 
