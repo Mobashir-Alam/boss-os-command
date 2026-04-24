@@ -473,6 +473,43 @@ The founder command center and startup detail pages now have a concrete demo com
 
 ---
 
+## Snapshot: 2026-04-25 - Full Product Vision Clarified
+
+### What The Product Is
+
+One operating system for a CEO who owns multiple companies, used by everyone in those companies at different access levels.
+
+The product serves four roles:
+
+- **CEO** — sees everything across all companies, has exclusive access to KAI
+- **Manager / Team Lead** — manages their team, logs department updates, sees employee progress
+- **Employee** — logs their own work and project completion status
+- **Finance Manager** — enters and maintains all financial data (payroll, expenses, bills, documents)
+
+KAI is AI assistance for the CEO only. It aggregates data from all levels and passes it to an external AI API to return strategic insights — business health, risk signals, market context, what to act on next.
+
+### Why This Matters
+
+Previous documentation had employee workflows, manager dashboards, and finance data entry listed as permanently out of scope. This was incorrect. All four roles are in scope — lower roles are phased later but not excluded.
+
+### Documentation Updated
+
+The following docs were updated to reflect the full four-role product vision:
+
+- `docs/phase-0-product-brief.md`
+- `docs/founder-mvp-scope.md`
+- `docs/phase-1-schema-gap-analysis.md`
+
+### Build Status Against Full Vision
+
+- CEO layer: ~65% done
+- Manager layer: ~20% done (routes exist, mostly static)
+- Employee self-reporting: 0% done
+- Finance Manager data entry: ~30% done (read-only, no entry forms)
+- KAI full pipeline: ~15% done (chat works, no full data aggregation or external AI API)
+
+---
+
 ## Snapshot: 2026-04-21 - Current Main Flow Status
 
 ### Current Branch State

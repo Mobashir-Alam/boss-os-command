@@ -122,14 +122,67 @@ KAI should provide:
 - What is the ownership or fundraising context?
 - What should I do next as CEO?
 
-## Out Of Scope
+## Role Scope — All Four Roles
 
-- detailed per-person work management
-- cross-role inbox and collaboration systems
-- full-blown project planning tools
+### Employee
+The employee experience is a later phase but is in scope for the full product.
+
+Employees need to:
+- see their assigned tasks and projects
+- update task and project completion status
+- log daily or weekly work progress
+- see their own profile and department
+
+Employees cannot see:
+- other employees' performance data
+- company financials or ownership
+- CEO-level KAI insights or strategic summaries
+
+### Manager / Team Lead
+The manager experience is a later phase but is in scope for the full product.
+
+Managers need to:
+- see all employees in their team or department
+- view task and project progress per employee
+- log department updates — wins, blockers, risks, asks
+- see department-level summaries for their area only
+
+Managers cannot see:
+- CEO financial or ownership detail
+- other departments' operational data
+- KAI strategic layer
+
+### Finance Manager
+The finance manager experience is a later phase but is in scope for the full product.
+
+Finance managers need to:
+- enter and update salary and payroll per employee
+- log expenses, vendor payments, and bills
+- upload supporting financial documents linked to entries
+- see a finance dashboard for their assigned companies
+
+Finance managers cannot see:
+- employee productivity or performance data
+- ownership and cap table detail
+- KAI or CEO strategic summaries
+
+### KAI — CEO Only
+KAI is exclusive to the CEO and is in scope across all phases.
+
+KAI should:
+- aggregate data from all levels — employees, managers, departments, finances, ownership
+- pass this data to an external AI API
+- return strategic insights for the CEO: business health, risk signals, market context, what to act on
+- answer direct CEO questions about any company or the full portfolio
+- grow smarter as more data is added across all roles
+
+No other role has access to KAI.
+
+## Out Of Scope Permanently
+
 - autonomous AI workflows that modify business data on their own
 - comprehensive board/report export flows
-- final polished lower-role experiences
+- external investor-facing portals
 
 ## MVP Pages
 
