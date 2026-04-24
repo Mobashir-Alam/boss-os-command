@@ -171,15 +171,15 @@ export function useProjectDetail(projectId: string | undefined) {
         });
       }
 
-      // 2. Look up demo/seed people by person_id (overrides profile lookup when present)
+      // 2. Look up demo/seed people by person_id (people table has no email column)
       const personIds = memberList.map((m) => m.person_id).filter(Boolean) as string[];
       if (personIds.length > 0) {
         const { data: peopleRows } = await supabase
           .from("people")
-          .select("id, full_name, email")
+          .select("id, full_name")
           .in("id", personIds);
         (peopleRows ?? []).forEach((p: any) => {
-          nameMap[p.id] = { full_name: p.full_name, email: p.email };
+          nameMap[p.id] = { full_name: p.full_name, email: null };
         });
       }
 
