@@ -554,4 +554,279 @@ BEGIN
     startup_id = EXCLUDED.startup_id,
     memory = EXCLUDED.memory,
     category = EXCLUDED.category;
+
+  -- -------------------------------------------------------------------------
+  -- Projects: Nasheedio active team projects
+  -- project_members use people.id as profile_id placeholder for demo purposes.
+  -- In production, profile_id will be the actual auth.users id of each member.
+  -- -------------------------------------------------------------------------
+
+  INSERT INTO public.projects (id, startup_id, department_key, title, description, status, deadline, overall_completion)
+  VALUES
+    (
+      'd0000000-0000-4000-8000-000000000001'::uuid,
+      nasheedio_id,
+      'tech',
+      'Creator Analytics Dashboard v2',
+      'Build an internal analytics dashboard for creators and brand clients to track campaign reach, engagement, and ROI in real time. Replaces the current manual Google Sheets reporting flow.',
+      'active',
+      DATE '2026-05-30',
+      0
+    ),
+    (
+      'd0000000-0000-4000-8000-000000000002'::uuid,
+      nasheedio_id,
+      'social_media',
+      'Q2 Brand Campaign — IndiGo x Nasheedio',
+      'End-to-end delivery of the Q2 IndiGo brand campaign including social content, short-form video, and influencer activations across 3 platforms.',
+      'active',
+      DATE '2026-05-15',
+      0
+    ),
+    (
+      'd0000000-0000-4000-8000-000000000003'::uuid,
+      nasheedio_id,
+      'studio',
+      'Studio Expansion — Phase 1 Equipment Setup',
+      'Install new camera rigs, lighting panels, and acoustic treatment in Studio B to double shoot capacity from 4 to 8 shoot days per week.',
+      'active',
+      DATE '2026-06-10',
+      0
+    ),
+    (
+      'd0000000-0000-4000-8000-000000000004'::uuid,
+      nasheedio_id,
+      'content_management',
+      'Content Calendar Automation',
+      'Automate the weekly content scheduling workflow using a CMS integration so the team stops manually copying posts across 5 platforms each week.',
+      'paused',
+      DATE '2026-06-30',
+      0
+    )
+  ON CONFLICT (id) DO UPDATE
+  SET
+    startup_id        = EXCLUDED.startup_id,
+    department_key    = EXCLUDED.department_key,
+    title             = EXCLUDED.title,
+    description       = EXCLUDED.description,
+    status            = EXCLUDED.status,
+    deadline          = EXCLUDED.deadline;
+
+  -- project_members for Project 1: Creator Analytics Dashboard v2 (Tech)
+  -- Members: Tech Lead (..26), Software Engineer (..27), Arjun Verma as creative input (..09), Aisha Khan as stakeholder (..01)
+  INSERT INTO public.project_members (
+    id, project_id, profile_id, person_id, role,
+    task_title, task_description, status, completion_percentage, progress_note
+  )
+  VALUES
+    (
+      'e0000000-0000-4000-8000-000000000001'::uuid,
+      'd0000000-0000-4000-8000-000000000001'::uuid,
+      '10000000-0000-4000-8000-000000000026'::uuid,
+      '10000000-0000-4000-8000-000000000026'::uuid,
+      'lead',
+      'System architecture and backend API',
+      'Design the data model, set up the API layer, and ensure the dashboard backend can handle real-time data from 27 brand clients simultaneously.',
+      'in_progress', 55,
+      'API endpoints are live. Working on data aggregation layer for multi-client queries.'
+    ),
+    (
+      'e0000000-0000-4000-8000-000000000002'::uuid,
+      'd0000000-0000-4000-8000-000000000001'::uuid,
+      '10000000-0000-4000-8000-000000000027'::uuid,
+      '10000000-0000-4000-8000-000000000027'::uuid,
+      'member',
+      'Frontend dashboard UI',
+      'Build the React dashboard with charts, filters, and export functionality. Must work on mobile for creator clients reviewing on the go.',
+      'in_progress', 30,
+      'Core chart components done. Filtering and date range picker in progress.'
+    ),
+    (
+      'e0000000-0000-4000-8000-000000000003'::uuid,
+      'd0000000-0000-4000-8000-000000000001'::uuid,
+      '10000000-0000-4000-8000-000000000009'::uuid,
+      '10000000-0000-4000-8000-000000000009'::uuid,
+      'member',
+      'Creative KPIs and metrics definition',
+      'Define which video and reach metrics matter most from a creative perspective. Provide the tech team with a final metrics spec document.',
+      'done', 100,
+      'Metrics spec delivered. 14 KPIs defined across reach, engagement, and revenue.'
+    ),
+    (
+      'e0000000-0000-4000-8000-000000000004'::uuid,
+      'd0000000-0000-4000-8000-000000000001'::uuid,
+      '10000000-0000-4000-8000-000000000001'::uuid,
+      '10000000-0000-4000-8000-000000000001'::uuid,
+      'member',
+      'Brand client requirements and UAT',
+      'Gather requirements from 5 priority brand clients, co-ordinate user acceptance testing, and sign off on final dashboard flows.',
+      'in_progress', 20,
+      'Requirements collected from 3 of 5 clients. UAT plan drafted.'
+    )
+  ON CONFLICT (id) DO UPDATE
+  SET
+    status                = EXCLUDED.status,
+    completion_percentage = EXCLUDED.completion_percentage,
+    progress_note         = EXCLUDED.progress_note;
+
+  -- project_members for Project 2: Q2 Brand Campaign — IndiGo x Nasheedio (Social Media)
+  INSERT INTO public.project_members (
+    id, project_id, profile_id, person_id, role,
+    task_title, task_description, status, completion_percentage, progress_note
+  )
+  VALUES
+    (
+      'e0000000-0000-4000-8000-000000000005'::uuid,
+      'd0000000-0000-4000-8000-000000000002'::uuid,
+      '10000000-0000-4000-8000-000000000001'::uuid,
+      '10000000-0000-4000-8000-000000000001'::uuid,
+      'lead',
+      'Campaign strategy and client coordination',
+      'Own the campaign brief, manage client communication with IndiGo, and ensure all deliverables match the approved content plan.',
+      'in_progress', 60,
+      'Brief approved. 3 of 8 content pieces delivered. Client happy with tone so far.'
+    ),
+    (
+      'e0000000-0000-4000-8000-000000000006'::uuid,
+      'd0000000-0000-4000-8000-000000000002'::uuid,
+      '10000000-0000-4000-8000-000000000002'::uuid,
+      '10000000-0000-4000-8000-000000000002'::uuid,
+      'member',
+      'Paid campaign management',
+      'Set up and manage the paid amplification of organic content across Instagram and YouTube. Daily budget is INR 35,000.',
+      'in_progress', 45,
+      'Campaigns live on both platforms. CTR is 4.2% against 3.5% target.'
+    ),
+    (
+      'e0000000-0000-4000-8000-000000000007'::uuid,
+      'd0000000-0000-4000-8000-000000000002'::uuid,
+      '10000000-0000-4000-8000-000000000009'::uuid,
+      '10000000-0000-4000-8000-000000000009'::uuid,
+      'member',
+      'Video content production',
+      'Direct and produce 4 short-form videos (30s and 60s) for Instagram Reels and YouTube Shorts. All shoots to be completed by May 5.',
+      'in_progress', 50,
+      '2 videos shot and in editing. Shoot 3 is booked for May 3.'
+    ),
+    (
+      'e0000000-0000-4000-8000-000000000008'::uuid,
+      'd0000000-0000-4000-8000-000000000002'::uuid,
+      '10000000-0000-4000-8000-000000000011'::uuid,
+      '10000000-0000-4000-8000-000000000011'::uuid,
+      'member',
+      'Video editing and post-production',
+      'Edit all 4 campaign videos with brand-approved colour grading, motion graphics, and captions. Turnaround: 48 hours per video.',
+      'in_progress', 40,
+      '1 video fully delivered. 1 in final review. Waiting on shoot footage for the remaining 2.'
+    ),
+    (
+      'e0000000-0000-4000-8000-000000000009'::uuid,
+      'd0000000-0000-4000-8000-000000000002'::uuid,
+      '10000000-0000-4000-8000-000000000005'::uuid,
+      '10000000-0000-4000-8000-000000000005'::uuid,
+      'member',
+      'Caption and copy writing',
+      'Write all social media captions, hashtag sets, and story copy for the campaign across Instagram, YouTube, and LinkedIn.',
+      'done', 100,
+      'All copy delivered and approved by client. No revisions requested.'
+    )
+  ON CONFLICT (id) DO UPDATE
+  SET
+    status                = EXCLUDED.status,
+    completion_percentage = EXCLUDED.completion_percentage,
+    progress_note         = EXCLUDED.progress_note;
+
+  -- project_members for Project 3: Studio Expansion — Phase 1 (Studio)
+  INSERT INTO public.project_members (
+    id, project_id, profile_id, person_id, role,
+    task_title, task_description, status, completion_percentage, progress_note, blocked_reason
+  )
+  VALUES
+    (
+      'e0000000-0000-4000-8000-000000000010'::uuid,
+      'd0000000-0000-4000-8000-000000000003'::uuid,
+      '10000000-0000-4000-8000-000000000010'::uuid,
+      '10000000-0000-4000-8000-000000000010'::uuid,
+      'lead',
+      'Equipment procurement and vendor coordination',
+      'Source and confirm vendors for camera rigs, lighting, and acoustic panels. Get quotes, negotiate, and place purchase orders.',
+      'blocked', 40,
+      'Quotes received from 3 vendors. Waiting on final approval from finance before placing orders.',
+      'Finance approval pending for INR 8.4 L equipment purchase order.'
+    ),
+    (
+      'e0000000-0000-4000-8000-000000000011'::uuid,
+      'd0000000-0000-4000-8000-000000000003'::uuid,
+      '10000000-0000-4000-8000-000000000014'::uuid,
+      '10000000-0000-4000-8000-000000000014'::uuid,
+      'member',
+      'Studio layout and rigging plan',
+      'Design the camera rig placement and lighting grid layout for Studio B. Coordinate with the civil team on ceiling anchor points.',
+      'done', 100,
+      'Layout plan finalized and approved. Ready to install as soon as equipment arrives.'
+    ),
+    (
+      'e0000000-0000-4000-8000-000000000012'::uuid,
+      'd0000000-0000-4000-8000-000000000003'::uuid,
+      '10000000-0000-4000-8000-000000000015'::uuid,
+      '10000000-0000-4000-8000-000000000015'::uuid,
+      'member',
+      'Acoustic treatment installation',
+      'Manage the installation of acoustic panels in Studio B including vendor scheduling, quality check, and sign-off.',
+      'not_started', 0,
+      NULL,
+      NULL
+    )
+  ON CONFLICT (id) DO UPDATE
+  SET
+    status                = EXCLUDED.status,
+    completion_percentage = EXCLUDED.completion_percentage,
+    progress_note         = EXCLUDED.progress_note,
+    blocked_reason        = EXCLUDED.blocked_reason;
+
+  -- project_members for Project 4: Content Calendar Automation (paused)
+  INSERT INTO public.project_members (
+    id, project_id, profile_id, person_id, role,
+    task_title, task_description, status, completion_percentage, progress_note
+  )
+  VALUES
+    (
+      'e0000000-0000-4000-8000-000000000013'::uuid,
+      'd0000000-0000-4000-8000-000000000004'::uuid,
+      '10000000-0000-4000-8000-000000000019'::uuid,
+      '10000000-0000-4000-8000-000000000019'::uuid,
+      'lead',
+      'CMS integration research and vendor selection',
+      'Evaluate 3 CMS automation tools (Buffer, Publer, Sprout Social) and recommend one that works with our existing content stack.',
+      'in_progress', 35,
+      'Evaluating Buffer and Publer. Sprout Social too expensive. Will have a recommendation by end of month.'
+    ),
+    (
+      'e0000000-0000-4000-8000-000000000014'::uuid,
+      'd0000000-0000-4000-8000-000000000004'::uuid,
+      '10000000-0000-4000-8000-000000000020'::uuid,
+      '10000000-0000-4000-8000-000000000020'::uuid,
+      'member',
+      'Current scheduling workflow documentation',
+      'Document the current manual scheduling process end-to-end so we can map it to the new automated flow.',
+      'done', 100,
+      'Full process documented. 14-step manual workflow mapped. Shared with Meenal.'
+    ),
+    (
+      'e0000000-0000-4000-8000-000000000015'::uuid,
+      'd0000000-0000-4000-8000-000000000004'::uuid,
+      '10000000-0000-4000-8000-000000000027'::uuid,
+      '10000000-0000-4000-8000-000000000027'::uuid,
+      'member',
+      'API integration build',
+      'Build the integration between the selected CMS tool and the internal content database. Project is currently paused pending vendor selection.',
+      'not_started', 0,
+      'Waiting for vendor decision before starting build.'
+    )
+  ON CONFLICT (id) DO UPDATE
+  SET
+    status                = EXCLUDED.status,
+    completion_percentage = EXCLUDED.completion_percentage,
+    progress_note         = EXCLUDED.progress_note;
+
 END $$;
