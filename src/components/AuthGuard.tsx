@@ -1,26 +1,9 @@
 import { useAuth } from "@/contexts/AuthContext";
-import { Navigate, useLocation } from "react-router-dom";
+import { Navigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
-
-const roleDefaultRoutes: Record<string, string> = {
-  founder: "/",
-  mfo: "/mfo",
-  functional_head: "/my-domain",
-  project_manager: "/project-board",
-  team_member: "/my-work",
-};
-
-const roleAllowedRoutes: Record<string, string[]> = {
-  founder: ["/", "/focus", "/decisions", "/finances", "/people"],
-  mfo: ["/mfo", "/", "/focus", "/people"],
-  functional_head: ["/my-domain", "/decisions", "/finances"],
-  project_manager: ["/pm", "/project-board"],
-  team_member: ["/my-work"],
-};
 
 const AuthGuard = ({ children }: { children: React.ReactNode }) => {
   const { user, loading, profile } = useAuth();
-  const location = useLocation();
 
   if (loading || (user && !profile)) {
     return (
@@ -34,18 +17,6 @@ const AuthGuard = ({ children }: { children: React.ReactNode }) => {
 
   const onboardingDone = localStorage.getItem("onboarding_complete");
   if (!onboardingDone) return <Navigate to="/onboarding" replace />;
-
-  const role = profile?.role;
-  if (role) {
-    const currentPath = location.pathname;
-    const isStartupRoute = currentPath.startsWith("/startup/");
-    const allowed = roleAllowedRoutes[role] || [];
-
-    if (!isStartupRoute && !allowed.includes(currentPath)) {
-      const defaultRoute = roleDefaultRoutes[role] || "/";
-      return <Navigate to={defaultRoute} replace />;
-    }
-  }
 
   return <>{children}</>;
 };

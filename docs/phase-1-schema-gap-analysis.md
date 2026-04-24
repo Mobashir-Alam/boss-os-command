@@ -362,15 +362,91 @@ Phase 1 should define service-level contracts such as:
 
 The app can still use the existing tables under the hood, but the UI should begin consuming normalized view models instead of raw rows everywhere.
 
-## Highest-Priority Gaps
+## Highest-Priority Gaps — CEO Layer
 
-If we only solve the most important gaps first, they should be:
+If we only solve the most important CEO gaps first, they should be:
 
 1. founder summary data contract
 2. department update model
 3. document metadata model
 4. finance-to-document linking
 5. removal of static demo dependencies from founder views
+
+## Gap Analysis — Lower Role Layers
+
+The product serves four roles. The schema gaps below must be addressed for each role's layer to work.
+
+### Employee Self-Reporting
+
+What employees need to do:
+- log which projects or tasks they are working on
+- report percentage complete
+- update their work status
+
+Current gap:
+- `tasks` table exists but is managed top-down (founder/manager assigns)
+- no employee-facing task update flow
+- no self-reported work log or status per employee per day/week
+- no UI for employees to update their own task progress
+
+Schema action needed:
+- `tasks` table already has status and completion fields — wire these to employee-facing update UI
+- consider adding `work_logs` table for structured daily/weekly employee reports if needed later
+
+### Manager / Team Lead View
+
+What managers need to see:
+- all employees in their team
+- task and project status per employee
+- department update history
+
+Current gap:
+- `people` table has `reporting_manager` field but no manager-facing aggregation hook
+- no manager dashboard that shows their team's live status
+- `department_updates` table exists but only the CEO currently reads it; no manager write UI
+
+Schema action needed:
+- `department_updates` write UI (form for manager to log wins, blockers, risks, asks)
+- manager-scoped query of `people` and `tasks` filtered by their department or team
+
+### Finance Manager Data Entry
+
+What finance managers need to do:
+- enter salary and payroll per employee
+- log expenses, vendor bills, purchase invoices
+- upload supporting documents linked to financial entries
+
+Current gap:
+- `financial_entries`, `burn_categories`, `cash_flow_entries` tables exist but are read-only in the UI
+- no data entry forms for expenses, salaries, or vendor payments
+- `startup_documents` upload partially exists but not linked to financial entries in the UI
+- `people.salary` field exists but no payroll management UI
+
+Schema action needed:
+- no new tables required immediately
+- build data entry forms on top of existing finance tables
+- build salary/payroll update UI on `people` table
+- build document upload + link-to-entry UI in finance context
+
+### KAI Full Data Pipeline
+
+What KAI needs to work properly:
+- access to all data: employees, tasks, departments, finances, ownership, documents
+- structured aggregation into a single context payload
+- sent to an external AI API (not just Lovable's gateway)
+- response contains strategic insights, risk signals, market intelligence
+
+Current gap:
+- KAI currently only receives a short summarized text string as context
+- no raw data aggregation pipeline exists
+- no external AI API wired yet (currently uses Lovable's Gemini gateway as placeholder)
+- `kai_memories` table exists but no structured memory save/recall UI
+
+Schema action needed:
+- define a canonical KAI context object that aggregates all tables
+- build an edge function or server-side aggregator that compiles this context
+- wire to an external AI API (OpenAI, Anthropic, or similar) when ready
+- `kai_memories` write UI so insights can be saved per company
 
 ## Phase 1 Outcome
 
@@ -380,3 +456,4 @@ Phase 1 is successful when:
 - the missing data concepts are explicitly modeled
 - the founder dashboard can be rebuilt from real data contracts
 - KAI has a structured, reliable context layer to read later
+- the schema is ready to support employee, manager, and finance manager layers in Phase 2

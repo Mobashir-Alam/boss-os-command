@@ -89,13 +89,32 @@ The CEO MVP is successful when a CEO can:
 - view stakeholder ownership and funding rounds
 - receive a KAI summary and actionable CEO suggestions
 
-## Not In Scope For This Phase
+## Full Product Vision — All Roles
 
-The following are intentionally deferred:
+This product serves four distinct roles. Phase 0 starts with the CEO layer but all four roles are in scope across phases.
 
-- deep team-member workflows
-- PM sprint management
-- full functional-head dashboards
+### CEO
+Sees everything across all companies. Has exclusive access to KAI. Makes strategic decisions based on full portfolio visibility.
+
+### Manager / Team Lead
+Manages their team within a company. Sees employee work status and progress. Logs department updates (wins, blockers, risks). Cannot see CEO-level financial or ownership data.
+
+### Employee
+Logs their own work — which projects they are on and how much is done. Updates task and project completion. Cannot see other employees' data or any company-level financial or strategic information.
+
+### Finance Manager
+Enters and maintains all financial data — payroll, salaries, expenses, vendor payments, bills. Uploads supporting financial documents. Has finance-scoped access only.
+
+### KAI — CEO Only
+KAI is an AI assistant exclusive to the CEO. It aggregates data from all levels (employee work, department updates, financials, ownership) and passes it to an external AI API. The AI returns strategic insights: business health signals, risk identification, market context, and what the CEO should act on next. No other role has access to KAI.
+
+## Not In Scope For Phase 0
+
+The following are deferred to later phases — they are part of the product but not the starting slice:
+
+- employee self-reporting UI
+- manager team management view
+- finance manager data entry forms
 - autonomous KAI action-taking
 - heavy workflow automation
 - broad notification systems

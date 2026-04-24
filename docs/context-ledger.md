@@ -473,6 +473,43 @@ The founder command center and startup detail pages now have a concrete demo com
 
 ---
 
+## Snapshot: 2026-04-25 - Full Product Vision Clarified
+
+### What The Product Is
+
+One operating system for a CEO who owns multiple companies, used by everyone in those companies at different access levels.
+
+The product serves four roles:
+
+- **CEO** — sees everything across all companies, has exclusive access to KAI
+- **Manager / Team Lead** — manages their team, logs department updates, sees employee progress
+- **Employee** — logs their own work and project completion status
+- **Finance Manager** — enters and maintains all financial data (payroll, expenses, bills, documents)
+
+KAI is AI assistance for the CEO only. It aggregates data from all levels and passes it to an external AI API to return strategic insights — business health, risk signals, market context, what to act on next.
+
+### Why This Matters
+
+Previous documentation had employee workflows, manager dashboards, and finance data entry listed as permanently out of scope. This was incorrect. All four roles are in scope — lower roles are phased later but not excluded.
+
+### Documentation Updated
+
+The following docs were updated to reflect the full four-role product vision:
+
+- `docs/phase-0-product-brief.md`
+- `docs/founder-mvp-scope.md`
+- `docs/phase-1-schema-gap-analysis.md`
+
+### Build Status Against Full Vision
+
+- CEO layer: ~65% done
+- Manager layer: ~20% done (routes exist, mostly static)
+- Employee self-reporting: 0% done
+- Finance Manager data entry: ~30% done (read-only, no entry forms)
+- KAI full pipeline: ~15% done (chat works, no full data aggregation or external AI API)
+
+---
+
 ## Snapshot: 2026-04-21 - Current Main Flow Status
 
 ### Current Branch State
@@ -537,3 +574,38 @@ Next implementation flow:
   - Priorities/tasks
 - fix any real-data schema or UI issues discovered during QA
 - only after this live data pass, begin Phase 4 KAI GPT integration
+
+---
+
+## Snapshot: 2026-04-25 - Employee Scope Defined
+
+### What Was Decided
+
+The employee experience is project-based, not just an individual task list.
+
+Key decisions made:
+
+- A "project" is a new first-class entity with its own table
+- Any of CEO / manager / tech lead can create a project and assign members
+- Employees see all projects they are added to
+- Inside a project, employees see the full team breakdown — who has what task, each person's % and status (read-only for others)
+- Employees can only update their own task (status, %, note, blocked flag)
+- When added to a project: in-app notification + email sent with project name, assignor, their task, and deadline
+
+### New Tables Required
+
+- `projects` — project entity with startup_id, title, description, deadline, status, created_by
+- `project_members` — join table linking person to project with task_title, status, completion_percentage, progress_note
+- `notifications` — in-app notification records per recipient
+
+### Existing Tables Not Changed
+
+The existing `tasks` table stays as-is for CEO/manager-assigned individual priorities. Projects are separate — they represent collaborative team work with shared visibility.
+
+### Documentation Created
+
+- `docs/employee-scope.md` — full employee scope, data model, access control, UI pages required, and build priority
+
+### Build Phase
+
+Employee UI is Phase 2. CEO layer must stabilize first.
