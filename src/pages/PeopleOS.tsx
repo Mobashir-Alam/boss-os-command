@@ -1,15 +1,18 @@
 import { useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import { usePeople, Person } from "@/hooks/usePeople";
 import { useStartups } from "@/hooks/useStartups";
+import { usePersonProjects } from "@/hooks/useEmployeeProjects";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, ArrowUpDown, Trash2, Pencil, Users } from "lucide-react";
+import { Plus, Search, ArrowUpDown, Trash2, Pencil, Users, ChevronDown, ChevronRight, Layers, Calendar } from "lucide-react";
 import AddPersonModal from "@/components/people/AddPersonModal";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 const ROLE_LABELS: Record<string, string> = {
   founder: "Founder", mfo: "MFO", functional_head: "Functional Head",
@@ -30,6 +33,75 @@ const EMP_LABELS: Record<string, string> = {
 
 type SortKey = "full_name" | "role" | "department" | "status" | "kpi_score" | "salary";
 
+const PROJECT_STATUS_DOT: Record<string, string> = {
+  not_started: "bg-muted-foreground",
+  in_progress:  "bg-blue-500",
+  done:         "bg-emerald-500",
+  blocked:      "bg-amber-500",
+};
+const PROJECT_STATUS_LABEL: Record<string, string> = {
+  not_started: "Not started",
+  in_progress:  "In progress",
+  done:         "Done",
+  blocked:      "Blocked",
+};
+
+function PersonProjectsRow({ personId, colSpan }: { personId: string; colSpan: number }) {
+  const navigate = useNavigate();
+  const { data: projects = [], isLoading } = usePersonProjects(personId);
+
+  return (
+    <TableRow className="bg-muted/20 hover:bg-muted/20">
+      <TableCell colSpan={colSpan} className="py-3 px-6">
+        {isLoading ? (
+          <p className="text-xs text-muted-foreground">Loading projects...</p>
+        ) : projects.length === 0 ? (
+          <p className="text-xs text-muted-foreground italic">No projects assigned</p>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {projects.map((project) => {
+              const member = project.my_member_row;
+              const status = member?.status ?? "not_started";
+              const dl = project.deadline
+                ? (() => {
+                    const d = new Date(project.deadline);
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    const diff = Math.ceil((d.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+                    return diff < 0 ? `${Math.abs(diff)}d overdue` : diff === 0 ? "Due today" : `${diff}d left`;
+                  })()
+                : null;
+              return (
+                <button
+                  key={project.id}
+                  type="button"
+                  onClick={() => navigate(`/project/${project.id}`)}
+                  className="flex items-center gap-2 rounded-lg border border-border/50 bg-card px-3 py-2 text-left hover:border-border hover:shadow-sm transition-all"
+                >
+                  <span className={cn("h-1.5 w-1.5 rounded-full flex-shrink-0", PROJECT_STATUS_DOT[status])} />
+                  <span className="text-xs font-medium max-w-[160px] truncate">{project.title}</span>
+                  {project.department_key && (
+                    <span className="text-[10px] text-muted-foreground hidden sm:inline">
+                      · {project.department_key.replace(/_/g, " ")}
+                    </span>
+                  )}
+                  {member && (
+                    <span className="text-[10px] tabular-nums text-muted-foreground">{member.completion_percentage}%</span>
+                  )}
+                  {dl && (
+                    <span className="text-[10px] text-muted-foreground hidden md:inline">· {dl}</span>
+                  )}
+                  <ChevronRight className="h-3 w-3 text-muted-foreground/50 flex-shrink-0" />
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </TableCell>
+    </TableRow>
+  );
+}
+
 export default function PeopleOS() {
   const { people, isLoading, addPerson, updatePerson, deletePerson } = usePeople();
   const { dbStartups } = useStartups();
@@ -40,6 +112,7 @@ export default function PeopleOS() {
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [modalOpen, setModalOpen] = useState(false);
   const [editPerson, setEditPerson] = useState<Person | null>(null);
+  const [expandedPersonId, setExpandedPersonId] = useState<string | null>(null);
 
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -91,7 +164,7 @@ export default function PeopleOS() {
   };
 
   const SortBtn = ({ label, col }: { label: string; col: SortKey }) => (
-    <button onClick={() => toggleSort(col)} className="flex items-center gap-1 hover:text-foreground transition-colors">
+    <button type="button" onClick={() => toggleSort(col)} className="flex items-center gap-1 hover:text-foreground transition-colors">
       {label}
       <ArrowUpDown className="h-3 w-3 opacity-40" />
     </button>
@@ -156,7 +229,7 @@ export default function PeopleOS() {
                 <TableHead className="text-xs font-semibold text-right">Tasks</TableHead>
                 <TableHead className="text-xs font-semibold text-right">Hours</TableHead>
                 <TableHead className="text-xs font-semibold text-right"><SortBtn label="Salary" col="salary" /></TableHead>
-                <TableHead className="text-xs font-semibold w-[80px]" />
+                <TableHead className="text-xs font-semibold w-[100px]">Projects</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -165,30 +238,73 @@ export default function PeopleOS() {
               ) : filtered.length === 0 ? (
                 <TableRow><TableCell colSpan={11} className="text-center text-sm text-muted-foreground py-12">No people found</TableCell></TableRow>
               ) : (
-                filtered.map((p) => (
-                  <TableRow key={p.id} className="group">
-                    <TableCell className="font-medium text-sm">{p.full_name}</TableCell>
-                    <TableCell className="text-xs text-muted-foreground">{ROLE_LABELS[p.role] || p.role}</TableCell>
-                    <TableCell className="text-xs text-muted-foreground">{p.department || "—"}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${STATUS_COLORS[p.status] || ""}`}>
-                        {STATUS_LABELS[p.status] || p.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">{EMP_LABELS[p.employment_type] || p.employment_type}</TableCell>
-                    <TableCell className="text-xs text-muted-foreground">{managerName(p.reporting_manager_id)}</TableCell>
-                    <TableCell className="text-right text-xs tabular-nums">{p.kpi_score}%</TableCell>
-                    <TableCell className="text-right text-xs tabular-nums text-muted-foreground">{p.tasks_completed}/{p.tasks_assigned}</TableCell>
-                    <TableCell className="text-right text-xs tabular-nums text-muted-foreground">{p.hours_delivered}/{p.hours_committed}</TableCell>
-                    <TableCell className="text-right text-xs tabular-nums">₹{(p.salary || 0).toLocaleString("en-IN")}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button onClick={() => setEditPerson(p)} className="p-1 rounded hover:bg-muted"><Pencil className="h-3.5 w-3.5 text-muted-foreground" /></button>
-                        <button onClick={() => handleDelete(p.id)} className="p-1 rounded hover:bg-destructive/10"><Trash2 className="h-3.5 w-3.5 text-destructive/70" /></button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
+                filtered.map((p) => {
+                  const isExpanded = expandedPersonId === p.id;
+                  return (
+                    <>
+                      <TableRow key={p.id} className="group">
+                        <TableCell className="font-medium text-sm">
+                          <button
+                            type="button"
+                            onClick={() => setExpandedPersonId(isExpanded ? null : p.id)}
+                            className="flex items-center gap-1.5 text-left hover:text-primary transition-colors"
+                            title={`${isExpanded ? "Hide" : "Show"} projects for ${p.full_name}`}
+                          >
+                            {isExpanded
+                              ? <ChevronDown className="h-3 w-3 text-primary flex-shrink-0" />
+                              : <ChevronRight className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                            }
+                            {p.full_name}
+                          </button>
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">{ROLE_LABELS[p.role] || p.role}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground">{p.department || "—"}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${STATUS_COLORS[p.status] || ""}`}>
+                            {STATUS_LABELS[p.status] || p.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">{EMP_LABELS[p.employment_type] || p.employment_type}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground">{managerName(p.reporting_manager_id)}</TableCell>
+                        <TableCell className="text-right text-xs tabular-nums">{p.kpi_score}%</TableCell>
+                        <TableCell className="text-right text-xs tabular-nums text-muted-foreground">{p.tasks_completed}/{p.tasks_assigned}</TableCell>
+                        <TableCell className="text-right text-xs tabular-nums text-muted-foreground">{p.hours_delivered}/{p.hours_committed}</TableCell>
+                        <TableCell className="text-right text-xs tabular-nums">₹{(p.salary || 0).toLocaleString("en-IN")}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              title={`View projects for ${p.full_name}`}
+                              onClick={() => setExpandedPersonId(isExpanded ? null : p.id)}
+                              className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-primary transition-colors"
+                            >
+                              <Layers className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              title={`Edit ${p.full_name}`}
+                              onClick={() => setEditPerson(p)}
+                              className="p-1 rounded hover:bg-muted opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
+                            </button>
+                            <button
+                              type="button"
+                              title={`Remove ${p.full_name}`}
+                              onClick={() => handleDelete(p.id)}
+                              className="p-1 rounded hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              <Trash2 className="h-3.5 w-3.5 text-destructive/70" />
+                            </button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                      {isExpanded && (
+                        <PersonProjectsRow key={`${p.id}-projects`} personId={p.id} colSpan={11} />
+                      )}
+                    </>
+                  );
+                })
               )}
             </TableBody>
           </Table>

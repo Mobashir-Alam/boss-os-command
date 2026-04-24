@@ -233,6 +233,43 @@ export function useUpdateMyTask() {
   });
 }
 
+// Fetch all projects a specific person (by person_id) is assigned to
+// Used by CEO when inspecting an individual employee
+export function usePersonProjects(personId: string | null | undefined) {
+  return useQuery({
+    queryKey: ["person-projects", personId],
+    enabled: !!personId,
+    queryFn: async (): Promise<Project[]> => {
+      if (!personId) return [];
+
+      const { data: memberRows, error: memberErr } = await supabase
+        .from("project_members")
+        .select("*")
+        .eq("person_id", personId)
+        .order("assigned_at", { ascending: false });
+
+      if (memberErr) throw memberErr;
+      if (!memberRows || memberRows.length === 0) return [];
+
+      const projectIds = memberRows.map((m: any) => m.project_id);
+
+      const { data: projects, error: projErr } = await supabase
+        .from("projects")
+        .select("*, startups(name)")
+        .in("id", projectIds)
+        .order("created_at", { ascending: false });
+
+      if (projErr) throw projErr;
+
+      return (projects ?? []).map((p: any) => ({
+        ...p,
+        startup_name: p.startups?.name ?? null,
+        my_member_row: (memberRows.find((m: any) => m.project_id === p.id) ?? null) as ProjectMember | null,
+      }));
+    },
+  });
+}
+
 // Fetch unread notifications for current user
 export function useMyNotifications() {
   const { user } = useAuth();

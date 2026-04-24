@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import AskKai from "@/components/AskKai";
 import {
   AlertTriangle,
@@ -10,12 +10,18 @@ import {
   Crosshair,
   Eye,
   Gauge,
+  Layers,
+  Calendar,
+  Users,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import SparkLine from "@/components/SparkLine";
 import { useFounderOverview } from "@/hooks/useFounderOverview";
+import { useMyProjects, type Project } from "@/hooks/useEmployeeProjects";
+import { useStartups } from "@/hooks/useStartups";
 import { useTaskContext } from "@/contexts/TaskContext";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { statusConfig } from "@/data/startups";
 import { toast } from "sonner";
@@ -64,13 +70,48 @@ const signalLabel: Record<string, string> = {
   stabilize: "Stabilize",
 };
 
+const PROJECT_STATUS_COLOR: Record<string, string> = {
+  active:    "text-emerald-700 bg-emerald-500/10 border-emerald-500/20",
+  paused:    "text-amber-700 bg-amber-500/10 border-amber-500/20",
+  completed: "text-blue-700 bg-blue-500/10 border-blue-500/20",
+  cancelled: "text-muted-foreground bg-muted/40 border-border/40",
+};
+
+function projectDeadlineLabel(deadline: string | null): { text: string; urgent: boolean } | null {
+  if (!deadline) return null;
+  const d = new Date(deadline);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const diff = Math.ceil((d.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+  if (diff < 0) return { text: `${Math.abs(diff)}d overdue`, urgent: true };
+  if (diff === 0) return { text: "Due today", urgent: true };
+  if (diff <= 3) return { text: `${diff}d left`, urgent: true };
+  if (diff <= 7) return { text: `${diff}d left`, urgent: false };
+  return { text: d.toLocaleDateString("en-IN", { day: "numeric", month: "short" }), urgent: false };
+}
+
 const FounderCommandCenter = () => {
+  const navigate = useNavigate();
   const [mode, setMode] = useState<Mode>("founder");
+  const [projectFilter, setProjectFilter] = useState<string>("all");
   const { getTaskStats, getOverdueTasks, tasks } = useTaskContext();
   const overview = useFounderOverview();
+  const { data: allProjects = [], isLoading: projectsLoading } = useMyProjects();
+  const { dbStartups } = useStartups();
   const stats = getTaskStats();
   const overdueTasks = getOverdueTasks();
   const blockedTasks = tasks.filter((task) => task.status === "blocked");
+
+  const filteredProjects = useMemo(() => {
+    if (projectFilter === "all") return allProjects;
+    return allProjects.filter((p: Project) => p.startup_id === projectFilter);
+  }, [allProjects, projectFilter]);
+
+  const activeProjectCount = allProjects.filter((p: Project) => p.status === "active").length;
+  const blockedProjectCount = allProjects.filter((p: Project) =>
+    p.members?.some((m) => m.status === "blocked") ||
+    (p.my_member_row && (p as any).overall_completion < 100 && p.status === "active")
+  ).length;
 
   const handleAcceptDecision = (decision: string) => {
     toast.success("Decision captured", { description: decision });
@@ -456,6 +497,144 @@ const FounderCommandCenter = () => {
                   })}
                 </div>
               </div>
+            </section>
+
+            {/* ── Portfolio Projects ── */}
+            <section>
+              <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+                <div>
+                  <span className="eyebrow">Portfolio Projects</span>
+                  <h2 className="mt-1 font-display text-2xl">
+                    {activeProjectCount} Active{allProjects.length > activeProjectCount ? `, ${allProjects.length - activeProjectCount} Other` : ""}
+                  </h2>
+                </div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => setProjectFilter("all")}
+                    className={cn(
+                      "rounded-md border px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider transition-all",
+                      projectFilter === "all"
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "border-border text-muted-foreground hover:text-foreground hover:border-border/80"
+                    )}
+                  >
+                    All Companies
+                  </button>
+                  {(dbStartups ?? []).map((s: any) => (
+                    <button
+                      key={s.id}
+                      type="button"
+                      onClick={() => setProjectFilter(s.id)}
+                      className={cn(
+                        "rounded-md border px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider transition-all",
+                        projectFilter === s.id
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "border-border text-muted-foreground hover:text-foreground hover:border-border/80"
+                      )}
+                    >
+                      {s.name}
+                    </button>
+                  ))}
+                  <Link
+                    to="/employee"
+                    className="text-[11px] font-semibold uppercase tracking-wider text-accent hover:underline underline-offset-2 ml-2"
+                  >
+                    Full View -
+                  </Link>
+                </div>
+              </div>
+
+              {projectsLoading ? (
+                <div className="grid grid-cols-1 gap-px border border-border bg-border sm:grid-cols-2 lg:grid-cols-3">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="bg-card p-5 h-32 animate-pulse" />
+                  ))}
+                </div>
+              ) : filteredProjects.length === 0 ? (
+                <div className="paper-card p-8 text-center">
+                  <Layers className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
+                  <p className="text-sm text-muted-foreground">No projects{projectFilter !== "all" ? " for this company" : " yet"}</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 gap-px border border-border bg-border sm:grid-cols-2 lg:grid-cols-3">
+                  {filteredProjects.map((project: Project) => {
+                    const dl = projectDeadlineLabel(project.deadline);
+                    const memberCount = (project as any).member_count ?? 0;
+                    return (
+                      <button
+                        key={project.id}
+                        type="button"
+                        onClick={() => navigate(`/project/${project.id}`)}
+                        className="group bg-card p-5 text-left transition-colors hover:bg-paper w-full"
+                      >
+                        <div className="flex items-start justify-between gap-2 mb-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1 flex-wrap">
+                              <Badge
+                                variant="outline"
+                                className={cn("text-[9px] px-1.5 py-0 capitalize flex-shrink-0", PROJECT_STATUS_COLOR[project.status])}
+                              >
+                                {project.status}
+                              </Badge>
+                              {projectFilter === "all" && project.startup_name && (
+                                <span className="text-[9px] uppercase tracking-wider text-muted-foreground truncate">
+                                  {project.startup_name}
+                                </span>
+                              )}
+                            </div>
+                            <h3 className="font-display text-base leading-snug group-hover:text-accent transition-colors line-clamp-2">
+                              {project.title}
+                            </h3>
+                          </div>
+                          <ChevronRight className="h-4 w-4 text-muted-foreground/40 flex-shrink-0 mt-1" />
+                        </div>
+
+                        {project.department_key && (
+                          <div className="flex items-center gap-1 mb-3">
+                            <Layers className="h-3 w-3 text-muted-foreground" />
+                            <span className="text-[10px] text-muted-foreground capitalize">
+                              {project.department_key.replace(/_/g, " ")}
+                            </span>
+                          </div>
+                        )}
+
+                        <div className="space-y-1 mb-3">
+                          <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+                            <span>Progress</span>
+                            <span className="font-semibold tabular-nums">{project.overall_completion}%</span>
+                          </div>
+                          <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                            <div
+                              className={cn(
+                                "h-full rounded-full transition-all duration-500",
+                                project.overall_completion === 100 ? "bg-emerald-500" :
+                                project.overall_completion >= 60 ? "bg-blue-500" : "bg-primary"
+                              )}
+                              style={{ width: `${project.overall_completion}%` }}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+                          {dl ? (
+                            <span className={cn("flex items-center gap-1", dl.urgent && "text-signal-critical font-semibold")}>
+                              <Calendar className="h-2.5 w-2.5" />
+                              {dl.text}
+                            </span>
+                          ) : <span />}
+                          {project.members && (
+                            <span className="flex items-center gap-1">
+                              <Users className="h-2.5 w-2.5" />
+                              {project.members.length} member{project.members.length !== 1 ? "s" : ""}
+                            </span>
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </section>
 
             <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
