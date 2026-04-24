@@ -56,7 +56,7 @@ export interface Notification {
 // - Everyone else: see only projects they are assigned to
 export function useMyProjects() {
   const { user, isFounder } = useAuth();
-  const { startups } = useStartups();
+  const { dbStartups } = useStartups();
 
   return useQuery({
     queryKey: ["my-projects", user?.id, isFounder],
@@ -66,7 +66,8 @@ export function useMyProjects() {
 
       if (isFounder) {
         // Founders see all projects across all their startups
-        const startupIds = startups.map((s) => s.id);
+        // Use dbStartups (real UUIDs), not startups (which maps id → slug)
+        const startupIds = dbStartups.map((s) => s.id);
         if (startupIds.length === 0) return [];
 
         const { data: projects, error: projErr } = await supabase
