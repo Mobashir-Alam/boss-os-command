@@ -126,7 +126,7 @@ const StartupDetail = () => {
     executiveOverview.financials
       ? `Monthly burn: ${executiveOverview.financials.burn}, Revenue: ${executiveOverview.financials.revenue}, Expenses: ${executiveOverview.financials.expenses}`
       : null,
-    `Tasks: ${completedTasks} completed of ${totalTasks} total`,
+    `Tasks: ${startupTasks.filter((t) => t.status === "completed").length} completed of ${startupTasks.length} total`,
     kaiData?.insight ? `Strategic insight: ${kaiData.insight}` : null,
     kaiData?.recommendation?.action ? `Recommended action: ${kaiData.recommendation.action}` : null,
     kaiData?.recommendation?.why ? `Why it matters: ${kaiData.recommendation.why}` : null,
