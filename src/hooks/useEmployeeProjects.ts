@@ -154,27 +154,44 @@ export function useProjectDetail(projectId: string | undefined) {
 
       if (memErr) throw memErr;
 
-      // Fetch profile names for all members
-      const profileIds = (members ?? []).map((m) => m.profile_id);
-      let profileMap: Record<string, { full_name: string | null; email: string | null }> = {};
+      // Build name map: prefer people table (for seed/demo rows where person_id is set),
+      // fall back to profiles table (for real auth users).
+      const memberList = members ?? [];
+      let nameMap: Record<string, { full_name: string | null; email: string | null }> = {};
 
+      // 1. Look up real auth users in profiles table
+      const profileIds = memberList.map((m) => m.profile_id).filter(Boolean);
       if (profileIds.length > 0) {
         const { data: profiles } = await supabase
           .from("profiles")
           .select("id, full_name, email")
           .in("id", profileIds);
-
         (profiles ?? []).forEach((p: any) => {
-          profileMap[p.id] = { full_name: p.full_name, email: p.email };
+          nameMap[p.id] = { full_name: p.full_name, email: p.email };
         });
       }
 
-      const enrichedMembers: ProjectMember[] = (members ?? []).map((m) => ({
-        ...m,
-        status: m.status as MemberStatus,
-        profile_name: profileMap[m.profile_id]?.full_name ?? "Team Member",
-        profile_email: profileMap[m.profile_id]?.email ?? null,
-      }));
+      // 2. Look up demo/seed people by person_id (overrides profile lookup when present)
+      const personIds = memberList.map((m) => m.person_id).filter(Boolean) as string[];
+      if (personIds.length > 0) {
+        const { data: peopleRows } = await supabase
+          .from("people")
+          .select("id, full_name, email")
+          .in("id", personIds);
+        (peopleRows ?? []).forEach((p: any) => {
+          nameMap[p.id] = { full_name: p.full_name, email: p.email };
+        });
+      }
+
+      const enrichedMembers: ProjectMember[] = memberList.map((m) => {
+        const lookup = (m.person_id && nameMap[m.person_id]) || nameMap[m.profile_id] || null;
+        return {
+          ...m,
+          status: m.status as MemberStatus,
+          profile_name: lookup?.full_name ?? "Team Member",
+          profile_email: lookup?.email ?? null,
+        };
+      });
 
       return {
         ...(project as any),
