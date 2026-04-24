@@ -574,3 +574,38 @@ Next implementation flow:
   - Priorities/tasks
 - fix any real-data schema or UI issues discovered during QA
 - only after this live data pass, begin Phase 4 KAI GPT integration
+
+---
+
+## Snapshot: 2026-04-25 - Employee Scope Defined
+
+### What Was Decided
+
+The employee experience is project-based, not just an individual task list.
+
+Key decisions made:
+
+- A "project" is a new first-class entity with its own table
+- Any of CEO / manager / tech lead can create a project and assign members
+- Employees see all projects they are added to
+- Inside a project, employees see the full team breakdown — who has what task, each person's % and status (read-only for others)
+- Employees can only update their own task (status, %, note, blocked flag)
+- When added to a project: in-app notification + email sent with project name, assignor, their task, and deadline
+
+### New Tables Required
+
+- `projects` — project entity with startup_id, title, description, deadline, status, created_by
+- `project_members` — join table linking person to project with task_title, status, completion_percentage, progress_note
+- `notifications` — in-app notification records per recipient
+
+### Existing Tables Not Changed
+
+The existing `tasks` table stays as-is for CEO/manager-assigned individual priorities. Projects are separate — they represent collaborative team work with shared visibility.
+
+### Documentation Created
+
+- `docs/employee-scope.md` — full employee scope, data model, access control, UI pages required, and build priority
+
+### Build Phase
+
+Employee UI is Phase 2. CEO layer must stabilize first.

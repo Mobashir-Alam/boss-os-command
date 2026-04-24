@@ -24,6 +24,8 @@ import Unsubscribe from "./pages/Unsubscribe.tsx";
 import CfoDashboard from "./pages/CfoDashboard.tsx";
 import PeopleOS from "./pages/PeopleOS.tsx";
 import NotFound from "./pages/NotFound.tsx";
+import EmployeeDashboard from "./pages/EmployeeDashboard.tsx";
+import ProjectDetail from "./pages/ProjectDetail.tsx";
 
 const queryClient = new QueryClient({});
 
@@ -52,6 +54,8 @@ const App = () => (
               <Route path="/my-work" element={<AuthGuard><MyWorkDashboard /></AuthGuard>} />
               <Route path="/finances" element={<AuthGuard><CfoDashboard /></AuthGuard>} />
               <Route path="/people" element={<AuthGuard><PeopleOS /></AuthGuard>} />
+              <Route path="/employee" element={<AuthGuard><EmployeeDashboard /></AuthGuard>} />
+              <Route path="/project/:id" element={<AuthGuard><ProjectDetail /></AuthGuard>} />
               <Route path="/unsubscribe" element={<Unsubscribe />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
