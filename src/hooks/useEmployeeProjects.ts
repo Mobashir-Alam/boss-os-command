@@ -206,7 +206,12 @@ export function useUpdateMyTask() {
       progress_note?: string;
       blocked_reason?: string;
     }) => {
-      const updates: Record<string, any> = {};
+      const updates: {
+        status?: MemberStatus;
+        completion_percentage?: number;
+        progress_note?: string;
+        blocked_reason?: string;
+      } = {};
       if (status !== undefined) updates.status = status;
       if (completion_percentage !== undefined) updates.completion_percentage = completion_percentage;
       if (progress_note !== undefined) updates.progress_note = progress_note;
