@@ -674,6 +674,44 @@ export type Database = {
         }
         Relationships: []
       }
+      notifications: {
+        Row: {
+          created_at: string
+          id: string
+          message: string
+          project_id: string | null
+          read: boolean
+          recipient_profile_id: string
+          type: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message: string
+          project_id?: string | null
+          read?: boolean
+          recipient_profile_id: string
+          type?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message?: string
+          project_id?: string | null
+          read?: boolean
+          recipient_profile_id?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       people: {
         Row: {
           cost_to_company: number
@@ -1009,6 +1047,119 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      project_members: {
+        Row: {
+          assigned_at: string
+          blocked_reason: string | null
+          completion_percentage: number
+          id: string
+          person_id: string | null
+          profile_id: string
+          progress_note: string | null
+          project_id: string
+          role: string
+          status: string
+          task_description: string | null
+          task_title: string | null
+          updated_at: string
+        }
+        Insert: {
+          assigned_at?: string
+          blocked_reason?: string | null
+          completion_percentage?: number
+          id?: string
+          person_id?: string | null
+          profile_id: string
+          progress_note?: string | null
+          project_id: string
+          role?: string
+          status?: string
+          task_description?: string | null
+          task_title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          assigned_at?: string
+          blocked_reason?: string | null
+          completion_percentage?: number
+          id?: string
+          person_id?: string | null
+          profile_id?: string
+          progress_note?: string | null
+          project_id?: string
+          role?: string
+          status?: string
+          task_description?: string | null
+          task_title?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_members_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "people"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_members_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      projects: {
+        Row: {
+          created_at: string
+          created_by_profile: string | null
+          deadline: string | null
+          department_key: string | null
+          description: string | null
+          id: string
+          overall_completion: number
+          startup_id: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by_profile?: string | null
+          deadline?: string | null
+          department_key?: string | null
+          description?: string | null
+          id?: string
+          overall_completion?: number
+          startup_id: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by_profile?: string | null
+          deadline?: string | null
+          department_key?: string | null
+          description?: string | null
+          id?: string
+          overall_completion?: number
+          startup_id?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "projects_startup_id_fkey"
+            columns: ["startup_id"]
+            isOneToOne: false
+            referencedRelation: "startups"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       special_rights: {
         Row: {
@@ -1606,150 +1757,6 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
-      }
-      projects: {
-        Row: {
-          id: string
-          startup_id: string
-          department_key: string | null
-          title: string
-          description: string | null
-          status: string
-          deadline: string | null
-          created_by_profile: string | null
-          overall_completion: number
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          startup_id: string
-          department_key?: string | null
-          title: string
-          description?: string | null
-          status?: string
-          deadline?: string | null
-          created_by_profile?: string | null
-          overall_completion?: number
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          startup_id?: string
-          department_key?: string | null
-          title?: string
-          description?: string | null
-          status?: string
-          deadline?: string | null
-          created_by_profile?: string | null
-          overall_completion?: number
-          created_at?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "projects_startup_id_fkey"
-            columns: ["startup_id"]
-            isOneToOne: false
-            referencedRelation: "startups"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      project_members: {
-        Row: {
-          id: string
-          project_id: string
-          profile_id: string
-          person_id: string | null
-          role: string
-          task_title: string | null
-          task_description: string | null
-          status: string
-          completion_percentage: number
-          progress_note: string | null
-          blocked_reason: string | null
-          assigned_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          project_id: string
-          profile_id: string
-          person_id?: string | null
-          role?: string
-          task_title?: string | null
-          task_description?: string | null
-          status?: string
-          completion_percentage?: number
-          progress_note?: string | null
-          blocked_reason?: string | null
-          assigned_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          project_id?: string
-          profile_id?: string
-          person_id?: string | null
-          role?: string
-          task_title?: string | null
-          task_description?: string | null
-          status?: string
-          completion_percentage?: number
-          progress_note?: string | null
-          blocked_reason?: string | null
-          assigned_at?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "project_members_project_id_fkey"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "projects"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      notifications: {
-        Row: {
-          id: string
-          recipient_profile_id: string
-          type: string
-          project_id: string | null
-          message: string
-          read: boolean
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          recipient_profile_id: string
-          type?: string
-          project_id?: string | null
-          message: string
-          read?: boolean
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          recipient_profile_id?: string
-          type?: string
-          project_id?: string | null
-          message?: string
-          read?: boolean
-          created_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "notifications_project_id_fkey"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "projects"
-            referencedColumns: ["id"]
-          },
-        ]
       }
     }
     Views: {
