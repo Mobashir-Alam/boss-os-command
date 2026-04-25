@@ -16,11 +16,16 @@ const AuthGuard = ({ children }: { children: React.ReactNode }) => {
 
   if (!user) return <Navigate to="/login" replace />;
 
-  const onboardingDone = localStorage.getItem("onboarding_complete");
-  if (!onboardingDone) return <Navigate to="/onboarding" replace />;
+  // A user is "onboarded" if their profile has a role in the DB.
+  // localStorage is a per-browser fallback for the very first sign-up flow.
+  const dbOnboarded = !!profile?.role;
+  const localOnboarded = !!localStorage.getItem("onboarding_complete");
+  if (!dbOnboarded && !localOnboarded) {
+    return <Navigate to="/onboarding" replace />;
+  }
 
-  // Send team members to their dashboard instead of the CEO panel
-  if (profile?.role === "team_member" && location.pathname === "/") {
+  // The CEO panel ("/") is for founders only. Everyone else lands on /employee.
+  if (profile?.role && profile.role !== "founder" && location.pathname === "/") {
     return <Navigate to="/employee" replace />;
   }
 

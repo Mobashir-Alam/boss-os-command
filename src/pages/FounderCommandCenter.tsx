@@ -18,6 +18,8 @@ import Navbar from "@/components/Navbar";
 import SparkLine from "@/components/SparkLine";
 import { useFounderOverview } from "@/hooks/useFounderOverview";
 import { useMyProjects, type Project } from "@/hooks/useEmployeeProjects";
+import CreateProjectModal from "@/components/project/CreateProjectModal";
+import { Plus } from "lucide-react";
 import { useStartups } from "@/hooks/useStartups";
 import { useTaskContext } from "@/contexts/TaskContext";
 import { Button } from "@/components/ui/button";
@@ -94,6 +96,7 @@ const FounderCommandCenter = () => {
   const navigate = useNavigate();
   const [mode, setMode] = useState<Mode>("founder");
   const [projectFilter, setProjectFilter] = useState<string>("all");
+  const [createOpen, setCreateOpen] = useState(false);
   const { getTaskStats, getOverdueTasks, tasks } = useTaskContext();
   const overview = useFounderOverview();
   const { data: allProjects = [], isLoading: projectsLoading } = useMyProjects();
@@ -542,6 +545,14 @@ const FounderCommandCenter = () => {
                   >
                     Full View -
                   </Link>
+                  <Button
+                    size="sm"
+                    onClick={() => setCreateOpen(true)}
+                    className="ml-2 h-7 gap-1.5 text-[11px] uppercase tracking-wider"
+                  >
+                    <Plus className="h-3 w-3" />
+                    New Project
+                  </Button>
                 </div>
               </div>
 
@@ -776,6 +787,12 @@ const FounderCommandCenter = () => {
           <AskKai startupContext={portfolioContext} />
         </section>
       </main>
+
+      <CreateProjectModal
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        onCreated={(projectId) => navigate(`/project/${projectId}`)}
+      />
     </div>
   );
 };

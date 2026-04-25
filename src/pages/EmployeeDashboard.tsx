@@ -23,7 +23,10 @@ import {
   Layers,
   AlertTriangle,
   User,
+  Plus,
+  Crown,
 } from "lucide-react";
+import CreateProjectModal from "@/components/project/CreateProjectModal";
 
 /* ── helpers ─────────────────────────────────────────────── */
 
@@ -92,6 +95,15 @@ function ProjectCard({ project, onClick }: { project: Project; onClick: () => vo
               >
                 {project.status}
               </Badge>
+              {member?.role === "lead" && (
+                <Badge
+                  variant="outline"
+                  className="text-[10px] px-1.5 py-0 border-amber-500/30 bg-amber-500/10 text-amber-700"
+                >
+                  <Crown className="h-2.5 w-2.5 mr-0.5 inline" />
+                  Lead
+                </Badge>
+              )}
             </div>
 
             <div className="flex items-center gap-3 mt-1.5 flex-wrap">
@@ -206,6 +218,9 @@ const EmployeeDashboard = () => {
   const markRead = useMarkNotificationRead();
 
   const [showNotifications, setShowNotifications] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
+
+  const canCreate = profile?.role === "project_manager" || profile?.role === "founder";
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
@@ -233,13 +248,26 @@ const EmployeeDashboard = () => {
               {profile?.full_name ?? "Team Member"} · {profile?.department?.replace(/_/g, " ") ?? ""}
             </p>
           </div>
-          <button
-            type="button"
-            className="relative p-2 rounded-lg hover:bg-muted transition-colors"
-            onClick={() => setShowNotifications(!showNotifications)}
-          >
-            <NotificationBell count={unreadCount} />
-          </button>
+          <div className="flex items-center gap-2">
+            {canCreate && (
+              <Button
+                size="sm"
+                onClick={() => setCreateOpen(true)}
+                className="h-8 gap-1.5 text-xs"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                New Project
+              </Button>
+            )}
+            <button
+              type="button"
+              title={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ""}`}
+              className="relative p-2 rounded-lg hover:bg-muted transition-colors"
+              onClick={() => setShowNotifications(!showNotifications)}
+            >
+              <NotificationBell count={unreadCount} />
+            </button>
+          </div>
         </div>
 
         {/* Notification panel */}
@@ -349,6 +377,14 @@ const EmployeeDashboard = () => {
           </div>
         )}
       </main>
+
+      {canCreate && (
+        <CreateProjectModal
+          open={createOpen}
+          onOpenChange={setCreateOpen}
+          onCreated={(projectId) => navigate(`/project/${projectId}`)}
+        />
+      )}
     </div>
   );
 };

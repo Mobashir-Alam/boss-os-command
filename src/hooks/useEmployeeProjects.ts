@@ -413,3 +413,242 @@ export function useDeleteProjectMessage() {
     },
   });
 }
+
+// ============================================================
+// Lead / CEO project management
+// ============================================================
+
+export interface AssignableProfile {
+  id: string;
+  full_name: string | null;
+  email: string | null;
+  role: string | null;
+  department: string | null;
+}
+
+export function useAssignableProfiles() {
+  return useQuery({
+    queryKey: ["assignable-profiles"],
+    queryFn: async (): Promise<AssignableProfile[]> => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, full_name, email, role, department")
+        .order("full_name", { ascending: true });
+      if (error) throw error;
+      return ((data ?? []) as any[]).filter((p) => p.full_name) as AssignableProfile[];
+    },
+  });
+}
+
+export interface NewMemberInput {
+  profile_id: string;
+  role: "lead" | "member";
+  task_title?: string | null;
+  task_description?: string | null;
+}
+
+export interface CreateProjectInput {
+  startup_id: string;
+  department_key: string | null;
+  title: string;
+  description?: string | null;
+  deadline?: string | null;
+  status?: ProjectStatus;
+  members: NewMemberInput[];
+}
+
+async function notifyMembers(
+  projectId: string,
+  projectTitle: string,
+  recipientIds: string[],
+  type: "project_assigned" | "task_updated" | "project_completed" | "project_paused"
+) {
+  if (recipientIds.length === 0) return;
+  const messageByType: Record<string, string> = {
+    project_assigned: `You've been added to "${projectTitle}"`,
+    task_updated: `Your task on "${projectTitle}" was updated`,
+    project_completed: `"${projectTitle}" was marked complete`,
+    project_paused: `"${projectTitle}" was paused`,
+  };
+  const rows = recipientIds.map((rid) => ({
+    recipient_profile_id: rid,
+    type,
+    project_id: projectId,
+    message: messageByType[type],
+  }));
+  await supabase.from("notifications").insert(rows as any);
+}
+
+export function useCreateProject() {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  return useMutation({
+    mutationFn: async (input: CreateProjectInput) => {
+      if (!user?.id) throw new Error("Not signed in");
+      if (input.members.length === 0) throw new Error("Pick at least one member");
+      const leads = input.members.filter((m) => m.role === "lead");
+      if (leads.length !== 1) throw new Error("Exactly one lead required");
+
+      const { data: project, error: projErr } = await supabase
+        .from("projects")
+        .insert({
+          startup_id: input.startup_id,
+          department_key: input.department_key,
+          title: input.title,
+          description: input.description ?? null,
+          deadline: input.deadline ?? null,
+          status: input.status ?? "active",
+          created_by_profile: user.id,
+        } as any)
+        .select("id, title")
+        .single();
+      if (projErr) throw projErr;
+
+      const projectId = (project as any).id as string;
+      const projectTitle = (project as any).title as string;
+
+      const memberRows = input.members.map((m) => ({
+        project_id: projectId,
+        profile_id: m.profile_id,
+        role: m.role,
+        task_title: m.task_title ?? null,
+        task_description: m.task_description ?? null,
+      }));
+      const { error: memberErr } = await supabase
+        .from("project_members")
+        .insert(memberRows as any);
+      if (memberErr) throw memberErr;
+
+      const recipientIds = input.members
+        .map((m) => m.profile_id)
+        .filter((id) => id !== user.id);
+      await notifyMembers(projectId, projectTitle, recipientIds, "project_assigned");
+
+      return projectId;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["my-projects"] });
+    },
+  });
+}
+
+export interface UpdateProjectInput {
+  projectId: string;
+  patch: {
+    title?: string;
+    description?: string | null;
+    status?: ProjectStatus;
+    deadline?: string | null;
+    department_key?: string | null;
+  };
+}
+
+export function useUpdateProject() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ projectId, patch }: UpdateProjectInput) => {
+      const { error } = await supabase
+        .from("projects")
+        .update(patch as any)
+        .eq("id", projectId);
+      if (error) throw error;
+      return projectId;
+    },
+    onSuccess: (projectId) => {
+      queryClient.invalidateQueries({ queryKey: ["project-detail", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["my-projects"] });
+    },
+  });
+}
+
+export function useAddProjectMember() {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  return useMutation({
+    mutationFn: async ({
+      projectId,
+      projectTitle,
+      member,
+    }: {
+      projectId: string;
+      projectTitle: string;
+      member: NewMemberInput;
+    }) => {
+      const { error } = await supabase.from("project_members").insert({
+        project_id: projectId,
+        profile_id: member.profile_id,
+        role: member.role,
+        task_title: member.task_title ?? null,
+        task_description: member.task_description ?? null,
+      } as any);
+      if (error) throw error;
+
+      if (member.profile_id !== user?.id) {
+        await notifyMembers(projectId, projectTitle, [member.profile_id], "project_assigned");
+      }
+      return projectId;
+    },
+    onSuccess: (projectId) => {
+      queryClient.invalidateQueries({ queryKey: ["project-detail", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["my-projects"] });
+    },
+  });
+}
+
+export function useRemoveProjectMember() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ memberId, projectId }: { memberId: string; projectId: string }) => {
+      const { error } = await supabase
+        .from("project_members")
+        .delete()
+        .eq("id", memberId);
+      if (error) throw error;
+      return projectId;
+    },
+    onSuccess: (projectId) => {
+      queryClient.invalidateQueries({ queryKey: ["project-detail", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["my-projects"] });
+    },
+  });
+}
+
+// Lead version: update any member's row on a project the caller leads.
+export function useLeadUpdateMemberTask() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      memberId,
+      projectId,
+      patch,
+    }: {
+      memberId: string;
+      projectId: string;
+      patch: {
+        task_title?: string | null;
+        task_description?: string | null;
+        status?: MemberStatus;
+        completion_percentage?: number;
+        progress_note?: string | null;
+        blocked_reason?: string | null;
+        role?: "lead" | "member";
+      };
+    }) => {
+      const { error } = await supabase
+        .from("project_members")
+        .update(patch as any)
+        .eq("id", memberId);
+      if (error) throw error;
+      return projectId;
+    },
+    onSuccess: (projectId) => {
+      queryClient.invalidateQueries({ queryKey: ["project-detail", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["my-projects"] });
+    },
+  });
+}
