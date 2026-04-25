@@ -16,6 +16,7 @@ import {
 } from "@/hooks/useEmployeeProjects";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import ProjectDiscussion from "@/components/project/ProjectDiscussion";
 import {
   ArrowLeft,
   Building2,
@@ -470,7 +471,7 @@ const ProjectDetail = () => {
         )}
 
         {/* Team members */}
-        <div>
+        <div className="mb-8">
           <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">
             Team — {totalMembers} member{totalMembers !== 1 ? "s" : ""}
           </h2>
@@ -485,6 +486,9 @@ const ProjectDetail = () => {
             ))}
           </div>
         </div>
+
+        {/* Discussion */}
+        {id && <ProjectDiscussion projectId={id} />}
 
       </main>
 

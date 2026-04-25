@@ -329,3 +329,87 @@ export function useMarkNotificationRead() {
     },
   });
 }
+
+// ============================================================
+// Project Discussion (chat thread per project)
+// ============================================================
+
+export interface ProjectMessage {
+  id: string;
+  project_id: string;
+  author_profile: string;
+  author_name: string;
+  body: string;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+}
+
+export function useProjectMessages(projectId: string | undefined) {
+  return useQuery({
+    queryKey: ["project-messages", projectId],
+    enabled: !!projectId,
+    queryFn: async (): Promise<ProjectMessage[]> => {
+      if (!projectId) return [];
+      const { data, error } = await supabase
+        .from("project_messages")
+        .select("*")
+        .eq("project_id", projectId)
+        .order("created_at", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as ProjectMessage[];
+    },
+  });
+}
+
+export function useSendProjectMessage() {
+  const queryClient = useQueryClient();
+  const { user, profile } = useAuth();
+
+  return useMutation({
+    mutationFn: async ({ projectId, body }: { projectId: string; body: string }) => {
+      if (!user?.id) throw new Error("Not signed in");
+      const trimmed = body.trim();
+      if (!trimmed) throw new Error("Message is empty");
+
+      const author_name =
+        profile?.full_name ||
+        profile?.email?.split("@")[0] ||
+        user.email?.split("@")[0] ||
+        "Team Member";
+
+      const { error } = await supabase.from("project_messages").insert({
+        project_id: projectId,
+        author_profile: user.id,
+        author_name,
+        body: trimmed,
+      } as any);
+      if (error) throw error;
+      return projectId;
+    },
+    onSuccess: (projectId) => {
+      queryClient.invalidateQueries({ queryKey: ["project-messages", projectId] });
+    },
+  });
+}
+
+export function useDeleteProjectMessage() {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  return useMutation({
+    mutationFn: async ({ messageId, projectId }: { messageId: string; projectId: string }) => {
+      if (!user?.id) throw new Error("Not signed in");
+      const { error } = await supabase
+        .from("project_messages")
+        .update({ deleted_at: new Date().toISOString() } as any)
+        .eq("id", messageId)
+        .eq("author_profile", user.id);
+      if (error) throw error;
+      return projectId;
+    },
+    onSuccess: (projectId) => {
+      queryClient.invalidateQueries({ queryKey: ["project-messages", projectId] });
+    },
+  });
+}
