@@ -1,9 +1,10 @@
 import { useAuth } from "@/contexts/AuthContext";
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 
 const AuthGuard = ({ children }: { children: React.ReactNode }) => {
   const { user, loading, profile } = useAuth();
+  const location = useLocation();
 
   if (loading || (user && !profile)) {
     return (
@@ -17,6 +18,11 @@ const AuthGuard = ({ children }: { children: React.ReactNode }) => {
 
   const onboardingDone = localStorage.getItem("onboarding_complete");
   if (!onboardingDone) return <Navigate to="/onboarding" replace />;
+
+  // Send team members to their dashboard instead of the CEO panel
+  if (profile?.role === "team_member" && location.pathname === "/") {
+    return <Navigate to="/employee" replace />;
+  }
 
   return <>{children}</>;
 };
