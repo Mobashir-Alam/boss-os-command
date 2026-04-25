@@ -1111,6 +1111,50 @@ export type Database = {
           },
         ]
       }
+      project_messages: {
+        Row: {
+          author_name: string
+          author_profile: string
+          body: string
+          created_at: string
+          deleted_at: string | null
+          edited_at: string | null
+          id: string
+          project_id: string
+          updated_at: string
+        }
+        Insert: {
+          author_name?: string
+          author_profile: string
+          body: string
+          created_at?: string
+          deleted_at?: string | null
+          edited_at?: string | null
+          id?: string
+          project_id: string
+          updated_at?: string
+        }
+        Update: {
+          author_name?: string
+          author_profile?: string
+          body?: string
+          created_at?: string
+          deleted_at?: string | null
+          edited_at?: string | null
+          id?: string
+          project_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_messages_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       projects: {
         Row: {
           created_at: string
