@@ -11,7 +11,7 @@
 CREATE TABLE IF NOT EXISTS public.project_tasks (
   id                    uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   project_id            uuid NOT NULL REFERENCES public.projects(id) ON DELETE CASCADE,
-  assigned_to_profile   uuid REFERENCES auth.users(id) ON DELETE SET NULL,
+  assignee_profile   uuid REFERENCES auth.users(id) ON DELETE SET NULL,
   title                 text NOT NULL CHECK (length(trim(title)) > 0),
   description           text,
   status                text NOT NULL DEFAULT 'not_started'
@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS public.project_tasks (
 CREATE INDEX IF NOT EXISTS project_tasks_project_idx
   ON public.project_tasks(project_id);
 CREATE INDEX IF NOT EXISTS project_tasks_assignee_idx
-  ON public.project_tasks(assigned_to_profile);
+  ON public.project_tasks(assignee_profile);
 CREATE INDEX IF NOT EXISTS project_tasks_status_idx
   ON public.project_tasks(status);
 
@@ -88,7 +88,7 @@ DROP TRIGGER IF EXISTS sync_project_completion ON public.project_members;
 -- ─────────────────────────────────────────────────────────────
 
 INSERT INTO public.project_tasks (
-  project_id, assigned_to_profile, title, description,
+  project_id, assignee_profile, title, description,
   status, completion_percentage, progress_note, blocked_reason,
   created_by, created_at, updated_at
 )
@@ -150,7 +150,7 @@ CREATE POLICY "project_tasks_insert" ON public.project_tasks
 DROP POLICY IF EXISTS "project_tasks_update" ON public.project_tasks;
 CREATE POLICY "project_tasks_update" ON public.project_tasks
   FOR UPDATE USING (
-    assigned_to_profile = auth.uid()
+    assignee_profile = auth.uid()
     OR EXISTS (
       SELECT 1 FROM public.projects p
        WHERE p.id = project_tasks.project_id
