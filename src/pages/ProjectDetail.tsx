@@ -11,12 +11,14 @@ import { useAuth } from "@/contexts/AuthContext";
 import {
   useProjectDetail,
   useUpdateMyTask,
+  useRemoveProjectMember,
   type ProjectMember,
   type MemberStatus,
 } from "@/hooks/useEmployeeProjects";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import ProjectDiscussion from "@/components/project/ProjectDiscussion";
+import { EditProjectModal, AddMemberModal } from "@/components/project/LeadControls";
 import {
   ArrowLeft,
   Building2,
@@ -29,6 +31,9 @@ import {
   ChevronDown,
   ChevronUp,
   Edit3,
+  Crown,
+  UserPlus,
+  Trash2,
 } from "lucide-react";
 
 /* ── helpers ─────────────────────────────────────────────── */
@@ -66,10 +71,14 @@ function MemberRow({
   member,
   isMe,
   onEdit,
+  canManage = false,
+  onRemove,
 }: {
   member: ProjectMember;
   isMe: boolean;
   onEdit: () => void;
+  canManage?: boolean;
+  onRemove?: () => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const cfg = STATUS_CONFIG[member.status];
@@ -118,6 +127,16 @@ function MemberRow({
 
         <div className="flex items-center gap-2 flex-shrink-0">
           <span className="text-sm font-bold tabular-nums">{member.completion_percentage}%</span>
+          {canManage && !isMe && onRemove && (
+            <button
+              type="button"
+              title={`Remove ${member.profile_name ?? "member"} from project`}
+              onClick={(e) => { e.stopPropagation(); onRemove(); }}
+              className="p-1 rounded hover:bg-destructive/10 text-destructive/70"
+            >
+              <Trash2 className="h-3 w-3" />
+            </button>
+          )}
           {expanded ? <ChevronUp className="h-3.5 w-3.5 text-muted-foreground" /> : <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />}
         </div>
       </div>
@@ -308,12 +327,29 @@ function UpdateDialog({
 const ProjectDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isFounder } = useAuth();
   const { data: project, isLoading } = useProjectDetail(id);
+  const removeMember = useRemoveProjectMember();
   const [editOpen, setEditOpen] = useState(false);
+  const [editProjectOpen, setEditProjectOpen] = useState(false);
+  const [addMemberOpen, setAddMemberOpen] = useState(false);
 
   const myMember = project?.members?.find((m) => m.profile_id === user?.id) ?? null;
+  const isLead = myMember?.role === "lead";
+  const canManage = isLead || isFounder;
   const dl = project ? deadlineLabel(project.deadline) : null;
+
+  const handleRemoveMember = (memberId: string, memberName: string) => {
+    if (!project) return;
+    if (!confirm(`Remove ${memberName} from this project?`)) return;
+    removeMember.mutate(
+      { memberId, projectId: project.id },
+      {
+        onSuccess: () => toast.success(`${memberName} removed`),
+        onError: (e: any) => toast.error(e.message ?? "Failed to remove"),
+      }
+    );
+  };
 
   if (isLoading) {
     return (
@@ -365,17 +401,36 @@ const ProjectDetail = () => {
         <div className="mb-6">
           <div className="flex items-start justify-between gap-3 flex-wrap">
             <h1 className="text-xl font-bold tracking-tight flex-1">{project.title}</h1>
-            <Badge
-              variant="outline"
-              className={cn(
-                "text-[10px] capitalize flex-shrink-0",
-                project.status === "active"    && "text-emerald-700 bg-emerald-500/10 border-emerald-500/20",
-                project.status === "paused"    && "text-amber-700 bg-amber-500/10 border-amber-500/20",
-                project.status === "completed" && "text-blue-700 bg-blue-500/10 border-blue-500/20",
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {isLead && (
+                <Badge variant="outline" className="text-[10px] border-amber-500/30 bg-amber-500/10 text-amber-700">
+                  <Crown className="h-2.5 w-2.5 mr-0.5 inline" />
+                  You lead this
+                </Badge>
               )}
-            >
-              {project.status}
-            </Badge>
+              <Badge
+                variant="outline"
+                className={cn(
+                  "text-[10px] capitalize",
+                  project.status === "active"    && "text-emerald-700 bg-emerald-500/10 border-emerald-500/20",
+                  project.status === "paused"    && "text-amber-700 bg-amber-500/10 border-amber-500/20",
+                  project.status === "completed" && "text-blue-700 bg-blue-500/10 border-blue-500/20",
+                )}
+              >
+                {project.status}
+              </Badge>
+              {canManage && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setEditProjectOpen(true)}
+                  className="h-7 text-xs gap-1"
+                >
+                  <Edit3 className="h-3 w-3" />
+                  Edit
+                </Button>
+              )}
+            </div>
           </div>
 
           <div className="flex items-center gap-4 mt-2 flex-wrap">
@@ -472,9 +527,22 @@ const ProjectDetail = () => {
 
         {/* Team members */}
         <div className="mb-8">
-          <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">
-            Team — {totalMembers} member{totalMembers !== 1 ? "s" : ""}
-          </h2>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+              Team — {totalMembers} member{totalMembers !== 1 ? "s" : ""}
+            </h2>
+            {canManage && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setAddMemberOpen(true)}
+                className="h-7 text-xs gap-1"
+              >
+                <UserPlus className="h-3 w-3" />
+                Add Member
+              </Button>
+            )}
+          </div>
           <div className="space-y-2">
             {members.map((member) => (
               <MemberRow
@@ -482,6 +550,8 @@ const ProjectDetail = () => {
                 member={member}
                 isMe={member.profile_id === user?.id}
                 onEdit={() => setEditOpen(true)}
+                canManage={canManage}
+                onRemove={() => handleRemoveMember(member.id, member.profile_name ?? "Member")}
               />
             ))}
           </div>
@@ -499,6 +569,23 @@ const ProjectDetail = () => {
           open={editOpen}
           onClose={() => setEditOpen(false)}
         />
+      )}
+
+      {/* Lead controls */}
+      {canManage && (
+        <>
+          <EditProjectModal
+            project={project}
+            open={editProjectOpen}
+            onOpenChange={setEditProjectOpen}
+          />
+          <AddMemberModal
+            project={project}
+            open={addMemberOpen}
+            onOpenChange={setAddMemberOpen}
+            existingMemberIds={members.map((m) => m.profile_id)}
+          />
+        </>
       )}
     </div>
   );
