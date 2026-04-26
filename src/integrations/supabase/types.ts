@@ -1881,6 +1881,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_founder: { Args: { _user_id: string }; Returns: boolean }
       is_project_lead: {
         Args: { _project_id: string; _user_id: string }
         Returns: boolean
