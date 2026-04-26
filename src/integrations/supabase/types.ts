@@ -1155,6 +1155,65 @@ export type Database = {
           },
         ]
       }
+      project_tasks: {
+        Row: {
+          assignee_person_id: string | null
+          assignee_profile: string | null
+          blocked_reason: string | null
+          completion_percentage: number
+          created_at: string
+          created_by: string | null
+          deadline: string | null
+          description: string | null
+          id: string
+          progress_note: string | null
+          project_id: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          assignee_person_id?: string | null
+          assignee_profile?: string | null
+          blocked_reason?: string | null
+          completion_percentage?: number
+          created_at?: string
+          created_by?: string | null
+          deadline?: string | null
+          description?: string | null
+          id?: string
+          progress_note?: string | null
+          project_id: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          assignee_person_id?: string | null
+          assignee_profile?: string | null
+          blocked_reason?: string | null
+          completion_percentage?: number
+          created_at?: string
+          created_by?: string | null
+          deadline?: string | null
+          description?: string | null
+          id?: string
+          progress_note?: string | null
+          project_id?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_tasks_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       projects: {
         Row: {
           created_at: string
