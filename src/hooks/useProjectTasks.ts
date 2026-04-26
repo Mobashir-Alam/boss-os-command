@@ -131,6 +131,7 @@ export interface UpdateTaskInput {
     deadline?: string | null;
     progress_note?: string | null;
     blocked_reason?: string | null;
+    assignee_profile?: string | null;
   };
 }
 

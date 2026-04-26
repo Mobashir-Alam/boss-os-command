@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useCreateTask, useUpdateTask, type ProjectTask, type TaskStatus } from "@/hooks/useProjectTasks";
+import { useCreateTask, useUpdateTask, useReassignTask, type ProjectTask, type TaskStatus } from "@/hooks/useProjectTasks";
 import type { ProjectMember } from "@/hooks/useEmployeeProjects";
 import { toast } from "sonner";
 
@@ -46,6 +46,7 @@ export default function TaskFormModal({
   const isEdit = !!task;
   const createTask = useCreateTask();
   const updateTask = useUpdateTask();
+  const reassignTask = useReassignTask();
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -86,29 +87,61 @@ export default function TaskFormModal({
     }
 
     if (isEdit && task) {
-      // Build patch with only the fields the viewer is allowed to change
+      // Build patch with ONLY the fields the viewer is allowed to change.
+      // Definition fields (title/description/deadline) → leads & creators.
+      // Progress fields (status/%/notes/blocker) → assignee only, even if
+      // the viewer is the lead. Lead overwriting someone else's progress
+      // breaks accountability.
       const patch: any = {};
       if (canManageAll) {
         patch.title = title.trim();
         patch.description = description.trim() || null;
         patch.deadline = deadline || null;
       }
-      if (canManageAll || isAssignee) {
+      if (isAssignee) {
         patch.status = status;
         patch.completion_percentage = completion;
         patch.progress_note = progressNote.trim() || null;
         patch.blocked_reason = status === "blocked" ? blockedReason.trim() || null : null;
       }
-      updateTask.mutate(
-        { taskId: task.id, projectId, patch },
-        {
-          onSuccess: () => {
-            toast.success("Task updated");
-            onOpenChange(false);
+
+      // Reassignment is a separate concern — runs through useReassignTask
+      // so the new assignee gets a notification.
+      const newAssigneeId = assigneeId === "unassigned" ? null : assigneeId;
+      const currentAssigneeId = task.assignee_profile ?? null;
+      const assigneeChanged = canManageAll && newAssigneeId !== currentAssigneeId;
+
+      const finishWithToast = () => {
+        toast.success("Task updated");
+        onOpenChange(false);
+      };
+
+      const onErr = (e: any) => toast.error(e.message ?? "Failed to update task");
+
+      const runReassign = (after: () => void) => {
+        if (!assigneeChanged) return after();
+        reassignTask.mutate(
+          {
+            taskId: task.id,
+            projectId,
+            projectTitle,
+            taskTitle: (patch.title ?? task.title) as string,
+            newAssigneeId,
           },
-          onError: (e: any) => toast.error(e.message ?? "Failed to update task"),
-        }
-      );
+          { onSuccess: () => after(), onError: onErr }
+        );
+      };
+
+      const runPatch = (after: () => void) => {
+        if (Object.keys(patch).length === 0) return after();
+        updateTask.mutate(
+          { taskId: task.id, projectId, patch },
+          { onSuccess: () => after(), onError: onErr }
+        );
+      };
+
+      // Reassign first (so notification carries the new title if it changed)
+      runReassign(() => runPatch(finishWithToast));
     } else {
       createTask.mutate(
         {
@@ -216,8 +249,31 @@ export default function TaskFormModal({
             </div>
           </div>
 
-          {/* Progress fields — visible only when editing or for new task default */}
-          {isEdit && (
+          {/* Progress fields — only the assignee can update their own progress.
+              Lead/creator who isn't the assignee sees a read-only summary instead. */}
+          {isEdit && !isAssignee && (
+            <div className="rounded-lg border border-border/40 bg-muted/20 px-3 py-2">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">
+                Progress (read-only)
+              </p>
+              <div className="flex items-center gap-2 text-sm">
+                <span className="font-medium capitalize">{status.replace(/_/g, " ")}</span>
+                <span className="text-muted-foreground">·</span>
+                <span className="tabular-nums font-semibold">{completion}%</span>
+              </div>
+              {progressNote && (
+                <p className="text-xs text-muted-foreground italic mt-1">"{progressNote}"</p>
+              )}
+              {status === "blocked" && blockedReason && (
+                <p className="text-xs text-amber-700 mt-1">⚠ {blockedReason}</p>
+              )}
+              <p className="text-[10px] text-muted-foreground mt-1.5">
+                Only the assignee can update progress.
+              </p>
+            </div>
+          )}
+
+          {isEdit && isAssignee && (
             <>
               <div>
                 <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Status</label>
