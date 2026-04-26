@@ -172,21 +172,37 @@ export default function TaskFormModal({
               <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Assigned to
               </label>
-              <Select
-                value={assigneeId}
-                onValueChange={setAssigneeId}
-                disabled={isEdit ? !canManageAll : false}
-              >
-                <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="unassigned">Unassigned</SelectItem>
-                  {projectMembers.map((m) => (
-                    <SelectItem key={m.profile_id} value={m.profile_id}>
-                      {m.profile_name ?? "Member"} {m.role === "lead" ? "(lead)" : ""}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {!isEdit && presetAssigneeId ? (
+                // Locked: this modal was opened from a specific member's "+"
+                (() => {
+                  const presetMember = projectMembers.find((m) => m.profile_id === presetAssigneeId);
+                  return (
+                    <div className="mt-1 flex items-center gap-2 rounded-md border border-border/60 bg-muted/30 px-3 py-2 text-sm">
+                      <span className="font-medium">{presetMember?.profile_name ?? "Member"}</span>
+                      {presetMember?.role === "lead" && (
+                        <span className="text-[10px] text-amber-700">(lead)</span>
+                      )}
+                      <span className="ml-auto text-[10px] text-muted-foreground">Locked</span>
+                    </div>
+                  );
+                })()
+              ) : (
+                <Select
+                  value={assigneeId}
+                  onValueChange={setAssigneeId}
+                  disabled={isEdit ? !canManageAll : false}
+                >
+                  <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="unassigned">Unassigned</SelectItem>
+                    {projectMembers.map((m) => (
+                      <SelectItem key={m.profile_id} value={m.profile_id}>
+                        {m.profile_name ?? "Member"} {m.role === "lead" ? "(lead)" : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
             <div>
               <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Deadline</label>
