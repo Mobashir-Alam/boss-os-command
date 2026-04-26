@@ -7,7 +7,7 @@ export type TaskStatus = "not_started" | "in_progress" | "done" | "blocked";
 export interface ProjectTask {
   id: string;
   project_id: string;
-  assigned_to_profile: string | null;
+  assignee_profile: string | null;
   title: string;
   description: string | null;
   status: TaskStatus;
@@ -49,7 +49,7 @@ export function useMyTasks() {
       const { data, error } = await supabase
         .from("project_tasks")
         .select("*")
-        .eq("assigned_to_profile", user.id)
+        .eq("assignee_profile", user.id)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as ProjectTask[];
@@ -76,7 +76,7 @@ export interface CreateTaskInput {
   project_title: string;
   title: string;
   description?: string | null;
-  assigned_to_profile?: string | null;
+  assignee_profile?: string | null;
   deadline?: string | null;
   status?: TaskStatus;
 }
@@ -94,19 +94,19 @@ export function useCreateTask() {
         project_id: input.project_id,
         title: input.title.trim(),
         description: input.description?.trim() || null,
-        assigned_to_profile: input.assigned_to_profile ?? null,
+        assignee_profile: input.assignee_profile ?? null,
         deadline: input.deadline ?? null,
         status: input.status ?? "not_started",
         created_by: user.id,
       } as any);
       if (error) throw error;
 
-      if (input.assigned_to_profile && input.assigned_to_profile !== user.id) {
+      if (input.assignee_profile && input.assignee_profile !== user.id) {
         await notifyAssignee(
           input.project_id,
           input.project_title,
           input.title.trim(),
-          input.assigned_to_profile
+          input.assignee_profile
         );
       }
       return input.project_id;
@@ -175,7 +175,7 @@ export function useReassignTask() {
     }) => {
       const { error } = await supabase
         .from("project_tasks")
-        .update({ assigned_to_profile: newAssigneeId } as any)
+        .update({ assignee_profile: newAssigneeId } as any)
         .eq("id", taskId);
       if (error) throw error;
 

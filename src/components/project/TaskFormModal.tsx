@@ -61,7 +61,7 @@ export default function TaskFormModal({
     if (task) {
       setTitle(task.title);
       setDescription(task.description ?? "");
-      setAssigneeId(task.assigned_to_profile ?? "unassigned");
+      setAssigneeId(task.assignee_profile ?? "unassigned");
       setDeadline(task.deadline ?? "");
       setStatus(task.status);
       setCompletion(task.completion_percentage);
@@ -116,7 +116,7 @@ export default function TaskFormModal({
           project_title: projectTitle,
           title: title.trim(),
           description: description.trim() || null,
-          assigned_to_profile: assigneeId === "unassigned" ? null : assigneeId,
+          assignee_profile: assigneeId === "unassigned" ? null : assigneeId,
           deadline: deadline || null,
           status,
         },

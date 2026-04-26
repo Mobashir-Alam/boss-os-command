@@ -524,7 +524,7 @@ export function useCreateProject() {
         .filter((m) => (m.task_title ?? "").trim().length > 0)
         .map((m) => ({
           project_id: projectId,
-          assigned_to_profile: m.profile_id,
+          assignee_profile: m.profile_id,
           title: m.task_title!.trim(),
           description: m.task_description?.trim() || null,
           created_by: user.id,
@@ -604,7 +604,7 @@ export function useAddProjectMember() {
       if ((member.task_title ?? "").trim().length > 0) {
         await supabase.from("project_tasks").insert({
           project_id: projectId,
-          assigned_to_profile: member.profile_id,
+          assignee_profile: member.profile_id,
           title: member.task_title!.trim(),
           description: member.task_description?.trim() || null,
           created_by: user?.id ?? null,

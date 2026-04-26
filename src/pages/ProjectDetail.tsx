@@ -295,7 +295,7 @@ const ProjectDetail = () => {
   const dl = project ? deadlineLabel(project.deadline) : null;
 
   const myTasks = useMemo(
-    () => tasks.filter((t) => t.assigned_to_profile === user?.id),
+    () => tasks.filter((t) => t.assignee_profile === user?.id),
     [tasks, user?.id]
   );
 
@@ -303,7 +303,7 @@ const ProjectDetail = () => {
   const tasksByAssignee = useMemo(() => {
     const map = new Map<string, ProjectTask[]>();
     for (const t of tasks) {
-      const key = t.assigned_to_profile ?? "__unassigned__";
+      const key = t.assignee_profile ?? "__unassigned__";
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(t);
     }
@@ -615,7 +615,7 @@ const ProjectDetail = () => {
         projectMembers={members}
         task={taskEditing}
         canManageAll={canManageAll}
-        isAssignee={taskEditing?.assigned_to_profile === user?.id}
+        isAssignee={taskEditing?.assignee_profile === user?.id}
         presetAssigneeId={presetAssigneeId}
         key={taskEditing?.id ?? presetAssigneeId ?? "new"}
       />
