@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import { Card, CardContent } from "@/components/ui/card";
@@ -10,8 +10,8 @@ import {
   useMyNotifications,
   useMarkNotificationRead,
   type Project,
-  type MemberStatus,
 } from "@/hooks/useEmployeeProjects";
+import { useMyTasks, type TaskStatus } from "@/hooks/useProjectTasks";
 import { cn } from "@/lib/utils";
 import {
   Bell,
@@ -30,7 +30,7 @@ import CreateProjectModal from "@/components/project/CreateProjectModal";
 
 /* ── helpers ─────────────────────────────────────────────── */
 
-const STATUS_CONFIG: Record<MemberStatus, { label: string; color: string; dot: string }> = {
+const STATUS_CONFIG: Record<TaskStatus, { label: string; color: string; dot: string }> = {
   not_started: { label: "Not Started", color: "text-muted-foreground", dot: "bg-muted-foreground" },
   in_progress:  { label: "In Progress", color: "text-blue-600",         dot: "bg-blue-500" },
   done:         { label: "Done",        color: "text-emerald-600",      dot: "bg-emerald-500" },
@@ -68,10 +68,35 @@ function isDeadlineUrgent(deadline: string | null): boolean {
 
 /* ── sub-components ──────────────────────────────────────── */
 
-function ProjectCard({ project, onClick }: { project: Project; onClick: () => void }) {
+export interface MyTaskStats {
+  total: number;
+  done: number;
+  inProgress: number;
+  blocked: number;
+  notStarted: number;
+  avgCompletion: number;
+}
+
+function rollupStatus(stats: MyTaskStats | undefined): TaskStatus {
+  if (!stats || stats.total === 0) return "not_started";
+  if (stats.blocked > 0) return "blocked";
+  if (stats.done === stats.total) return "done";
+  if (stats.inProgress > 0 || stats.done > 0) return "in_progress";
+  return "not_started";
+}
+
+function ProjectCard({
+  project,
+  stats,
+  onClick,
+}: {
+  project: Project;
+  stats: MyTaskStats | undefined;
+  onClick: () => void;
+}) {
   const member = project.my_member_row;
-  const memberStatus = (member?.status ?? "not_started") as MemberStatus;
-  const cfg = STATUS_CONFIG[memberStatus];
+  const myStatus = rollupStatus(stats);
+  const cfg = STATUS_CONFIG[myStatus];
   const urgent = isDeadlineUrgent(project.deadline);
   const dl = deadlineLabel(project.deadline);
 
@@ -79,8 +104,8 @@ function ProjectCard({ project, onClick }: { project: Project; onClick: () => vo
     <Card
       className={cn(
         "cursor-pointer border-border/40 hover:border-border/80 hover:shadow-sm transition-all",
-        memberStatus === "blocked" && "border-l-2 border-l-amber-500",
-        urgent && memberStatus !== "done" && "border-l-2 border-l-destructive"
+        myStatus === "blocked" && "border-l-2 border-l-amber-500",
+        urgent && myStatus !== "done" && "border-l-2 border-l-destructive"
       )}
       onClick={onClick}
     >
@@ -123,7 +148,7 @@ function ProjectCard({ project, onClick }: { project: Project; onClick: () => vo
                 <span
                   className={cn(
                     "flex items-center gap-1 text-[11px]",
-                    urgent && memberStatus !== "done" ? "text-destructive font-semibold" : "text-muted-foreground"
+                    urgent && myStatus !== "done" ? "text-destructive font-semibold" : "text-muted-foreground"
                   )}
                 >
                   <Calendar className="h-2.5 w-2.5" />
@@ -132,16 +157,18 @@ function ProjectCard({ project, onClick }: { project: Project; onClick: () => vo
               )}
             </div>
 
-            {member?.task_title && (
-              <p className="text-xs text-muted-foreground mt-1.5 line-clamp-1">
-                My task: <span className="text-foreground/80">{member.task_title}</span>
+            {stats && stats.total > 0 && (
+              <p className="text-xs text-muted-foreground mt-1.5">
+                <span className="text-foreground/80">{stats.done}/{stats.total}</span> task{stats.total !== 1 ? "s" : ""} done
+                {stats.blocked > 0 && (
+                  <span className="text-amber-700 font-medium ml-1.5">· {stats.blocked} blocked</span>
+                )}
               </p>
             )}
-
-            {member?.status === "blocked" && member.blocked_reason && (
-              <div className="mt-2 rounded bg-amber-500/10 border border-amber-500/20 px-2 py-1">
-                <p className="text-[10px] text-amber-700">⚠ {member.blocked_reason}</p>
-              </div>
+            {(!stats || stats.total === 0) && member && (
+              <p className="text-xs text-muted-foreground italic mt-1.5">
+                No tasks assigned to you yet
+              </p>
             )}
           </div>
 
@@ -175,17 +202,17 @@ function ProjectCard({ project, onClick }: { project: Project; onClick: () => vo
           </div>
         </div>
 
-        {/* My completion */}
-        {member && (
+        {/* My completion (avg of my tasks on this project) */}
+        {stats && stats.total > 0 && (
           <div className="mt-2 space-y-1">
             <div className="flex items-center justify-between text-[10px] text-muted-foreground">
-              <span>My progress</span>
-              <span>{member.completion_percentage}%</span>
+              <span>My progress (avg)</span>
+              <span>{stats.avgCompletion}%</span>
             </div>
             <div className="h-1 rounded-full bg-muted overflow-hidden">
               <div
                 className="h-full rounded-full bg-primary/60 transition-all duration-500"
-                style={{ width: `${member.completion_percentage}%` }}
+                style={{ width: `${stats.avgCompletion}%` }}
               />
             </div>
           </div>
@@ -214,6 +241,7 @@ const EmployeeDashboard = () => {
   const navigate = useNavigate();
   const { profile } = useAuth();
   const { data: projects = [], isLoading } = useMyProjects();
+  const { data: myTasks = [] } = useMyTasks();
   const { data: notifications = [] } = useMyNotifications();
   const markRead = useMarkNotificationRead();
 
@@ -224,12 +252,32 @@ const EmployeeDashboard = () => {
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
+  // Per-project task stats for the current user
+  const statsByProject = useMemo(() => {
+    const map = new Map<string, MyTaskStats>();
+    for (const t of myTasks) {
+      const s = map.get(t.project_id) ?? { total: 0, done: 0, inProgress: 0, blocked: 0, notStarted: 0, avgCompletion: 0 };
+      s.total++;
+      if (t.status === "done") s.done++;
+      else if (t.status === "in_progress") s.inProgress++;
+      else if (t.status === "blocked") s.blocked++;
+      else s.notStarted++;
+      s.avgCompletion += t.completion_percentage;
+      map.set(t.project_id, s);
+    }
+    for (const s of map.values()) {
+      s.avgCompletion = s.total > 0 ? Math.round(s.avgCompletion / s.total) : 0;
+    }
+    return map;
+  }, [myTasks]);
+
   const activeProjects  = projects.filter((p) => p.status === "active");
   const otherProjects   = projects.filter((p) => p.status !== "active");
 
-  const myActiveCount   = activeProjects.filter((p) => p.my_member_row?.status === "in_progress").length;
-  const blockedCount    = activeProjects.filter((p) => p.my_member_row?.status === "blocked").length;
-  const doneCount       = projects.filter((p) => p.my_member_row?.status === "done").length;
+  // Stats bar across all my tasks (not project-roll-up)
+  const myActiveCount = myTasks.filter((t) => t.status === "in_progress").length;
+  const blockedCount  = myTasks.filter((t) => t.status === "blocked").length;
+  const doneCount     = myTasks.filter((t) => t.status === "done").length;
 
   const handleNotificationClick = (id: string) => {
     markRead.mutate(id);
@@ -352,6 +400,7 @@ const EmployeeDashboard = () => {
                 <ProjectCard
                   key={project.id}
                   project={project}
+                  stats={statsByProject.get(project.id)}
                   onClick={() => navigate(`/project/${project.id}`)}
                 />
               ))}
@@ -370,6 +419,7 @@ const EmployeeDashboard = () => {
                 <ProjectCard
                   key={project.id}
                   project={project}
+                  stats={statsByProject.get(project.id)}
                   onClick={() => navigate(`/project/${project.id}`)}
                 />
               ))}

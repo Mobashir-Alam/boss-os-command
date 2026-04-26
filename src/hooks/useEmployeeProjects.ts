@@ -508,17 +508,33 @@ export function useCreateProject() {
       const projectId = (project as any).id as string;
       const projectTitle = (project as any).title as string;
 
+      // Membership rows (no task data — tasks live in project_tasks now)
       const memberRows = input.members.map((m) => ({
         project_id: projectId,
         profile_id: m.profile_id,
         role: m.role,
-        task_title: m.task_title ?? null,
-        task_description: m.task_description ?? null,
       }));
       const { error: memberErr } = await supabase
         .from("project_members")
         .insert(memberRows as any);
       if (memberErr) throw memberErr;
+
+      // Initial tasks: one project_tasks row per member with a task_title
+      const initialTasks = input.members
+        .filter((m) => (m.task_title ?? "").trim().length > 0)
+        .map((m) => ({
+          project_id: projectId,
+          assigned_to_profile: m.profile_id,
+          title: m.task_title!.trim(),
+          description: m.task_description?.trim() || null,
+          created_by: user.id,
+        }));
+      if (initialTasks.length > 0) {
+        const { error: taskErr } = await supabase
+          .from("project_tasks")
+          .insert(initialTasks as any);
+        if (taskErr) throw taskErr;
+      }
 
       const recipientIds = input.members
         .map((m) => m.profile_id)
@@ -581,10 +597,19 @@ export function useAddProjectMember() {
         project_id: projectId,
         profile_id: member.profile_id,
         role: member.role,
-        task_title: member.task_title ?? null,
-        task_description: member.task_description ?? null,
       } as any);
       if (error) throw error;
+
+      // If the lead also gave them an initial task, create it in project_tasks
+      if ((member.task_title ?? "").trim().length > 0) {
+        await supabase.from("project_tasks").insert({
+          project_id: projectId,
+          assigned_to_profile: member.profile_id,
+          title: member.task_title!.trim(),
+          description: member.task_description?.trim() || null,
+          created_by: user?.id ?? null,
+        } as any);
+      }
 
       if (member.profile_id !== user?.id) {
         await notifyMembers(projectId, projectTitle, [member.profile_id], "project_assigned");
@@ -594,6 +619,7 @@ export function useAddProjectMember() {
     onSuccess: (projectId) => {
       queryClient.invalidateQueries({ queryKey: ["project-detail", projectId] });
       queryClient.invalidateQueries({ queryKey: ["my-projects"] });
+      queryClient.invalidateQueries({ queryKey: ["project-tasks", projectId] });
     },
   });
 }

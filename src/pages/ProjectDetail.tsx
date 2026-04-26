@@ -1,54 +1,51 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Slider } from "@/components/ui/slider";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   useProjectDetail,
-  useUpdateMyTask,
   useRemoveProjectMember,
   type ProjectMember,
-  type MemberStatus,
 } from "@/hooks/useEmployeeProjects";
+import {
+  useProjectTasks,
+  useDeleteTask,
+  type ProjectTask,
+  type TaskStatus,
+} from "@/hooks/useProjectTasks";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import ProjectDiscussion from "@/components/project/ProjectDiscussion";
 import { EditProjectModal, AddMemberModal } from "@/components/project/LeadControls";
+import TaskFormModal from "@/components/project/TaskFormModal";
 import {
   ArrowLeft,
   Building2,
   Calendar,
   CheckCircle2,
-  Clock,
   Layers,
   User,
-  AlertTriangle,
   ChevronDown,
   ChevronUp,
   Edit3,
   Crown,
   UserPlus,
   Trash2,
+  Plus,
+  ListTodo,
+  AlertTriangle,
 } from "lucide-react";
 
 /* ── helpers ─────────────────────────────────────────────── */
 
-const STATUS_CONFIG: Record<MemberStatus, { label: string; color: string; bg: string; dot: string }> = {
-  not_started: { label: "Not Started", color: "text-muted-foreground", bg: "bg-muted/40",          dot: "bg-muted-foreground" },
-  in_progress:  { label: "In Progress", color: "text-blue-700",         bg: "bg-blue-500/10",       dot: "bg-blue-500" },
-  done:         { label: "Done",        color: "text-emerald-700",      bg: "bg-emerald-500/10",    dot: "bg-emerald-500" },
-  blocked:      { label: "Blocked",     color: "text-amber-700",        bg: "bg-amber-500/10",      dot: "bg-amber-500" },
-};
-
-const NEXT_STATUS: Partial<Record<MemberStatus, MemberStatus>> = {
-  not_started: "in_progress",
-  in_progress:  "done",
-  blocked:      "in_progress",
+const TASK_STATUS_CONFIG: Record<TaskStatus, { label: string; color: string; bg: string; dot: string }> = {
+  not_started: { label: "Not Started", color: "text-muted-foreground", bg: "bg-muted/40",       dot: "bg-muted-foreground" },
+  in_progress: { label: "In Progress", color: "text-blue-700",         bg: "bg-blue-500/10",    dot: "bg-blue-500" },
+  done:        { label: "Done",        color: "text-emerald-700",      bg: "bg-emerald-500/10", dot: "bg-emerald-500" },
+  blocked:     { label: "Blocked",     color: "text-amber-700",        bg: "bg-amber-500/10",   dot: "bg-amber-500" },
 };
 
 function deadlineLabel(deadline: string | null): { text: string; urgent: boolean } | null {
@@ -58,80 +55,190 @@ function deadlineLabel(deadline: string | null): { text: string; urgent: boolean
   today.setHours(0, 0, 0, 0);
   const diff = Math.ceil((d.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
   const urgent = diff <= 3;
-  if (diff < 0) return { text: `${Math.abs(diff)}d overdue`, urgent: true };
+  if (diff < 0)   return { text: `${Math.abs(diff)}d overdue`, urgent: true };
   if (diff === 0) return { text: "Due today", urgent: true };
   if (diff === 1) return { text: "Due tomorrow", urgent: true };
-  if (diff <= 7) return { text: `${diff}d left`, urgent };
+  if (diff <= 7)  return { text: `${diff}d left`, urgent };
   return { text: d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }), urgent: false };
 }
 
-/* ── member row ──────────────────────────────────────────── */
+/* ── task row ────────────────────────────────────────────── */
 
-function MemberRow({
-  member,
-  isMe,
+function TaskRow({
+  task,
+  canEdit,
+  canManageAll,
   onEdit,
-  canManage = false,
-  onRemove,
+  onDelete,
 }: {
-  member: ProjectMember;
-  isMe: boolean;
+  task: ProjectTask;
+  canEdit: boolean;
+  canManageAll: boolean;
   onEdit: () => void;
-  canManage?: boolean;
-  onRemove?: () => void;
+  onDelete: () => void;
 }) {
-  const [expanded, setExpanded] = useState(false);
-  const cfg = STATUS_CONFIG[member.status];
+  const cfg = TASK_STATUS_CONFIG[task.status];
+  const dl = deadlineLabel(task.deadline);
+  const interactive = canEdit || canManageAll;
 
   return (
     <div
       className={cn(
-        "rounded-xl border transition-all",
-        isMe ? "border-primary/30 bg-primary/5" : "border-border/40 bg-muted/10"
+        "rounded-lg border border-border/40 bg-card p-3 transition-colors",
+        interactive && "hover:border-border cursor-pointer",
+        task.status === "blocked" && "border-l-2 border-l-amber-500",
       )}
+      onClick={interactive ? onEdit : undefined}
     >
-      <div
-        className="flex items-center gap-3 p-3 cursor-pointer"
-        onClick={() => setExpanded(!expanded)}
-      >
-        {/* Avatar */}
-        <div
-          className={cn(
-            "h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0",
-            isMe ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
-          )}
-        >
-          {(member.profile_name ?? "?")[0].toUpperCase()}
-        </div>
-
+      <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <p className="text-sm font-medium">
-              {member.profile_name ?? "Team Member"}
-              {isMe && <span className="text-[10px] text-primary ml-1">(you)</span>}
-            </p>
+            <p className="text-sm font-medium leading-tight">{task.title}</p>
             <Badge variant="outline" className={cn("text-[10px] px-1.5 py-0", cfg.color, cfg.bg)}>
               <span className={cn("h-1.5 w-1.5 rounded-full mr-1", cfg.dot)} />
               {cfg.label}
             </Badge>
-            {member.role === "lead" && (
-              <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-purple-700 bg-purple-500/10">
-                Lead
-              </Badge>
+          </div>
+          {task.description && (
+            <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{task.description}</p>
+          )}
+          <div className="flex items-center gap-3 mt-1.5 flex-wrap">
+            {dl && (
+              <span className={cn("flex items-center gap-1 text-[10px]", dl.urgent ? "text-destructive font-semibold" : "text-muted-foreground")}>
+                <Calendar className="h-2.5 w-2.5" />
+                {dl.text}
+              </span>
+            )}
+            {task.progress_note && (
+              <span className="text-[10px] text-muted-foreground italic truncate max-w-[200px]">
+                "{task.progress_note}"
+              </span>
             )}
           </div>
-          {member.task_title && (
-            <p className="text-[11px] text-muted-foreground mt-0.5 truncate">{member.task_title}</p>
+          {task.status === "blocked" && task.blocked_reason && (
+            <div className="mt-2 rounded bg-amber-500/10 border border-amber-500/20 px-2 py-1">
+              <p className="text-[10px] text-amber-700">⚠ {task.blocked_reason}</p>
+            </div>
           )}
         </div>
 
         <div className="flex items-center gap-2 flex-shrink-0">
-          <span className="text-sm font-bold tabular-nums">{member.completion_percentage}%</span>
-          {canManage && !isMe && onRemove && (
+          <span className="text-sm font-bold tabular-nums">{task.completion_percentage}%</span>
+          {canManageAll && (
             <button
               type="button"
-              title={`Remove ${member.profile_name ?? "member"} from project`}
-              onClick={(e) => { e.stopPropagation(); onRemove(); }}
+              title="Delete task"
+              onClick={(e) => { e.stopPropagation(); onDelete(); }}
+              className="p-1 rounded hover:bg-destructive/10 text-destructive/70"
+            >
+              <Trash2 className="h-3 w-3" />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Progress bar */}
+      <div className="mt-2 h-1 rounded-full bg-muted overflow-hidden">
+        <div
+          className={cn(
+            "h-full rounded-full transition-all duration-500",
+            task.status === "done"        ? "bg-emerald-500" :
+            task.status === "in_progress" ? "bg-blue-500" :
+            task.status === "blocked"     ? "bg-amber-500" :
+            "bg-muted-foreground/40"
+          )}
+          style={{ width: `${task.completion_percentage}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
+/* ── member group ─────────────────────────────────────────── */
+
+function MemberGroup({
+  member,
+  tasks,
+  isMe,
+  canManageAll,
+  onAddTask,
+  onEditTask,
+  onDeleteTask,
+  onRemoveMember,
+  initialExpanded,
+}: {
+  member: ProjectMember | null;          // null for "Unassigned" group
+  tasks: ProjectTask[];
+  isMe: boolean;
+  canManageAll: boolean;
+  onAddTask?: () => void;                // lead can add new task pre-assigned
+  onEditTask: (t: ProjectTask) => void;
+  onDeleteTask: (t: ProjectTask) => void;
+  onRemoveMember?: () => void;
+  initialExpanded?: boolean;
+}) {
+  const [expanded, setExpanded] = useState(initialExpanded ?? false);
+
+  const doneCount = tasks.filter((t) => t.status === "done").length;
+  const blockedCount = tasks.filter((t) => t.status === "blocked").length;
+
+  const name = member?.profile_name ?? "Unassigned";
+  const initial = (name[0] ?? "?").toUpperCase();
+
+  return (
+    <div className={cn("rounded-xl border", isMe ? "border-primary/30 bg-primary/5" : "border-border/40 bg-muted/10")}>
+      <div
+        className="flex items-center gap-3 p-3 cursor-pointer"
+        onClick={() => setExpanded(!expanded)}
+      >
+        <div className={cn(
+          "h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0",
+          member ? (isMe ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground") : "bg-amber-500/20 text-amber-700"
+        )}>
+          {member ? initial : "?"}
+        </div>
+
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <p className="text-sm font-semibold">
+              {name}
+              {isMe && <span className="text-[10px] text-primary ml-1">(you)</span>}
+            </p>
+            {member?.role === "lead" && (
+              <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-amber-500/30 bg-amber-500/10 text-amber-700">
+                <Crown className="h-2.5 w-2.5 mr-0.5 inline" />
+                Lead
+              </Badge>
+            )}
+            {blockedCount > 0 && (
+              <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-amber-700 bg-amber-500/10 border-amber-500/20">
+                {blockedCount} blocked
+              </Badge>
+            )}
+          </div>
+          <p className="text-[11px] text-muted-foreground mt-0.5">
+            {tasks.length === 0
+              ? "No tasks yet"
+              : `${doneCount}/${tasks.length} done`}
+          </p>
+        </div>
+
+        <div className="flex items-center gap-1 flex-shrink-0">
+          {canManageAll && member && onAddTask && (
+            <button
+              type="button"
+              title={`Assign a new task to ${name}`}
+              onClick={(e) => { e.stopPropagation(); onAddTask(); }}
+              className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
+            >
+              <Plus className="h-3.5 w-3.5" />
+            </button>
+          )}
+          {canManageAll && member && !isMe && onRemoveMember && (
+            <button
+              type="button"
+              title={`Remove ${name} from project`}
+              onClick={(e) => { e.stopPropagation(); onRemoveMember(); }}
               className="p-1 rounded hover:bg-destructive/10 text-destructive/70"
             >
               <Trash2 className="h-3 w-3" />
@@ -142,183 +249,26 @@ function MemberRow({
       </div>
 
       {expanded && (
-        <div className="px-3 pb-3 pt-0 space-y-3 border-t border-border/20 mt-0">
-          {/* Progress bar */}
-          <div className="space-y-1 pt-3">
-            <div className="h-2 rounded-full bg-muted overflow-hidden">
-              <div
-                className={cn(
-                  "h-full rounded-full transition-all duration-500",
-                  member.status === "done" ? "bg-emerald-500" : member.status === "in_progress" ? "bg-blue-500" : "bg-muted-foreground/40"
-                )}
-                style={{ width: `${member.completion_percentage}%` }}
-              />
+        <div className="px-3 pb-3 pt-0 border-t border-border/20 space-y-2">
+          {tasks.length === 0 ? (
+            <p className="text-xs text-muted-foreground italic py-3 text-center">No tasks assigned</p>
+          ) : (
+            <div className="space-y-2 pt-3">
+              {tasks.map((task) => (
+                <TaskRow
+                  key={task.id}
+                  task={task}
+                  canEdit={isMe}
+                  canManageAll={canManageAll}
+                  onEdit={() => onEditTask(task)}
+                  onDelete={() => onDeleteTask(task)}
+                />
+              ))}
             </div>
-          </div>
-
-          {member.task_description && (
-            <p className="text-xs text-muted-foreground leading-relaxed">{member.task_description}</p>
-          )}
-
-          {member.progress_note && (
-            <div className="rounded-lg bg-muted/30 px-3 py-2">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-0.5">Latest update</p>
-              <p className="text-xs">{member.progress_note}</p>
-            </div>
-          )}
-
-          {member.status === "blocked" && member.blocked_reason && (
-            <div className="rounded-lg bg-amber-500/10 border border-amber-500/20 px-3 py-2">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-amber-700 mb-0.5">Blocker</p>
-              <p className="text-xs text-amber-700">{member.blocked_reason}</p>
-            </div>
-          )}
-
-          {isMe && (
-            <Button size="sm" variant="outline" className="h-7 text-xs w-full" onClick={onEdit}>
-              <Edit3 className="h-3 w-3 mr-1" />
-              Update My Progress
-            </Button>
           )}
         </div>
       )}
     </div>
-  );
-}
-
-/* ── update dialog ───────────────────────────────────────── */
-
-function UpdateDialog({
-  member,
-  open,
-  onClose,
-}: {
-  member: ProjectMember;
-  open: boolean;
-  onClose: () => void;
-}) {
-  const updateTask = useUpdateMyTask();
-  const [status, setStatus] = useState<MemberStatus>(member.status);
-  const [pct, setPct] = useState(member.completion_percentage);
-  const [note, setNote] = useState(member.progress_note ?? "");
-  const [blockedReason, setBlockedReason] = useState(member.blocked_reason ?? "");
-
-  const handleSave = async () => {
-    try {
-      await updateTask.mutateAsync({
-        memberId: member.id,
-        projectId: member.project_id,
-        status,
-        completion_percentage: pct,
-        progress_note: note.trim() || undefined,
-        blocked_reason: status === "blocked" ? blockedReason.trim() : "",
-      });
-      toast.success("Progress updated");
-      onClose();
-    } catch {
-      toast.error("Failed to save update");
-    }
-  };
-
-  const statusOptions: MemberStatus[] = ["not_started", "in_progress", "done", "blocked"];
-
-  return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="text-base">Update My Progress</DialogTitle>
-        </DialogHeader>
-
-        {member.task_title && (
-          <p className="text-sm font-medium text-muted-foreground -mt-2">{member.task_title}</p>
-        )}
-
-        <div className="space-y-4">
-          {/* Status */}
-          <div>
-            <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground block mb-2">
-              Status
-            </label>
-            <div className="grid grid-cols-2 gap-2">
-              {statusOptions.map((s) => {
-                const cfg = STATUS_CONFIG[s];
-                return (
-                  <button
-                    key={s}
-                    type="button"
-                    onClick={() => setStatus(s)}
-                    className={cn(
-                      "rounded-lg border px-3 py-2 text-xs font-medium text-left transition-all",
-                      status === s
-                        ? `${cfg.bg} ${cfg.color} border-current`
-                        : "border-border/40 text-muted-foreground hover:border-border"
-                    )}
-                  >
-                    <span className={cn("h-1.5 w-1.5 rounded-full inline-block mr-1.5 align-middle", cfg.dot)} />
-                    {cfg.label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Completion */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Completion
-              </label>
-              <span className="text-sm font-bold tabular-nums">{pct}%</span>
-            </div>
-            <Slider
-              value={[pct]}
-              onValueChange={([v]) => setPct(v)}
-              min={0}
-              max={100}
-              step={5}
-              className="w-full"
-            />
-          </div>
-
-          {/* Blocker reason */}
-          {status === "blocked" && (
-            <div>
-              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground block mb-2">
-                What's blocking you?
-              </label>
-              <Textarea
-                placeholder="Describe the blocker..."
-                value={blockedReason}
-                onChange={(e) => setBlockedReason(e.target.value)}
-                className="text-sm resize-none"
-                rows={2}
-              />
-            </div>
-          )}
-
-          {/* Progress note */}
-          <div>
-            <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground block mb-2">
-              Progress note (optional)
-            </label>
-            <Textarea
-              placeholder="What did you work on? Any updates for the team..."
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              className="text-sm resize-none"
-              rows={3}
-            />
-          </div>
-        </div>
-
-        <DialogFooter className="gap-2">
-          <Button variant="outline" size="sm" onClick={onClose}>Cancel</Button>
-          <Button size="sm" onClick={handleSave} disabled={updateTask.isPending}>
-            {updateTask.isPending ? "Saving..." : "Save Update"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
   );
 }
 
@@ -329,19 +279,64 @@ const ProjectDetail = () => {
   const navigate = useNavigate();
   const { user, isFounder } = useAuth();
   const { data: project, isLoading } = useProjectDetail(id);
+  const { data: tasks = [], isLoading: tasksLoading } = useProjectTasks(id);
   const removeMember = useRemoveProjectMember();
-  const [editOpen, setEditOpen] = useState(false);
+  const deleteTask = useDeleteTask();
+
   const [editProjectOpen, setEditProjectOpen] = useState(false);
   const [addMemberOpen, setAddMemberOpen] = useState(false);
+  const [taskFormOpen, setTaskFormOpen] = useState(false);
+  const [taskEditing, setTaskEditing] = useState<ProjectTask | null>(null);
+  const [presetAssigneeId, setPresetAssigneeId] = useState<string | null>(null);
 
   const myMember = project?.members?.find((m) => m.profile_id === user?.id) ?? null;
   const isLead = myMember?.role === "lead";
-  const canManage = isLead || isFounder;
+  const canManageAll = isLead || isFounder;
   const dl = project ? deadlineLabel(project.deadline) : null;
+
+  const myTasks = useMemo(
+    () => tasks.filter((t) => t.assigned_to_profile === user?.id),
+    [tasks, user?.id]
+  );
+
+  // Group tasks by assignee for the team view
+  const tasksByAssignee = useMemo(() => {
+    const map = new Map<string, ProjectTask[]>();
+    for (const t of tasks) {
+      const key = t.assigned_to_profile ?? "__unassigned__";
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(t);
+    }
+    return map;
+  }, [tasks]);
+
+  const openCreateTask = (forAssigneeId?: string | null) => {
+    setTaskEditing(null);
+    setPresetAssigneeId(forAssigneeId ?? null);
+    setTaskFormOpen(true);
+  };
+
+  const openEditTask = (task: ProjectTask) => {
+    setTaskEditing(task);
+    setPresetAssigneeId(null);
+    setTaskFormOpen(true);
+  };
+
+  const handleDeleteTask = (task: ProjectTask) => {
+    if (!project) return;
+    if (!confirm(`Delete task "${task.title}"?`)) return;
+    deleteTask.mutate(
+      { taskId: task.id, projectId: project.id },
+      {
+        onSuccess: () => toast.success("Task deleted"),
+        onError: (e: any) => toast.error(e.message ?? "Failed to delete"),
+      }
+    );
+  };
 
   const handleRemoveMember = (memberId: string, memberName: string) => {
     if (!project) return;
-    if (!confirm(`Remove ${memberName} from this project?`)) return;
+    if (!confirm(`Remove ${memberName} from this project? Their assigned tasks will become unassigned.`)) return;
     removeMember.mutate(
       { memberId, projectId: project.id },
       {
@@ -379,15 +374,27 @@ const ProjectDetail = () => {
   }
 
   const members = project.members ?? [];
-  const lead = members.find((m) => m.role === "lead");
   const totalMembers = members.length;
+  const taskTotal = tasks.length;
+  const taskDone = tasks.filter((t) => t.status === "done").length;
+  const taskBlocked = tasks.filter((t) => t.status === "blocked").length;
+
+  // Render order for the team groups: current user first, then leads, then by name
+  const sortedMembers = [...members].sort((a, b) => {
+    if (a.profile_id === user?.id) return -1;
+    if (b.profile_id === user?.id) return 1;
+    if (a.role === "lead" && b.role !== "lead") return -1;
+    if (b.role === "lead" && a.role !== "lead") return 1;
+    return (a.profile_name ?? "").localeCompare(b.profile_name ?? "");
+  });
+
+  const unassignedTasks = tasksByAssignee.get("__unassigned__") ?? [];
 
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
       <main className="mx-auto max-w-2xl px-5 py-10">
 
-        {/* Back */}
         <button
           type="button"
           onClick={() => navigate("/employee")}
@@ -419,13 +426,8 @@ const ProjectDetail = () => {
               >
                 {project.status}
               </Badge>
-              {canManage && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setEditProjectOpen(true)}
-                  className="h-7 text-xs gap-1"
-                >
+              {canManageAll && (
+                <Button size="sm" variant="outline" onClick={() => setEditProjectOpen(true)} className="h-7 text-xs gap-1">
                   <Edit3 className="h-3 w-3" />
                   Edit
                 </Button>
@@ -452,6 +454,9 @@ const ProjectDetail = () => {
             <span className="flex items-center gap-1 text-xs text-muted-foreground">
               <User className="h-3 w-3" /> {totalMembers} member{totalMembers !== 1 ? "s" : ""}
             </span>
+            <span className="flex items-center gap-1 text-xs text-muted-foreground">
+              <ListTodo className="h-3 w-3" /> {taskDone}/{taskTotal} task{taskTotal !== 1 ? "s" : ""}
+            </span>
           </div>
 
           {project.description && (
@@ -464,7 +469,7 @@ const ProjectDetail = () => {
           <CardContent className="p-4">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                Overall Team Progress
+                Overall Progress (avg of tasks)
               </span>
               <span className="text-2xl font-bold tabular-nums">{project.overall_completion}%</span>
             </div>
@@ -478,7 +483,13 @@ const ProjectDetail = () => {
                 style={{ width: `${project.overall_completion}%` }}
               />
             </div>
-            {project.overall_completion === 100 && (
+            {taskBlocked > 0 && (
+              <div className="mt-2 flex items-center gap-1.5 text-amber-700">
+                <AlertTriangle className="h-3.5 w-3.5" />
+                <span className="text-xs font-medium">{taskBlocked} task{taskBlocked !== 1 ? "s" : ""} blocked</span>
+              </div>
+            )}
+            {project.overall_completion === 100 && taskTotal > 0 && (
               <div className="mt-2 flex items-center gap-1.5 text-emerald-600">
                 <CheckCircle2 className="h-3.5 w-3.5" />
                 <span className="text-xs font-medium">All tasks complete</span>
@@ -487,73 +498,87 @@ const ProjectDetail = () => {
           </CardContent>
         </Card>
 
-        {/* My task quick-update strip */}
-        {myMember && myMember.status !== "done" && (
-          <div className="mb-6 rounded-xl border border-primary/20 bg-primary/5 p-4">
-            <div className="flex items-center justify-between gap-3 flex-wrap">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wider text-primary/70">My Task</p>
-                <p className="text-sm font-medium mt-0.5">{myMember.task_title ?? "Assigned task"}</p>
+        {/* My Tasks */}
+        {user && (
+          <div className="mb-6">
+            <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">
+              My Tasks{myTasks.length > 0 && ` — ${myTasks.length}`}
+            </h2>
+            {tasksLoading ? (
+              <p className="text-xs text-muted-foreground italic">Loading tasks...</p>
+            ) : myTasks.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-border/40 bg-muted/10 p-6 text-center">
+                <p className="text-xs text-muted-foreground italic">No tasks assigned to you on this project yet.</p>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-lg font-bold tabular-nums">{myMember.completion_percentage}%</span>
-                <Button size="sm" className="h-8 text-xs" onClick={() => setEditOpen(true)}>
-                  Update
-                </Button>
+            ) : (
+              <div className="space-y-2">
+                {myTasks.map((task) => (
+                  <TaskRow
+                    key={task.id}
+                    task={task}
+                    canEdit={true}
+                    canManageAll={canManageAll}
+                    onEdit={() => openEditTask(task)}
+                    onDelete={() => handleDeleteTask(task)}
+                  />
+                ))}
               </div>
-            </div>
-            {NEXT_STATUS[myMember.status] && (
-              <p className="text-[10px] text-muted-foreground mt-2">
-                Tip: open the update dialog to advance your status or log a note for your team.
-              </p>
             )}
           </div>
         )}
 
-        {myMember && myMember.status === "done" && (
-          <div className="mb-6 rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4 flex items-center gap-3">
-            <CheckCircle2 className="h-5 w-5 text-emerald-500 flex-shrink-0" />
-            <div>
-              <p className="text-sm font-semibold text-emerald-700">Your task is complete</p>
-              {myMember.task_title && (
-                <p className="text-xs text-emerald-600/70">{myMember.task_title}</p>
-              )}
-            </div>
-            <Button size="sm" variant="outline" className="ml-auto h-7 text-xs" onClick={() => setEditOpen(true)}>
-              Edit
-            </Button>
-          </div>
-        )}
-
-        {/* Team members */}
+        {/* Team Tasks (grouped by member) */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-              Team — {totalMembers} member{totalMembers !== 1 ? "s" : ""}
+              Team Tasks{taskTotal > 0 && ` — ${taskTotal}`}
             </h2>
-            {canManage && (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setAddMemberOpen(true)}
-                className="h-7 text-xs gap-1"
-              >
-                <UserPlus className="h-3 w-3" />
-                Add Member
-              </Button>
-            )}
+            <div className="flex items-center gap-2">
+              {canManageAll && (
+                <>
+                  <Button size="sm" variant="outline" onClick={() => setAddMemberOpen(true)} className="h-7 text-xs gap-1">
+                    <UserPlus className="h-3 w-3" />
+                    Add Member
+                  </Button>
+                  <Button size="sm" onClick={() => openCreateTask()} className="h-7 text-xs gap-1">
+                    <Plus className="h-3 w-3" />
+                    Add Task
+                  </Button>
+                </>
+              )}
+            </div>
           </div>
+
           <div className="space-y-2">
-            {members.map((member) => (
-              <MemberRow
-                key={member.id}
-                member={member}
-                isMe={member.profile_id === user?.id}
-                onEdit={() => setEditOpen(true)}
-                canManage={canManage}
-                onRemove={() => handleRemoveMember(member.id, member.profile_name ?? "Member")}
+            {unassignedTasks.length > 0 && (
+              <MemberGroup
+                member={null}
+                tasks={unassignedTasks}
+                isMe={false}
+                canManageAll={canManageAll}
+                onEditTask={openEditTask}
+                onDeleteTask={handleDeleteTask}
+                initialExpanded={true}
               />
-            ))}
+            )}
+            {sortedMembers.map((member) => {
+              const memberTasks = tasksByAssignee.get(member.profile_id) ?? [];
+              const isMe = member.profile_id === user?.id;
+              return (
+                <MemberGroup
+                  key={member.id}
+                  member={member}
+                  tasks={memberTasks}
+                  isMe={isMe}
+                  canManageAll={canManageAll}
+                  onAddTask={canManageAll ? () => openCreateTask(member.profile_id) : undefined}
+                  onEditTask={openEditTask}
+                  onDeleteTask={handleDeleteTask}
+                  onRemoveMember={canManageAll ? () => handleRemoveMember(member.id, member.profile_name ?? "Member") : undefined}
+                  initialExpanded={isMe}
+                />
+              );
+            })}
           </div>
         </div>
 
@@ -562,23 +587,10 @@ const ProjectDetail = () => {
 
       </main>
 
-      {/* Update dialog */}
-      {myMember && (
-        <UpdateDialog
-          member={myMember}
-          open={editOpen}
-          onClose={() => setEditOpen(false)}
-        />
-      )}
-
       {/* Lead controls */}
-      {canManage && (
+      {canManageAll && (
         <>
-          <EditProjectModal
-            project={project}
-            open={editProjectOpen}
-            onOpenChange={setEditProjectOpen}
-          />
+          <EditProjectModal project={project} open={editProjectOpen} onOpenChange={setEditProjectOpen} />
           <AddMemberModal
             project={project}
             open={addMemberOpen}
@@ -587,6 +599,26 @@ const ProjectDetail = () => {
           />
         </>
       )}
+
+      {/* Task form (create or edit) */}
+      <TaskFormModal
+        open={taskFormOpen}
+        onOpenChange={(v) => {
+          setTaskFormOpen(v);
+          if (!v) {
+            setTaskEditing(null);
+            setPresetAssigneeId(null);
+          }
+        }}
+        projectId={project.id}
+        projectTitle={project.title}
+        projectMembers={members}
+        task={taskEditing}
+        canManageAll={canManageAll}
+        isAssignee={taskEditing?.assigned_to_profile === user?.id}
+        presetAssigneeId={presetAssigneeId}
+        key={taskEditing?.id ?? presetAssigneeId ?? "new"}
+      />
     </div>
   );
 };
