@@ -444,14 +444,69 @@ const Blockers = ({
 };
 
 const TechTeamDashboard = () => {
+  const { user } = useAuth();
+  const qc = useQueryClient();
   const [selected, setSelected] = useState<TechMember | null>(null);
   const [assignOpen, setAssignOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [addMemberOpen, setAddMemberOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [existingMemberIds, setExistingMemberIds] = useState<string[]>([]);
   const { data: members = [], isLoading: loadingMembers } = useTechMembers();
   const memberIds = useMemo(() => members.map((m) => m.id), [members]);
   const { data: tasks = [], isLoading: loadingTasks } = useTechTasks(memberIds);
 
-  const selectedTasks = selected ? tasks.filter((t) => t.assignee_profile === selected.id) : [];
-  const selectedPRs = selected ? PRS.filter((p) => p.author.name === selected.full_name) : [];
+  const { data: leadProjects = [], isLoading: loadingLead } = useQuery({
+    queryKey: ["lead-projects", user?.id],
+    enabled: !!user?.id,
+    queryFn: async (): Promise<Project[]> => {
+      const { data: memberRows } = await supabase
+        .from("project_members")
+        .select("project_id")
+        .eq("profile_id", user!.id)
+        .eq("role", "lead");
+      const ids = Array.from(new Set((memberRows ?? []).map((r) => r.project_id))).filter(Boolean) as string[];
+      if (!ids.length) return [];
+      const { data: projects } = await supabase
+        .from("projects")
+        .select("*")
+        .in("id", ids);
+      return (projects ?? []) as Project[];
+    },
+  });
+
+  const leadProjectIds = useMemo(() => leadProjects.map((p) => p.id), [leadProjects]);
+  const { data: memberCounts = {} } = useQuery({
+    queryKey: ["lead-project-member-counts", leadProjectIds.sort().join(",")],
+    enabled: leadProjectIds.length > 0,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("project_members")
+        .select("project_id, profile_id")
+        .in("project_id", leadProjectIds);
+      const counts: Record<string, number> = {};
+      (data ?? []).forEach((r: any) => {
+        counts[r.project_id] = (counts[r.project_id] ?? 0) + 1;
+      });
+      return counts;
+    },
+  });
+
+  const openAddMember = async (project: Project) => {
+    const { data } = await supabase
+      .from("project_members")
+      .select("profile_id")
+      .eq("project_id", project.id);
+    setExistingMemberIds((data ?? []).map((r: any) => r.profile_id).filter(Boolean));
+    setSelectedProject(project);
+    setAddMemberOpen(true);
+  };
+
+  const openEdit = (project: Project) => {
+    setSelectedProject(project);
+    setEditOpen(true);
+  };
 
   const activeTasks = tasks.filter((t) => t.status !== "done");
   const blockedCount = tasks.filter((t) => t.status === "blocked").length;
