@@ -35,6 +35,7 @@ import {
   UserPlus,
   Pencil,
   ArrowUpRight,
+} from "lucide-react";
 
 /* ───────── Mock data ───────── */
 
