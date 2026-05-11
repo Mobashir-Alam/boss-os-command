@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useTechMembers, useTechTasks, type TechMember, type TechTask } from "@/hooks/useTechTeam";
+import { AssignTaskModal } from "@/components/tech/AssignTaskModal";
 import {
   GitPullRequest,
   GitMerge,
@@ -22,6 +23,7 @@ import {
   Sparkles,
   Loader2,
   XCircle,
+  Plus,
 } from "lucide-react";
 
 /* ───────── Mock data ───────── */
