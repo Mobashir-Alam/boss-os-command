@@ -606,12 +606,19 @@ const TechTeamDashboard = () => {
                 {leadProjects.map((p) => (
                   <GlassCard key={p.id} className="p-5">
                     <div className="mb-3 flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <h4 className="truncate text-sm font-semibold">{p.title}</h4>
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/project/${p.id}`)}
+                        className="group min-w-0 flex-1 text-left"
+                      >
+                        <h4 className="flex items-center gap-1.5 truncate text-sm font-semibold group-hover:text-primary">
+                          {p.title}
+                          <ArrowUpRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground transition group-hover:text-primary" />
+                        </h4>
                         {p.description && (
                           <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{p.description}</p>
                         )}
-                      </div>
+                      </button>
                       <Badge variant="outline" className="font-mono text-[10px] uppercase tracking-wider">
                         {p.status}
                       </Badge>
