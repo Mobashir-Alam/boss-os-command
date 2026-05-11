@@ -695,7 +695,11 @@ const TechTeamDashboard = () => {
                   <h4 className="mb-2 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Tasks ({selectedTasks.length})</h4>
                   <div className="space-y-2">
                     {selectedTasks.map((t) => (
-                      <div key={t.id} className="flex items-center justify-between rounded-md border border-white/10 bg-white/[0.02] p-2.5 text-sm">
+                      <div
+                        key={t.id}
+                        onClick={() => { setSelected(null); navigate(`/project/${t.project_id}`); }}
+                        className="flex cursor-pointer items-center justify-between rounded-md border border-white/10 bg-white/[0.02] p-2.5 text-sm transition hover:border-white/20 hover:bg-white/[0.05]"
+                      >
                         <div className="min-w-0">
                           <p className="truncate">{t.title}</p>
                           <p className="text-xs text-muted-foreground">{t.project_title}</p>
