@@ -224,53 +224,69 @@ const PrPulse = () => {
 
 /* ───────── Tab 2: Team load ───────── */
 
-const TeamLoad = ({ onSelect }: { onSelect: (m: Member) => void }) => {
-  const max = useMemo(
-    () => Math.max(...MEMBERS.map((m) => Math.max(m.openPRs, m.openIssues, m.tasks))),
-    [],
+const TeamLoad = ({
+  members,
+  tasks,
+  loading,
+  onSelect,
+}: {
+  members: TechMember[];
+  tasks: TechTask[];
+  loading: boolean;
+  onSelect: (m: TechMember) => void;
+}) => {
+  const rows = useMemo(
+    () =>
+      members.map((m) => {
+        const mine = tasks.filter((t) => t.assignee_profile === m.id);
+        const openPRs = PRS.filter((p) => p.author.name === m.full_name && p.state === "open").length;
+        const openIssues = mine.filter((t) => t.status === "blocked").length;
+        return { member: m, openPRs, openIssues, tasks: mine.length };
+      }),
+    [members, tasks],
   );
+  const max = Math.max(1, ...rows.flatMap((r) => [r.openPRs, r.openIssues, r.tasks]));
+
   const Bar = ({ value, color }: { value: number; color: string }) => (
     <div className="flex items-center gap-2">
       <div className="h-2 flex-1 overflow-hidden rounded-full bg-white/5">
-        <div
-          className={cn("h-full rounded-full transition-all", color)}
-          style={{ width: `${(value / max) * 100}%` }}
-        />
+        <div className={cn("h-full rounded-full transition-all", color)} style={{ width: `${(value / max) * 100}%` }} />
       </div>
       <span className="w-6 text-right font-mono text-xs tabular-nums text-muted-foreground">{value}</span>
     </div>
   );
+
+  if (loading) return <Skeleton className="h-32 w-full" />;
+  if (rows.length === 0)
+    return <p className="text-sm text-muted-foreground">No tech team members found (profiles.department = 'tech').</p>;
+
   return (
     <div className="space-y-3">
-      {MEMBERS.map((m) => (
-        <button
-          key={m.id}
-          onClick={() => onSelect(m)}
-          className="block w-full text-left"
-        >
+      {rows.map(({ member: m, openPRs, openIssues, tasks: t }) => (
+        <button key={m.id} onClick={() => onSelect(m)} className="block w-full text-left">
           <GlassCard className="p-4">
             <div className="grid grid-cols-12 items-center gap-4">
               <div className="col-span-12 flex items-center gap-3 md:col-span-3">
                 <Avatar className="h-10 w-10">
-                  <AvatarFallback>{initials(m.name)}</AvatarFallback>
+                  <AvatarFallback>{initials(m.full_name)}</AvatarFallback>
                 </Avatar>
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold">{m.name}</p>
+                  <p className="truncate text-sm font-semibold">{m.full_name}</p>
                   <p className="truncate text-xs text-muted-foreground">{m.role}</p>
                 </div>
               </div>
               <div className="col-span-12 grid gap-2 md:col-span-9 md:grid-cols-3">
                 <div>
                   <p className="mb-1 text-[10px] font-medium uppercase tracking-wider text-emerald-300">Open PRs</p>
-                  <Bar value={m.openPRs} color="bg-emerald-400/80" />
+                  <Bar value={openPRs} color="bg-emerald-400/80" />
                 </div>
                 <div>
-                  <p className="mb-1 text-[10px] font-medium uppercase tracking-wider text-amber-300">Open issues</p>
-                  <Bar value={m.openIssues} color="bg-amber-400/80" />
+                  <p className="mb-1 text-[10px] font-medium uppercase tracking-wider text-amber-300">Blocked</p>
+                  <Bar value={openIssues} color="bg-amber-400/80" />
                 </div>
                 <div>
                   <p className="mb-1 text-[10px] font-medium uppercase tracking-wider text-sky-300">Tasks</p>
-                  <Bar value={m.tasks} color="bg-sky-400/80" />
+                  <Bar value={t} color="bg-sky-400/80" />
                 </div>
               </div>
             </div>
@@ -283,21 +299,34 @@ const TeamLoad = ({ onSelect }: { onSelect: (m: Member) => void }) => {
 
 /* ───────── Tab 3: Blockers ───────── */
 
-const Blockers = () => {
+const Blockers = ({
+  tasks,
+  members,
+  loading,
+}: {
+  tasks: TechTask[];
+  members: TechMember[];
+  loading: boolean;
+}) => {
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [aiOut, setAiOut] = useState<Record<string, string>>({});
+  const memberById = useMemo(() => new Map(members.map((m) => [m.id, m])), [members]);
 
-  const askKai = async (b: BlockedTask) => {
-    setLoadingId(b.id);
+  const blocked = tasks.filter((t) => t.status === "blocked");
+
+  const askKai = async (t: TechTask) => {
+    setLoadingId(t.id);
     try {
       const r = await supabase.functions.invoke("kai-ask", {
         body: {
-          question: `Blocked task "${b.title}" in project ${b.project}. Reason: ${b.reason}. How do we unblock this?`,
+          question: `Blocked task "${t.title}" in project ${t.project_title ?? t.project_id}. Reason: ${
+            t.blocked_reason ?? "not specified"
+          }. How do we unblock this?`,
           role: "functional_head",
         },
       });
       if (r.error) throw r.error;
-      setAiOut((p) => ({ ...p, [b.id]: r.data?.answer || "No suggestion right now." }));
+      setAiOut((p) => ({ ...p, [t.id]: r.data?.answer || "No suggestion right now." }));
     } catch {
       toast.error("KAI couldn't respond");
     } finally {
@@ -305,8 +334,9 @@ const Blockers = () => {
     }
   };
 
-  const grouped = BLOCKED.reduce<Record<string, BlockedTask[]>>((acc, b) => {
-    (acc[b.project] ||= []).push(b);
+  const grouped = blocked.reduce<Record<string, TechTask[]>>((acc, b) => {
+    const key = b.project_title ?? "Unassigned project";
+    (acc[key] ||= []).push(b);
     return acc;
   }, {});
 
@@ -317,6 +347,10 @@ const Blockers = () => {
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
       <div className="space-y-4 lg:col-span-2">
         <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Blocked tasks</h3>
+        {loading && <Skeleton className="h-24 w-full" />}
+        {!loading && blocked.length === 0 && (
+          <GlassCard className="p-6 text-sm text-muted-foreground">No blocked tasks. Nice.</GlassCard>
+        )}
         {Object.entries(grouped).map(([project, items]) => (
           <GlassCard key={project} className="p-5">
             <div className="mb-3 flex items-center justify-between">
@@ -326,39 +360,40 @@ const Blockers = () => {
               </Badge>
             </div>
             <div className="space-y-3">
-              {items.map((b) => (
-                <div key={b.id} className="rounded-lg border border-white/5 bg-white/[0.02] p-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium">{b.title}</p>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {b.assignee} · <span className="text-rose-400 font-mono">{b.daysBlocked}d blocked</span>
-                      </p>
-                      <p className="mt-1 text-xs italic text-muted-foreground/80">"{b.reason}"</p>
+              {items.map((b) => {
+                const assigneeName = b.assignee_profile
+                  ? memberById.get(b.assignee_profile)?.full_name ?? "Unassigned"
+                  : "Unassigned";
+                return (
+                  <div key={b.id} className="rounded-lg border border-white/5 bg-white/[0.02] p-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium">{b.title}</p>
+                        <p className="mt-1 text-xs text-muted-foreground">{assigneeName}</p>
+                        {b.blocked_reason && (
+                          <p className="mt-1 text-xs italic text-muted-foreground/80">"{b.blocked_reason}"</p>
+                        )}
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => askKai(b)}
+                        disabled={loadingId === b.id}
+                        className="shrink-0 border-primary/30 text-primary hover:bg-primary/10"
+                      >
+                        {loadingId === b.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                        Ask KAI
+                      </Button>
                     </div>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => askKai(b)}
-                      disabled={loadingId === b.id}
-                      className="shrink-0 border-primary/30 text-primary hover:bg-primary/10"
-                    >
-                      {loadingId === b.id ? (
-                        <Loader2 className="h-3 w-3 animate-spin" />
-                      ) : (
-                        <Sparkles className="h-3 w-3" />
-                      )}
-                      Ask KAI
-                    </Button>
+                    {aiOut[b.id] && (
+                      <div className="mt-3 rounded-md border border-primary/20 bg-primary/5 p-2.5 text-xs leading-relaxed">
+                        <span className="mr-2 font-semibold text-primary">KAI</span>
+                        {aiOut[b.id]}
+                      </div>
+                    )}
                   </div>
-                  {aiOut[b.id] && (
-                    <div className="mt-3 rounded-md border border-primary/20 bg-primary/5 p-2.5 text-xs leading-relaxed">
-                      <span className="mr-2 font-semibold text-primary">KAI</span>
-                      {aiOut[b.id]}
-                    </div>
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
           </GlassCard>
         ))}
@@ -396,8 +431,6 @@ const Blockers = () => {
     </div>
   );
 };
-
-/* ───────── Page ───────── */
 
 const TechTeamDashboard = () => {
   const [selected, setSelected] = useState<Member | null>(null);
