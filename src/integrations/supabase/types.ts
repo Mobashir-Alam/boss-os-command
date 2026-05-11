@@ -146,6 +146,186 @@ export type Database = {
           },
         ]
       }
+      connector_credentials: {
+        Row: {
+          connector_type: string
+          created_at: string
+          created_by: string | null
+          credentials: Json
+          id: string
+          is_active: boolean
+          label: string | null
+          last_sync_error: string | null
+          last_synced_at: string | null
+          startup_id: string
+          updated_at: string
+        }
+        Insert: {
+          connector_type: string
+          created_at?: string
+          created_by?: string | null
+          credentials?: Json
+          id?: string
+          is_active?: boolean
+          label?: string | null
+          last_sync_error?: string | null
+          last_synced_at?: string | null
+          startup_id: string
+          updated_at?: string
+        }
+        Update: {
+          connector_type?: string
+          created_at?: string
+          created_by?: string | null
+          credentials?: Json
+          id?: string
+          is_active?: boolean
+          label?: string | null
+          last_sync_error?: string | null
+          last_synced_at?: string | null
+          startup_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "connector_credentials_startup_id_fkey"
+            columns: ["startup_id"]
+            isOneToOne: false
+            referencedRelation: "startups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      connector_data_github: {
+        Row: {
+          author_login: string | null
+          author_profile_id: string | null
+          body: string | null
+          closed_at_source: string | null
+          created_at_source: string | null
+          external_id: string
+          id: string
+          labels: string[]
+          merged_at_source: string | null
+          raw_payload: Json
+          record_type: string
+          repo_name: string
+          startup_id: string
+          state: string | null
+          synced_at: string
+          title: string | null
+          updated_at_source: string | null
+        }
+        Insert: {
+          author_login?: string | null
+          author_profile_id?: string | null
+          body?: string | null
+          closed_at_source?: string | null
+          created_at_source?: string | null
+          external_id: string
+          id?: string
+          labels?: string[]
+          merged_at_source?: string | null
+          raw_payload?: Json
+          record_type: string
+          repo_name: string
+          startup_id: string
+          state?: string | null
+          synced_at?: string
+          title?: string | null
+          updated_at_source?: string | null
+        }
+        Update: {
+          author_login?: string | null
+          author_profile_id?: string | null
+          body?: string | null
+          closed_at_source?: string | null
+          created_at_source?: string | null
+          external_id?: string
+          id?: string
+          labels?: string[]
+          merged_at_source?: string | null
+          raw_payload?: Json
+          record_type?: string
+          repo_name?: string
+          startup_id?: string
+          state?: string | null
+          synced_at?: string
+          title?: string | null
+          updated_at_source?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "connector_data_github_startup_id_fkey"
+            columns: ["startup_id"]
+            isOneToOne: false
+            referencedRelation: "startups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      connector_data_slack: {
+        Row: {
+          author_profile_id: string | null
+          channel_id: string
+          channel_name: string | null
+          has_files: boolean
+          id: string
+          message_date: string | null
+          message_ts: string
+          raw_payload: Json
+          reaction_count: number
+          reply_count: number
+          startup_id: string
+          synced_at: string
+          text: string | null
+          thread_ts: string | null
+          user_id_source: string | null
+        }
+        Insert: {
+          author_profile_id?: string | null
+          channel_id: string
+          channel_name?: string | null
+          has_files?: boolean
+          id?: string
+          message_date?: string | null
+          message_ts: string
+          raw_payload?: Json
+          reaction_count?: number
+          reply_count?: number
+          startup_id: string
+          synced_at?: string
+          text?: string | null
+          thread_ts?: string | null
+          user_id_source?: string | null
+        }
+        Update: {
+          author_profile_id?: string | null
+          channel_id?: string
+          channel_name?: string | null
+          has_files?: boolean
+          id?: string
+          message_date?: string | null
+          message_ts?: string
+          raw_payload?: Json
+          reaction_count?: number
+          reply_count?: number
+          startup_id?: string
+          synced_at?: string
+          text?: string | null
+          thread_ts?: string | null
+          user_id_source?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "connector_data_slack_startup_id_fkey"
+            columns: ["startup_id"]
+            isOneToOne: false
+            referencedRelation: "startups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       department_updates: {
         Row: {
           asks: string[]
@@ -647,6 +827,59 @@ export type Database = {
           },
         ]
       }
+      kai_insights: {
+        Row: {
+          body: string
+          confidence: string | null
+          data_sources: string[]
+          department_key: string | null
+          expires_at: string | null
+          generated_at: string
+          id: string
+          insight_type: string
+          is_dismissed: boolean
+          is_read: boolean
+          startup_id: string
+          title: string | null
+        }
+        Insert: {
+          body: string
+          confidence?: string | null
+          data_sources?: string[]
+          department_key?: string | null
+          expires_at?: string | null
+          generated_at?: string
+          id?: string
+          insight_type?: string
+          is_dismissed?: boolean
+          is_read?: boolean
+          startup_id: string
+          title?: string | null
+        }
+        Update: {
+          body?: string
+          confidence?: string | null
+          data_sources?: string[]
+          department_key?: string | null
+          expires_at?: string | null
+          generated_at?: string
+          id?: string
+          insight_type?: string
+          is_dismissed?: boolean
+          is_read?: boolean
+          startup_id?: string
+          title?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kai_insights_startup_id_fkey"
+            columns: ["startup_id"]
+            isOneToOne: false
+            referencedRelation: "startups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       kai_memories: {
         Row: {
           category: string
@@ -673,6 +906,62 @@ export type Database = {
           startup_id?: string
         }
         Relationships: []
+      }
+      metrics: {
+        Row: {
+          connector_type: string
+          department_key: string | null
+          granularity: string
+          id: string
+          metric_name: string
+          metric_text: string | null
+          metric_value: number | null
+          period_end: string
+          period_start: string
+          raw_data: Json
+          source_ref: string | null
+          startup_id: string
+          synced_at: string
+        }
+        Insert: {
+          connector_type: string
+          department_key?: string | null
+          granularity?: string
+          id?: string
+          metric_name: string
+          metric_text?: string | null
+          metric_value?: number | null
+          period_end: string
+          period_start: string
+          raw_data?: Json
+          source_ref?: string | null
+          startup_id: string
+          synced_at?: string
+        }
+        Update: {
+          connector_type?: string
+          department_key?: string | null
+          granularity?: string
+          id?: string
+          metric_name?: string
+          metric_text?: string | null
+          metric_value?: number | null
+          period_end?: string
+          period_start?: string
+          raw_data?: Json
+          source_ref?: string | null
+          startup_id?: string
+          synced_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "metrics_startup_id_fkey"
+            columns: ["startup_id"]
+            isOneToOne: false
+            referencedRelation: "startups"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       notifications: {
         Row: {
