@@ -592,7 +592,7 @@ const TechTeamDashboard = () => {
             <TeamLoad members={members} tasks={tasks} loading={loadingMembers || loadingTasks} onSelect={setSelected} />
           </TabsContent>
           <TabsContent value="blockers">
-            <Blockers tasks={tasks} members={members} loading={loadingMembers || loadingTasks} />
+            <Blockers tasks={tasks} members={members} loading={loadingMembers || loadingTasks} onOpenProject={(id) => navigate(`/project/${id}`)} />
           </TabsContent>
           <TabsContent value="projects">
             {loadingLead ? (
