@@ -380,7 +380,11 @@ const Blockers = ({
                   ? memberById.get(b.assignee_profile)?.full_name ?? "Unassigned"
                   : "Unassigned";
                 return (
-                  <div key={b.id} className="rounded-lg border border-white/5 bg-white/[0.02] p-3">
+                  <div
+                    key={b.id}
+                    onClick={() => onOpenProject(b.project_id)}
+                    className="cursor-pointer rounded-lg border border-white/5 bg-white/[0.02] p-3 transition hover:border-white/15 hover:bg-white/[0.05]"
+                  >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-medium">{b.title}</p>
