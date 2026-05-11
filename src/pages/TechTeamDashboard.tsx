@@ -4,12 +4,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Skeleton } from "@/components/ui/skeleton";
 import SparkLine from "@/components/SparkLine";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { useTechMembers, useTechTasks, type TechMember, type TechTask } from "@/hooks/useTechTeam";
 import {
   GitPullRequest,
   GitMerge,
@@ -48,22 +50,7 @@ const PRS: PR[] = [
   { id: "9", title: "docs: API reference", author: { name: "Sneha Iyer" }, repo: "docs", state: "merged", createdDaysAgo: 2, mergedDaysAgo: 0, labels: ["docs"] },
 ];
 
-type Member = { id: string; name: string; role: string; openPRs: number; openIssues: number; tasks: number };
-const MEMBERS: Member[] = [
-  { id: "m1", name: "Aarav Mehta", role: "Senior Engineer", openPRs: 4, openIssues: 2, tasks: 6 },
-  { id: "m2", name: "Priya Kumar", role: "Backend Engineer", openPRs: 3, openIssues: 5, tasks: 4 },
-  { id: "m3", name: "Rahul Singh", role: "Full-stack", openPRs: 2, openIssues: 1, tasks: 7 },
-  { id: "m4", name: "Sneha Iyer", role: "Frontend Engineer", openPRs: 2, openIssues: 3, tasks: 5 },
-  { id: "m5", name: "Karan Shah", role: "DevOps", openPRs: 1, openIssues: 4, tasks: 3 },
-];
-
-type BlockedTask = { id: string; project: string; title: string; assignee: string; daysBlocked: number; reason: string };
-const BLOCKED: BlockedTask[] = [
-  { id: "t1", project: "Billing v2", title: "Switch to Stripe Connect", assignee: "Aarav Mehta", daysBlocked: 4, reason: "Awaiting compliance review" },
-  { id: "t2", project: "Billing v2", title: "Migrate legacy invoices", assignee: "Priya Kumar", daysBlocked: 7, reason: "Schema decision pending" },
-  { id: "t3", project: "Mobile App", title: "Push notification SDK", assignee: "Sneha Iyer", daysBlocked: 3, reason: "Vendor key not provisioned" },
-  { id: "t4", project: "Infra", title: "Move staging to EU region", assignee: "Karan Shah", daysBlocked: 5, reason: "DNS propagation" },
-];
+// Members + tasks now come from useTechMembers / useTechTasks (real DB)
 
 const SPARKS = {
   openPRs: [12, 14, 11, 13, 10, 12, 12],
@@ -237,53 +224,69 @@ const PrPulse = () => {
 
 /* ───────── Tab 2: Team load ───────── */
 
-const TeamLoad = ({ onSelect }: { onSelect: (m: Member) => void }) => {
-  const max = useMemo(
-    () => Math.max(...MEMBERS.map((m) => Math.max(m.openPRs, m.openIssues, m.tasks))),
-    [],
+const TeamLoad = ({
+  members,
+  tasks,
+  loading,
+  onSelect,
+}: {
+  members: TechMember[];
+  tasks: TechTask[];
+  loading: boolean;
+  onSelect: (m: TechMember) => void;
+}) => {
+  const rows = useMemo(
+    () =>
+      members.map((m) => {
+        const mine = tasks.filter((t) => t.assignee_profile === m.id);
+        const openPRs = PRS.filter((p) => p.author.name === m.full_name && p.state === "open").length;
+        const openIssues = mine.filter((t) => t.status === "blocked").length;
+        return { member: m, openPRs, openIssues, tasks: mine.length };
+      }),
+    [members, tasks],
   );
+  const max = Math.max(1, ...rows.flatMap((r) => [r.openPRs, r.openIssues, r.tasks]));
+
   const Bar = ({ value, color }: { value: number; color: string }) => (
     <div className="flex items-center gap-2">
       <div className="h-2 flex-1 overflow-hidden rounded-full bg-white/5">
-        <div
-          className={cn("h-full rounded-full transition-all", color)}
-          style={{ width: `${(value / max) * 100}%` }}
-        />
+        <div className={cn("h-full rounded-full transition-all", color)} style={{ width: `${(value / max) * 100}%` }} />
       </div>
       <span className="w-6 text-right font-mono text-xs tabular-nums text-muted-foreground">{value}</span>
     </div>
   );
+
+  if (loading) return <Skeleton className="h-32 w-full" />;
+  if (rows.length === 0)
+    return <p className="text-sm text-muted-foreground">No tech team members found (profiles.department = 'tech').</p>;
+
   return (
     <div className="space-y-3">
-      {MEMBERS.map((m) => (
-        <button
-          key={m.id}
-          onClick={() => onSelect(m)}
-          className="block w-full text-left"
-        >
+      {rows.map(({ member: m, openPRs, openIssues, tasks: t }) => (
+        <button key={m.id} onClick={() => onSelect(m)} className="block w-full text-left">
           <GlassCard className="p-4">
             <div className="grid grid-cols-12 items-center gap-4">
               <div className="col-span-12 flex items-center gap-3 md:col-span-3">
                 <Avatar className="h-10 w-10">
-                  <AvatarFallback>{initials(m.name)}</AvatarFallback>
+                  <AvatarFallback>{initials(m.full_name)}</AvatarFallback>
                 </Avatar>
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold">{m.name}</p>
+                  <p className="truncate text-sm font-semibold">{m.full_name}</p>
                   <p className="truncate text-xs text-muted-foreground">{m.role}</p>
                 </div>
               </div>
               <div className="col-span-12 grid gap-2 md:col-span-9 md:grid-cols-3">
                 <div>
                   <p className="mb-1 text-[10px] font-medium uppercase tracking-wider text-emerald-300">Open PRs</p>
-                  <Bar value={m.openPRs} color="bg-emerald-400/80" />
+                  <Bar value={openPRs} color="bg-emerald-400/80" />
                 </div>
                 <div>
-                  <p className="mb-1 text-[10px] font-medium uppercase tracking-wider text-amber-300">Open issues</p>
-                  <Bar value={m.openIssues} color="bg-amber-400/80" />
+                  <p className="mb-1 text-[10px] font-medium uppercase tracking-wider text-amber-300">Blocked</p>
+                  <Bar value={openIssues} color="bg-amber-400/80" />
                 </div>
                 <div>
                   <p className="mb-1 text-[10px] font-medium uppercase tracking-wider text-sky-300">Tasks</p>
-                  <Bar value={m.tasks} color="bg-sky-400/80" />
+                  <Bar value={t} color="bg-sky-400/80" />
                 </div>
               </div>
             </div>
@@ -296,21 +299,34 @@ const TeamLoad = ({ onSelect }: { onSelect: (m: Member) => void }) => {
 
 /* ───────── Tab 3: Blockers ───────── */
 
-const Blockers = () => {
+const Blockers = ({
+  tasks,
+  members,
+  loading,
+}: {
+  tasks: TechTask[];
+  members: TechMember[];
+  loading: boolean;
+}) => {
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [aiOut, setAiOut] = useState<Record<string, string>>({});
+  const memberById = useMemo(() => new Map(members.map((m) => [m.id, m])), [members]);
 
-  const askKai = async (b: BlockedTask) => {
-    setLoadingId(b.id);
+  const blocked = tasks.filter((t) => t.status === "blocked");
+
+  const askKai = async (t: TechTask) => {
+    setLoadingId(t.id);
     try {
       const r = await supabase.functions.invoke("kai-ask", {
         body: {
-          question: `Blocked task "${b.title}" in project ${b.project}. Reason: ${b.reason}. How do we unblock this?`,
+          question: `Blocked task "${t.title}" in project ${t.project_title ?? t.project_id}. Reason: ${
+            t.blocked_reason ?? "not specified"
+          }. How do we unblock this?`,
           role: "functional_head",
         },
       });
       if (r.error) throw r.error;
-      setAiOut((p) => ({ ...p, [b.id]: r.data?.answer || "No suggestion right now." }));
+      setAiOut((p) => ({ ...p, [t.id]: r.data?.answer || "No suggestion right now." }));
     } catch {
       toast.error("KAI couldn't respond");
     } finally {
@@ -318,8 +334,9 @@ const Blockers = () => {
     }
   };
 
-  const grouped = BLOCKED.reduce<Record<string, BlockedTask[]>>((acc, b) => {
-    (acc[b.project] ||= []).push(b);
+  const grouped = blocked.reduce<Record<string, TechTask[]>>((acc, b) => {
+    const key = b.project_title ?? "Unassigned project";
+    (acc[key] ||= []).push(b);
     return acc;
   }, {});
 
@@ -330,6 +347,10 @@ const Blockers = () => {
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
       <div className="space-y-4 lg:col-span-2">
         <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Blocked tasks</h3>
+        {loading && <Skeleton className="h-24 w-full" />}
+        {!loading && blocked.length === 0 && (
+          <GlassCard className="p-6 text-sm text-muted-foreground">No blocked tasks. Nice.</GlassCard>
+        )}
         {Object.entries(grouped).map(([project, items]) => (
           <GlassCard key={project} className="p-5">
             <div className="mb-3 flex items-center justify-between">
@@ -339,39 +360,40 @@ const Blockers = () => {
               </Badge>
             </div>
             <div className="space-y-3">
-              {items.map((b) => (
-                <div key={b.id} className="rounded-lg border border-white/5 bg-white/[0.02] p-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium">{b.title}</p>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {b.assignee} · <span className="text-rose-400 font-mono">{b.daysBlocked}d blocked</span>
-                      </p>
-                      <p className="mt-1 text-xs italic text-muted-foreground/80">"{b.reason}"</p>
+              {items.map((b) => {
+                const assigneeName = b.assignee_profile
+                  ? memberById.get(b.assignee_profile)?.full_name ?? "Unassigned"
+                  : "Unassigned";
+                return (
+                  <div key={b.id} className="rounded-lg border border-white/5 bg-white/[0.02] p-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium">{b.title}</p>
+                        <p className="mt-1 text-xs text-muted-foreground">{assigneeName}</p>
+                        {b.blocked_reason && (
+                          <p className="mt-1 text-xs italic text-muted-foreground/80">"{b.blocked_reason}"</p>
+                        )}
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => askKai(b)}
+                        disabled={loadingId === b.id}
+                        className="shrink-0 border-primary/30 text-primary hover:bg-primary/10"
+                      >
+                        {loadingId === b.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                        Ask KAI
+                      </Button>
                     </div>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => askKai(b)}
-                      disabled={loadingId === b.id}
-                      className="shrink-0 border-primary/30 text-primary hover:bg-primary/10"
-                    >
-                      {loadingId === b.id ? (
-                        <Loader2 className="h-3 w-3 animate-spin" />
-                      ) : (
-                        <Sparkles className="h-3 w-3" />
-                      )}
-                      Ask KAI
-                    </Button>
+                    {aiOut[b.id] && (
+                      <div className="mt-3 rounded-md border border-primary/20 bg-primary/5 p-2.5 text-xs leading-relaxed">
+                        <span className="mr-2 font-semibold text-primary">KAI</span>
+                        {aiOut[b.id]}
+                      </div>
+                    )}
                   </div>
-                  {aiOut[b.id] && (
-                    <div className="mt-3 rounded-md border border-primary/20 bg-primary/5 p-2.5 text-xs leading-relaxed">
-                      <span className="mr-2 font-semibold text-primary">KAI</span>
-                      {aiOut[b.id]}
-                    </div>
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
           </GlassCard>
         ))}
@@ -410,13 +432,14 @@ const Blockers = () => {
   );
 };
 
-/* ───────── Page ───────── */
-
 const TechTeamDashboard = () => {
-  const [selected, setSelected] = useState<Member | null>(null);
+  const [selected, setSelected] = useState<TechMember | null>(null);
+  const { data: members = [], isLoading: loadingMembers } = useTechMembers();
+  const memberIds = useMemo(() => members.map((m) => m.id), [members]);
+  const { data: tasks = [], isLoading: loadingTasks } = useTechTasks(memberIds);
 
-  const memberPRs = (m: Member) =>
-    PRS.filter((p) => p.author.name === m.name);
+  const selectedTasks = selected ? tasks.filter((t) => t.assignee_profile === selected.id) : [];
+  const selectedPRs = selected ? PRS.filter((p) => p.author.name === selected.full_name) : [];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-background/80">
@@ -450,8 +473,12 @@ const TechTeamDashboard = () => {
           </TabsList>
 
           <TabsContent value="pulse"><PrPulse /></TabsContent>
-          <TabsContent value="load"><TeamLoad onSelect={setSelected} /></TabsContent>
-          <TabsContent value="blockers"><Blockers /></TabsContent>
+          <TabsContent value="load">
+            <TeamLoad members={members} tasks={tasks} loading={loadingMembers || loadingTasks} onSelect={setSelected} />
+          </TabsContent>
+          <TabsContent value="blockers">
+            <Blockers tasks={tasks} members={members} loading={loadingMembers || loadingTasks} />
+          </TabsContent>
         </Tabs>
       </div>
 
@@ -462,10 +489,10 @@ const TechTeamDashboard = () => {
               <SheetHeader>
                 <SheetTitle className="flex items-center gap-3">
                   <Avatar className="h-10 w-10">
-                    <AvatarFallback>{initials(selected.name)}</AvatarFallback>
+                    <AvatarFallback>{initials(selected.full_name)}</AvatarFallback>
                   </Avatar>
                   <div>
-                    <p className="text-base font-semibold">{selected.name}</p>
+                    <p className="text-base font-semibold">{selected.full_name}</p>
                     <p className="text-xs font-normal text-muted-foreground">{selected.role}</p>
                   </div>
                 </SheetTitle>
@@ -474,7 +501,7 @@ const TechTeamDashboard = () => {
                 <div>
                   <h4 className="mb-2 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Pull requests</h4>
                   <div className="space-y-2">
-                    {memberPRs(selected).map((p) => (
+                    {selectedPRs.map((p) => (
                       <div key={p.id} className="flex items-center justify-between rounded-md border border-white/10 bg-white/[0.02] p-2.5 text-sm">
                         <div className="min-w-0">
                           <p className="truncate">{p.title}</p>
@@ -485,15 +512,22 @@ const TechTeamDashboard = () => {
                         </Badge>
                       </div>
                     ))}
-                    {memberPRs(selected).length === 0 && (
-                      <p className="text-xs text-muted-foreground">No PRs.</p>
-                    )}
+                    {selectedPRs.length === 0 && <p className="text-xs text-muted-foreground">No PRs.</p>}
                   </div>
                 </div>
                 <div>
-                  <h4 className="mb-2 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Tasks</h4>
-                  <div className="rounded-md border border-white/10 bg-white/[0.02] p-3 text-sm font-mono tabular-nums">
-                    {selected.tasks} active tasks · {selected.openIssues} open issues
+                  <h4 className="mb-2 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Tasks ({selectedTasks.length})</h4>
+                  <div className="space-y-2">
+                    {selectedTasks.map((t) => (
+                      <div key={t.id} className="flex items-center justify-between rounded-md border border-white/10 bg-white/[0.02] p-2.5 text-sm">
+                        <div className="min-w-0">
+                          <p className="truncate">{t.title}</p>
+                          <p className="text-xs text-muted-foreground">{t.project_title}</p>
+                        </div>
+                        <Badge variant="outline" className="ml-2 font-mono text-[10px]">{t.status}</Badge>
+                      </div>
+                    ))}
+                    {selectedTasks.length === 0 && <p className="text-xs text-muted-foreground">No tasks.</p>}
                   </div>
                 </div>
               </div>
