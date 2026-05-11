@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useTechMembers, useTechTasks, type TechMember, type TechTask } from "@/hooks/useTechTeam";
+import { AssignTaskModal } from "@/components/tech/AssignTaskModal";
 import {
   GitPullRequest,
   GitMerge,
@@ -22,6 +23,7 @@ import {
   Sparkles,
   Loader2,
   XCircle,
+  Plus,
 } from "lucide-react";
 
 /* ───────── Mock data ───────── */
@@ -434,12 +436,30 @@ const Blockers = ({
 
 const TechTeamDashboard = () => {
   const [selected, setSelected] = useState<TechMember | null>(null);
+  const [assignOpen, setAssignOpen] = useState(false);
   const { data: members = [], isLoading: loadingMembers } = useTechMembers();
   const memberIds = useMemo(() => members.map((m) => m.id), [members]);
   const { data: tasks = [], isLoading: loadingTasks } = useTechTasks(memberIds);
 
   const selectedTasks = selected ? tasks.filter((t) => t.assignee_profile === selected.id) : [];
   const selectedPRs = selected ? PRS.filter((p) => p.author.name === selected.full_name) : [];
+
+  const activeTasks = tasks.filter((t) => t.status !== "done");
+  const blockedCount = tasks.filter((t) => t.status === "blocked").length;
+  const avgCompletion = activeTasks.length
+    ? Math.round(
+        activeTasks.reduce((s, t) => s + (t.completion_percentage ?? 0), 0) / activeTasks.length,
+      )
+    : 0;
+
+  const Stat = ({ label, value }: { label: string; value: string | number }) => (
+    <div className="flex-1 px-6 py-4 text-center">
+      <div className="font-mono text-3xl font-semibold tabular-nums tracking-tight">{value}</div>
+      <div className="mt-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+        {label}
+      </div>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-background/80">
@@ -454,10 +474,23 @@ const TechTeamDashboard = () => {
             </h1>
             <p className="text-sm text-muted-foreground">PR throughput, team load, and blockers in one view.</p>
           </div>
-          <Badge variant="outline" className="border-white/10 bg-white/5 font-mono text-[10px] uppercase tracking-widest">
-            Tech Lead view
-          </Badge>
+          <div className="flex items-center gap-3">
+            <Badge variant="outline" className="border-white/10 bg-white/5 font-mono text-[10px] uppercase tracking-widest">
+              Tech Lead view
+            </Badge>
+            <Button onClick={() => setAssignOpen(true)} className="gap-1.5">
+              <Plus className="h-4 w-4" /> Assign Task
+            </Button>
+          </div>
         </div>
+
+        <GlassCard className="mb-6 flex divide-x divide-white/10">
+          <Stat label="Members" value={loadingMembers ? "—" : members.length} />
+          <Stat label="Active tasks" value={loadingTasks ? "—" : activeTasks.length} />
+          <Stat label="Blocked" value={loadingTasks ? "—" : blockedCount} />
+          <Stat label="Avg completion" value={loadingTasks ? "—" : `${avgCompletion}%`} />
+        </GlassCard>
+
 
         <Tabs defaultValue="pulse" className="space-y-6">
           <TabsList className="bg-white/5 backdrop-blur-xl border border-white/10">
@@ -535,6 +568,8 @@ const TechTeamDashboard = () => {
           )}
         </SheetContent>
       </Sheet>
+
+      <AssignTaskModal open={assignOpen} onOpenChange={setAssignOpen} members={members} />
     </div>
   );
 };
