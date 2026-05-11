@@ -7,12 +7,18 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Progress } from "@/components/ui/progress";
 import SparkLine from "@/components/SparkLine";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { useTechMembers, useTechTasks, type TechMember, type TechTask } from "@/hooks/useTechTeam";
 import { AssignTaskModal } from "@/components/tech/AssignTaskModal";
+import CreateProjectModal from "@/components/project/CreateProjectModal";
+import { AddMemberModal, EditProjectModal } from "@/components/project/LeadControls";
+import type { Project } from "@/hooks/useEmployeeProjects";
 import {
   GitPullRequest,
   GitMerge,
@@ -24,6 +30,9 @@ import {
   Loader2,
   XCircle,
   Plus,
+  FolderKanban,
+  UserPlus,
+  Pencil,
 } from "lucide-react";
 
 /* ───────── Mock data ───────── */
