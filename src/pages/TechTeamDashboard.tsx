@@ -50,22 +50,7 @@ const PRS: PR[] = [
   { id: "9", title: "docs: API reference", author: { name: "Sneha Iyer" }, repo: "docs", state: "merged", createdDaysAgo: 2, mergedDaysAgo: 0, labels: ["docs"] },
 ];
 
-type Member = { id: string; name: string; role: string; openPRs: number; openIssues: number; tasks: number };
-const MEMBERS: Member[] = [
-  { id: "m1", name: "Aarav Mehta", role: "Senior Engineer", openPRs: 4, openIssues: 2, tasks: 6 },
-  { id: "m2", name: "Priya Kumar", role: "Backend Engineer", openPRs: 3, openIssues: 5, tasks: 4 },
-  { id: "m3", name: "Rahul Singh", role: "Full-stack", openPRs: 2, openIssues: 1, tasks: 7 },
-  { id: "m4", name: "Sneha Iyer", role: "Frontend Engineer", openPRs: 2, openIssues: 3, tasks: 5 },
-  { id: "m5", name: "Karan Shah", role: "DevOps", openPRs: 1, openIssues: 4, tasks: 3 },
-];
-
-type BlockedTask = { id: string; project: string; title: string; assignee: string; daysBlocked: number; reason: string };
-const BLOCKED: BlockedTask[] = [
-  { id: "t1", project: "Billing v2", title: "Switch to Stripe Connect", assignee: "Aarav Mehta", daysBlocked: 4, reason: "Awaiting compliance review" },
-  { id: "t2", project: "Billing v2", title: "Migrate legacy invoices", assignee: "Priya Kumar", daysBlocked: 7, reason: "Schema decision pending" },
-  { id: "t3", project: "Mobile App", title: "Push notification SDK", assignee: "Sneha Iyer", daysBlocked: 3, reason: "Vendor key not provisioned" },
-  { id: "t4", project: "Infra", title: "Move staging to EU region", assignee: "Karan Shah", daysBlocked: 5, reason: "DNS propagation" },
-];
+// Members + tasks now come from useTechMembers / useTechTasks (real DB)
 
 const SPARKS = {
   openPRs: [12, 14, 11, 13, 10, 12, 12],
