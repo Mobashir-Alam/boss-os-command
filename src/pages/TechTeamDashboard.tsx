@@ -454,6 +454,7 @@ const Blockers = ({
 const TechTeamDashboard = () => {
   const { user } = useAuth();
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const [selected, setSelected] = useState<TechMember | null>(null);
   const [assignOpen, setAssignOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
