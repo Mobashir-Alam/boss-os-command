@@ -697,6 +697,32 @@ const TechTeamDashboard = () => {
       </Sheet>
 
       <AssignTaskModal open={assignOpen} onOpenChange={setAssignOpen} members={members} />
+
+      <CreateProjectModal
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        onCreated={() => {
+          toast.success("Project created");
+          qc.invalidateQueries({ queryKey: ["tech-tasks"] });
+          qc.invalidateQueries({ queryKey: ["lead-projects"] });
+        }}
+      />
+
+      {selectedProject && (
+        <>
+          <AddMemberModal
+            project={selectedProject}
+            open={addMemberOpen}
+            onOpenChange={setAddMemberOpen}
+            existingMemberIds={existingMemberIds}
+          />
+          <EditProjectModal
+            project={selectedProject}
+            open={editOpen}
+            onOpenChange={setEditOpen}
+          />
+        </>
+      )}
     </div>
   );
 };
