@@ -24,6 +24,13 @@ const AuthGuard = ({ children }: { children: React.ReactNode }) => {
     return <Navigate to="/onboarding" replace />;
   }
 
+  // Tech functional heads (department leads) get the Tech Team dashboard as
+  // their home — not the generic /my-domain or /employee view.
+  const isTechLead = profile?.role === "functional_head" && profile?.department === "tech";
+  if (isTechLead && (location.pathname === "/" || location.pathname === "/my-domain")) {
+    return <Navigate to="/team/tech" replace />;
+  }
+
   // The CEO panel ("/") is for founders only. Everyone else lands on /employee.
   if (profile?.role && profile.role !== "founder" && location.pathname === "/") {
     return <Navigate to="/employee" replace />;
