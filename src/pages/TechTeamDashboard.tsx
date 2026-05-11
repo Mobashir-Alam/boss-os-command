@@ -545,8 +545,11 @@ const TechTeamDashboard = () => {
             <Badge variant="outline" className="border-white/10 bg-white/5 font-mono text-[10px] uppercase tracking-widest">
               Tech Lead view
             </Badge>
-            <Button onClick={() => setAssignOpen(true)} className="gap-1.5">
+            <Button onClick={() => setAssignOpen(true)} variant="outline" className="gap-1.5">
               <Plus className="h-4 w-4" /> Assign Task
+            </Button>
+            <Button onClick={() => setCreateOpen(true)} className="gap-1.5">
+              <Plus className="h-4 w-4" /> Create Project
             </Button>
           </div>
         </div>
