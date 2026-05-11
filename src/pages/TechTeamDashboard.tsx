@@ -316,10 +316,12 @@ const Blockers = ({
   tasks,
   members,
   loading,
+  onOpenProject,
 }: {
   tasks: TechTask[];
   members: TechMember[];
   loading: boolean;
+  onOpenProject: (projectId: string) => void;
 }) => {
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [aiOut, setAiOut] = useState<Record<string, string>>({});
