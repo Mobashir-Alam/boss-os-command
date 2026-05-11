@@ -7,12 +7,18 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Progress } from "@/components/ui/progress";
 import SparkLine from "@/components/SparkLine";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { useTechMembers, useTechTasks, type TechMember, type TechTask } from "@/hooks/useTechTeam";
 import { AssignTaskModal } from "@/components/tech/AssignTaskModal";
+import CreateProjectModal from "@/components/project/CreateProjectModal";
+import { AddMemberModal, EditProjectModal } from "@/components/project/LeadControls";
+import type { Project } from "@/hooks/useEmployeeProjects";
 import {
   GitPullRequest,
   GitMerge,
@@ -24,6 +30,9 @@ import {
   Loader2,
   XCircle,
   Plus,
+  FolderKanban,
+  UserPlus,
+  Pencil,
 } from "lucide-react";
 
 /* ───────── Mock data ───────── */
@@ -435,11 +444,69 @@ const Blockers = ({
 };
 
 const TechTeamDashboard = () => {
+  const { user } = useAuth();
+  const qc = useQueryClient();
   const [selected, setSelected] = useState<TechMember | null>(null);
   const [assignOpen, setAssignOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [addMemberOpen, setAddMemberOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [existingMemberIds, setExistingMemberIds] = useState<string[]>([]);
   const { data: members = [], isLoading: loadingMembers } = useTechMembers();
   const memberIds = useMemo(() => members.map((m) => m.id), [members]);
   const { data: tasks = [], isLoading: loadingTasks } = useTechTasks(memberIds);
+
+  const { data: leadProjects = [], isLoading: loadingLead } = useQuery({
+    queryKey: ["lead-projects", user?.id],
+    enabled: !!user?.id,
+    queryFn: async (): Promise<Project[]> => {
+      const { data: memberRows } = await supabase
+        .from("project_members")
+        .select("project_id")
+        .eq("profile_id", user!.id)
+        .eq("role", "lead");
+      const ids = Array.from(new Set((memberRows ?? []).map((r) => r.project_id))).filter(Boolean) as string[];
+      if (!ids.length) return [];
+      const { data: projects } = await supabase
+        .from("projects")
+        .select("*")
+        .in("id", ids);
+      return (projects ?? []) as Project[];
+    },
+  });
+
+  const leadProjectIds = useMemo(() => leadProjects.map((p) => p.id), [leadProjects]);
+  const { data: memberCounts = {} } = useQuery({
+    queryKey: ["lead-project-member-counts", leadProjectIds.sort().join(",")],
+    enabled: leadProjectIds.length > 0,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("project_members")
+        .select("project_id, profile_id")
+        .in("project_id", leadProjectIds);
+      const counts: Record<string, number> = {};
+      (data ?? []).forEach((r: any) => {
+        counts[r.project_id] = (counts[r.project_id] ?? 0) + 1;
+      });
+      return counts;
+    },
+  });
+
+  const openAddMember = async (project: Project) => {
+    const { data } = await supabase
+      .from("project_members")
+      .select("profile_id")
+      .eq("project_id", project.id);
+    setExistingMemberIds((data ?? []).map((r: any) => r.profile_id).filter(Boolean));
+    setSelectedProject(project);
+    setAddMemberOpen(true);
+  };
+
+  const openEdit = (project: Project) => {
+    setSelectedProject(project);
+    setEditOpen(true);
+  };
 
   const selectedTasks = selected ? tasks.filter((t) => t.assignee_profile === selected.id) : [];
   const selectedPRs = selected ? PRS.filter((p) => p.author.name === selected.full_name) : [];
@@ -478,8 +545,11 @@ const TechTeamDashboard = () => {
             <Badge variant="outline" className="border-white/10 bg-white/5 font-mono text-[10px] uppercase tracking-widest">
               Tech Lead view
             </Badge>
-            <Button onClick={() => setAssignOpen(true)} className="gap-1.5">
+            <Button onClick={() => setAssignOpen(true)} variant="outline" className="gap-1.5">
               <Plus className="h-4 w-4" /> Assign Task
+            </Button>
+            <Button onClick={() => setCreateOpen(true)} className="gap-1.5">
+              <Plus className="h-4 w-4" /> Create Project
             </Button>
           </div>
         </div>
@@ -503,6 +573,9 @@ const TechTeamDashboard = () => {
             <TabsTrigger value="blockers" className="data-[state=active]:bg-white/10">
               <AlertTriangle className="h-3.5 w-3.5" /> Blockers & risks
             </TabsTrigger>
+            <TabsTrigger value="projects" className="data-[state=active]:bg-white/10">
+              <FolderKanban className="h-3.5 w-3.5" /> My Projects
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="pulse"><PrPulse /></TabsContent>
@@ -511,6 +584,60 @@ const TechTeamDashboard = () => {
           </TabsContent>
           <TabsContent value="blockers">
             <Blockers tasks={tasks} members={members} loading={loadingMembers || loadingTasks} />
+          </TabsContent>
+          <TabsContent value="projects">
+            {loadingLead ? (
+              <Skeleton className="h-32 w-full" />
+            ) : leadProjects.length === 0 ? (
+              <GlassCard className="p-8 text-center text-sm text-muted-foreground">
+                You're not a lead on any projects yet. Create one to get started.
+              </GlassCard>
+            ) : (
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                {leadProjects.map((p) => (
+                  <GlassCard key={p.id} className="p-5">
+                    <div className="mb-3 flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <h4 className="truncate text-sm font-semibold">{p.title}</h4>
+                        {p.description && (
+                          <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{p.description}</p>
+                        )}
+                      </div>
+                      <Badge variant="outline" className="font-mono text-[10px] uppercase tracking-wider">
+                        {p.status}
+                      </Badge>
+                    </div>
+                    <div className="mb-3">
+                      <div className="mb-1 flex justify-between text-[10px] uppercase tracking-wider text-muted-foreground">
+                        <span>Progress</span>
+                        <span className="font-mono tabular-nums">{p.overall_completion ?? 0}%</span>
+                      </div>
+                      <Progress value={p.overall_completion ?? 0} className="h-1.5" />
+                    </div>
+                    <div className="mb-4 flex items-center gap-2 text-xs text-muted-foreground">
+                      <Users className="h-3 w-3" />
+                      <span className="font-mono tabular-nums">{memberCounts[p.id] ?? 0}</span>
+                      <span>members</span>
+                      {p.deadline && (
+                        <>
+                          <span className="text-muted-foreground/50">·</span>
+                          <Clock className="h-3 w-3" />
+                          <span>{new Date(p.deadline).toLocaleDateString()}</span>
+                        </>
+                      )}
+                    </div>
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="outline" className="flex-1 gap-1.5" onClick={() => openAddMember(p)}>
+                        <UserPlus className="h-3 w-3" /> Add Member
+                      </Button>
+                      <Button size="sm" variant="outline" className="flex-1 gap-1.5" onClick={() => openEdit(p)}>
+                        <Pencil className="h-3 w-3" /> Edit Project
+                      </Button>
+                    </div>
+                  </GlassCard>
+                ))}
+              </div>
+            )}
           </TabsContent>
         </Tabs>
       </div>
@@ -570,6 +697,32 @@ const TechTeamDashboard = () => {
       </Sheet>
 
       <AssignTaskModal open={assignOpen} onOpenChange={setAssignOpen} members={members} />
+
+      <CreateProjectModal
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        onCreated={() => {
+          toast.success("Project created");
+          qc.invalidateQueries({ queryKey: ["tech-tasks"] });
+          qc.invalidateQueries({ queryKey: ["lead-projects"] });
+        }}
+      />
+
+      {selectedProject && (
+        <>
+          <AddMemberModal
+            project={selectedProject}
+            open={addMemberOpen}
+            onOpenChange={setAddMemberOpen}
+            existingMemberIds={existingMemberIds}
+          />
+          <EditProjectModal
+            project={selectedProject}
+            open={editOpen}
+            onOpenChange={setEditOpen}
+          />
+        </>
+      )}
     </div>
   );
 };
