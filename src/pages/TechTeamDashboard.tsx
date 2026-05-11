@@ -568,6 +568,8 @@ const TechTeamDashboard = () => {
           )}
         </SheetContent>
       </Sheet>
+
+      <AssignTaskModal open={assignOpen} onOpenChange={setAssignOpen} members={members} />
     </div>
   );
 };
