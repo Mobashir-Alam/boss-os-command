@@ -12,6 +12,7 @@ import SparkLine from "@/components/SparkLine";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTechMembers, useTechTasks, type TechMember, type TechTask } from "@/hooks/useTechTeam";
@@ -33,6 +34,7 @@ import {
   FolderKanban,
   UserPlus,
   Pencil,
+  ArrowUpRight,
 } from "lucide-react";
 
 /* ───────── Mock data ───────── */
@@ -314,10 +316,12 @@ const Blockers = ({
   tasks,
   members,
   loading,
+  onOpenProject,
 }: {
   tasks: TechTask[];
   members: TechMember[];
   loading: boolean;
+  onOpenProject: (projectId: string) => void;
 }) => {
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [aiOut, setAiOut] = useState<Record<string, string>>({});
@@ -376,7 +380,11 @@ const Blockers = ({
                   ? memberById.get(b.assignee_profile)?.full_name ?? "Unassigned"
                   : "Unassigned";
                 return (
-                  <div key={b.id} className="rounded-lg border border-white/5 bg-white/[0.02] p-3">
+                  <div
+                    key={b.id}
+                    onClick={() => onOpenProject(b.project_id)}
+                    className="cursor-pointer rounded-lg border border-white/5 bg-white/[0.02] p-3 transition hover:border-white/15 hover:bg-white/[0.05]"
+                  >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-medium">{b.title}</p>
@@ -388,7 +396,7 @@ const Blockers = ({
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => askKai(b)}
+                        onClick={(e) => { e.stopPropagation(); askKai(b); }}
                         disabled={loadingId === b.id}
                         className="shrink-0 border-primary/30 text-primary hover:bg-primary/10"
                       >
@@ -446,6 +454,7 @@ const Blockers = ({
 const TechTeamDashboard = () => {
   const { user } = useAuth();
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const [selected, setSelected] = useState<TechMember | null>(null);
   const [assignOpen, setAssignOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
@@ -583,7 +592,7 @@ const TechTeamDashboard = () => {
             <TeamLoad members={members} tasks={tasks} loading={loadingMembers || loadingTasks} onSelect={setSelected} />
           </TabsContent>
           <TabsContent value="blockers">
-            <Blockers tasks={tasks} members={members} loading={loadingMembers || loadingTasks} />
+            <Blockers tasks={tasks} members={members} loading={loadingMembers || loadingTasks} onOpenProject={(id) => navigate(`/project/${id}`)} />
           </TabsContent>
           <TabsContent value="projects">
             {loadingLead ? (
@@ -597,12 +606,19 @@ const TechTeamDashboard = () => {
                 {leadProjects.map((p) => (
                   <GlassCard key={p.id} className="p-5">
                     <div className="mb-3 flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <h4 className="truncate text-sm font-semibold">{p.title}</h4>
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/project/${p.id}`)}
+                        className="group min-w-0 flex-1 text-left"
+                      >
+                        <h4 className="flex items-center gap-1.5 truncate text-sm font-semibold group-hover:text-primary">
+                          {p.title}
+                          <ArrowUpRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground transition group-hover:text-primary" />
+                        </h4>
                         {p.description && (
                           <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{p.description}</p>
                         )}
-                      </div>
+                      </button>
                       <Badge variant="outline" className="font-mono text-[10px] uppercase tracking-wider">
                         {p.status}
                       </Badge>
@@ -679,7 +695,11 @@ const TechTeamDashboard = () => {
                   <h4 className="mb-2 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Tasks ({selectedTasks.length})</h4>
                   <div className="space-y-2">
                     {selectedTasks.map((t) => (
-                      <div key={t.id} className="flex items-center justify-between rounded-md border border-white/10 bg-white/[0.02] p-2.5 text-sm">
+                      <div
+                        key={t.id}
+                        onClick={() => { setSelected(null); navigate(`/project/${t.project_id}`); }}
+                        className="flex cursor-pointer items-center justify-between rounded-md border border-white/10 bg-white/[0.02] p-2.5 text-sm transition hover:border-white/20 hover:bg-white/[0.05]"
+                      >
                         <div className="min-w-0">
                           <p className="truncate">{t.title}</p>
                           <p className="text-xs text-muted-foreground">{t.project_title}</p>
