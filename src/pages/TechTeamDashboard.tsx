@@ -508,6 +508,9 @@ const TechTeamDashboard = () => {
     setEditOpen(true);
   };
 
+  const selectedTasks = selected ? tasks.filter((t) => t.assignee_profile === selected.id) : [];
+  const selectedPRs = selected ? PRS.filter((p) => p.author.name === selected.full_name) : [];
+
   const activeTasks = tasks.filter((t) => t.status !== "done");
   const blockedCount = tasks.filter((t) => t.status === "blocked").length;
   const avgCompletion = activeTasks.length
