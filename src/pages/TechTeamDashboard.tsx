@@ -433,10 +433,13 @@ const Blockers = ({
 };
 
 const TechTeamDashboard = () => {
-  const [selected, setSelected] = useState<Member | null>(null);
+  const [selected, setSelected] = useState<TechMember | null>(null);
+  const { data: members = [], isLoading: loadingMembers } = useTechMembers();
+  const memberIds = useMemo(() => members.map((m) => m.id), [members]);
+  const { data: tasks = [], isLoading: loadingTasks } = useTechTasks(memberIds);
 
-  const memberPRs = (m: Member) =>
-    PRS.filter((p) => p.author.name === m.name);
+  const selectedTasks = selected ? tasks.filter((t) => t.assignee_profile === selected.id) : [];
+  const selectedPRs = selected ? PRS.filter((p) => p.author.name === selected.full_name) : [];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-background/80">
@@ -470,8 +473,12 @@ const TechTeamDashboard = () => {
           </TabsList>
 
           <TabsContent value="pulse"><PrPulse /></TabsContent>
-          <TabsContent value="load"><TeamLoad onSelect={setSelected} /></TabsContent>
-          <TabsContent value="blockers"><Blockers /></TabsContent>
+          <TabsContent value="load">
+            <TeamLoad members={members} tasks={tasks} loading={loadingMembers || loadingTasks} onSelect={setSelected} />
+          </TabsContent>
+          <TabsContent value="blockers">
+            <Blockers tasks={tasks} members={members} loading={loadingMembers || loadingTasks} />
+          </TabsContent>
         </Tabs>
       </div>
 
@@ -482,10 +489,10 @@ const TechTeamDashboard = () => {
               <SheetHeader>
                 <SheetTitle className="flex items-center gap-3">
                   <Avatar className="h-10 w-10">
-                    <AvatarFallback>{initials(selected.name)}</AvatarFallback>
+                    <AvatarFallback>{initials(selected.full_name)}</AvatarFallback>
                   </Avatar>
                   <div>
-                    <p className="text-base font-semibold">{selected.name}</p>
+                    <p className="text-base font-semibold">{selected.full_name}</p>
                     <p className="text-xs font-normal text-muted-foreground">{selected.role}</p>
                   </div>
                 </SheetTitle>
@@ -494,7 +501,7 @@ const TechTeamDashboard = () => {
                 <div>
                   <h4 className="mb-2 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Pull requests</h4>
                   <div className="space-y-2">
-                    {memberPRs(selected).map((p) => (
+                    {selectedPRs.map((p) => (
                       <div key={p.id} className="flex items-center justify-between rounded-md border border-white/10 bg-white/[0.02] p-2.5 text-sm">
                         <div className="min-w-0">
                           <p className="truncate">{p.title}</p>
@@ -505,15 +512,22 @@ const TechTeamDashboard = () => {
                         </Badge>
                       </div>
                     ))}
-                    {memberPRs(selected).length === 0 && (
-                      <p className="text-xs text-muted-foreground">No PRs.</p>
-                    )}
+                    {selectedPRs.length === 0 && <p className="text-xs text-muted-foreground">No PRs.</p>}
                   </div>
                 </div>
                 <div>
-                  <h4 className="mb-2 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Tasks</h4>
-                  <div className="rounded-md border border-white/10 bg-white/[0.02] p-3 text-sm font-mono tabular-nums">
-                    {selected.tasks} active tasks · {selected.openIssues} open issues
+                  <h4 className="mb-2 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Tasks ({selectedTasks.length})</h4>
+                  <div className="space-y-2">
+                    {selectedTasks.map((t) => (
+                      <div key={t.id} className="flex items-center justify-between rounded-md border border-white/10 bg-white/[0.02] p-2.5 text-sm">
+                        <div className="min-w-0">
+                          <p className="truncate">{t.title}</p>
+                          <p className="text-xs text-muted-foreground">{t.project_title}</p>
+                        </div>
+                        <Badge variant="outline" className="ml-2 font-mono text-[10px]">{t.status}</Badge>
+                      </div>
+                    ))}
+                    {selectedTasks.length === 0 && <p className="text-xs text-muted-foreground">No tasks.</p>}
                   </div>
                 </div>
               </div>
