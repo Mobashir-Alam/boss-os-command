@@ -34,7 +34,7 @@ import {
   FolderKanban,
   UserPlus,
   Pencil,
-} from "lucide-react";
+  ArrowUpRight,
 
 /* ───────── Mock data ───────── */
 
