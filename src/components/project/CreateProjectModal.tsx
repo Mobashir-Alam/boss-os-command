@@ -328,46 +328,46 @@ export default function CreateProjectModal({ open, onOpenChange, onCreated, lock
               </div>
             )}
 
-            {/* Picker */}
+            {/* Picker — always visible list, search filters it */}
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
               <Input
                 value={memberQuery}
                 onChange={(e) => setMemberQuery(e.target.value)}
-                placeholder="Search people to add..."
+                placeholder="Filter by name or email..."
                 className="pl-9 h-9 text-sm"
               />
             </div>
-            {memberQuery && (
-              <div className="mt-1 max-h-[180px] overflow-y-auto rounded-lg border border-border/40 bg-card">
-                {memberOptions.length === 0 ? (
-                  <p className="text-xs text-muted-foreground italic p-3">No matches.</p>
-                ) : (
-                  memberOptions.slice(0, 20).map((p) => (
-                    <button
-                      key={p.id}
-                      type="button"
-                      onClick={() => addMember(p.id, p.full_name ?? p.email ?? "Unknown")}
-                      className="w-full text-left px-3 py-2 hover:bg-muted/40 flex items-center justify-between gap-3"
-                    >
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium truncate">{p.full_name ?? "—"}</p>
-                        {p.email && (
-                          <p className="text-[10px] text-muted-foreground truncate">{p.email}</p>
-                        )}
-                      </div>
-                      {p.role && (
-                        <Badge variant="outline" className="text-[10px] capitalize flex-shrink-0">
-                          {p.role.replace(/_/g, " ")}
-                        </Badge>
+            <div className="mt-1 max-h-[220px] overflow-y-auto rounded-lg border border-border/40 bg-card">
+              {memberOptions.length === 0 ? (
+                <p className="text-xs text-muted-foreground italic p-3">
+                  {memberQuery ? "No matches." : "Everyone has been added."}
+                </p>
+              ) : (
+                memberOptions.slice(0, 50).map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => addMember(p.id, p.full_name ?? p.email ?? "Unknown")}
+                    className="w-full text-left px-3 py-2 hover:bg-muted/40 border-b border-border/30 last:border-0 flex items-center justify-between gap-3"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium truncate">{p.full_name ?? "—"}</p>
+                      {p.email && (
+                        <p className="text-[10px] text-muted-foreground truncate">{p.email}</p>
                       )}
-                    </button>
-                  ))
-                )}
-              </div>
-            )}
-            <p className="text-[10px] text-muted-foreground mt-1">
-              Pick one lead and any number of members. Lead has full control over the project.
+                    </div>
+                    {p.role && (
+                      <Badge variant="outline" className="text-[10px] capitalize flex-shrink-0">
+                        {p.role.replace(/_/g, " ")}
+                      </Badge>
+                    )}
+                  </button>
+                ))
+              )}
+            </div>
+            <p className="text-[10px] text-muted-foreground mt-1.5">
+              Click anyone to add them. Pick one lead — they get full control over the project.
             </p>
           </div>
         </div>
