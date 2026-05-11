@@ -573,6 +573,9 @@ const TechTeamDashboard = () => {
             <TabsTrigger value="blockers" className="data-[state=active]:bg-white/10">
               <AlertTriangle className="h-3.5 w-3.5" /> Blockers & risks
             </TabsTrigger>
+            <TabsTrigger value="projects" className="data-[state=active]:bg-white/10">
+              <FolderKanban className="h-3.5 w-3.5" /> My Projects
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="pulse"><PrPulse /></TabsContent>
@@ -581,6 +584,60 @@ const TechTeamDashboard = () => {
           </TabsContent>
           <TabsContent value="blockers">
             <Blockers tasks={tasks} members={members} loading={loadingMembers || loadingTasks} />
+          </TabsContent>
+          <TabsContent value="projects">
+            {loadingLead ? (
+              <Skeleton className="h-32 w-full" />
+            ) : leadProjects.length === 0 ? (
+              <GlassCard className="p-8 text-center text-sm text-muted-foreground">
+                You're not a lead on any projects yet. Create one to get started.
+              </GlassCard>
+            ) : (
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                {leadProjects.map((p) => (
+                  <GlassCard key={p.id} className="p-5">
+                    <div className="mb-3 flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <h4 className="truncate text-sm font-semibold">{p.title}</h4>
+                        {p.description && (
+                          <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{p.description}</p>
+                        )}
+                      </div>
+                      <Badge variant="outline" className="font-mono text-[10px] uppercase tracking-wider">
+                        {p.status}
+                      </Badge>
+                    </div>
+                    <div className="mb-3">
+                      <div className="mb-1 flex justify-between text-[10px] uppercase tracking-wider text-muted-foreground">
+                        <span>Progress</span>
+                        <span className="font-mono tabular-nums">{p.overall_completion ?? 0}%</span>
+                      </div>
+                      <Progress value={p.overall_completion ?? 0} className="h-1.5" />
+                    </div>
+                    <div className="mb-4 flex items-center gap-2 text-xs text-muted-foreground">
+                      <Users className="h-3 w-3" />
+                      <span className="font-mono tabular-nums">{memberCounts[p.id] ?? 0}</span>
+                      <span>members</span>
+                      {p.deadline && (
+                        <>
+                          <span className="text-muted-foreground/50">·</span>
+                          <Clock className="h-3 w-3" />
+                          <span>{new Date(p.deadline).toLocaleDateString()}</span>
+                        </>
+                      )}
+                    </div>
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="outline" className="flex-1 gap-1.5" onClick={() => openAddMember(p)}>
+                        <UserPlus className="h-3 w-3" /> Add Member
+                      </Button>
+                      <Button size="sm" variant="outline" className="flex-1 gap-1.5" onClick={() => openEdit(p)}>
+                        <Pencil className="h-3 w-3" /> Edit Project
+                      </Button>
+                    </div>
+                  </GlassCard>
+                ))}
+              </div>
+            )}
           </TabsContent>
         </Tabs>
       </div>
