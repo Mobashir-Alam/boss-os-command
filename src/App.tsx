@@ -26,6 +26,7 @@ import PeopleOS from "./pages/PeopleOS.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import EmployeeDashboard from "./pages/EmployeeDashboard.tsx";
 import ProjectDetail from "./pages/ProjectDetail.tsx";
+import TechTeamDashboard from "./pages/TechTeamDashboard.tsx";
 
 const queryClient = new QueryClient({});
 
