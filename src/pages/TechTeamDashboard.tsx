@@ -396,7 +396,7 @@ const Blockers = ({
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => askKai(b)}
+                        onClick={(e) => { e.stopPropagation(); askKai(b); }}
                         disabled={loadingId === b.id}
                         className="shrink-0 border-primary/30 text-primary hover:bg-primary/10"
                       >
