@@ -36,6 +36,7 @@ import {
   UserPlus,
   Pencil,
   ArrowUpRight,
+  Bug as BugIcon,
 } from "lucide-react";
 
 /* ───────── Mock data ───────── */
