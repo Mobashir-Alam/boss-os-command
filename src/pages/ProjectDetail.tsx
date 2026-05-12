@@ -21,6 +21,8 @@ import { toast } from "sonner";
 import ProjectDiscussion from "@/components/project/ProjectDiscussion";
 import { EditProjectModal, AddMemberModal } from "@/components/project/LeadControls";
 import TaskFormModal from "@/components/project/TaskFormModal";
+import BugsView from "@/components/bugs/BugsView";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   ArrowLeft,
   Building2,
