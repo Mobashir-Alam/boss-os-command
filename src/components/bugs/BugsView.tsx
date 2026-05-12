@@ -172,11 +172,18 @@ export default function BugsView({ projectId }: Props) {
     return m;
   }, [projectRows]);
 
-  const isTechRole =
+  // Who can RAISE a bug (broader — anyone in tech)
+  const canReport =
     profile?.role === "founder" ||
     ((profile?.role === "functional_head" || profile?.role === "team_member") &&
       profile?.department === "tech");
-  const canReport = !!isTechRole;
+
+  // Who can edit ANY bug, regardless of ownership (narrower — CEO + Tech Lead only)
+  // Team members can still edit their OWN bugs (reporter or assignee) — that's
+  // handled inside the detail sheet's `editable` check.
+  const canEditAny =
+    profile?.role === "founder" ||
+    (profile?.role === "functional_head" && profile?.department === "tech");
 
   const toggle = <T,>(set: Set<T>, v: T): Set<T> => {
     const n = new Set(set);
@@ -331,7 +338,7 @@ export default function BugsView({ projectId }: Props) {
         onClose={() => setSelected(null)}
         members={members}
         nameById={nameById}
-        canManage={canReport}
+        canManage={canEditAny}
         userId={user?.id ?? null}
       />
 
