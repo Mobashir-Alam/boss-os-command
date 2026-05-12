@@ -121,6 +121,8 @@ export default function BugsView({ projectId }: Props) {
 
   const [typeFilter, setTypeFilter] = useState<Set<BugType>>(new Set());
   const [statusFilter, setStatusFilter] = useState<Set<BugStatus>>(new Set(["open", "in_progress"]));
+  // assigneeFilter: "all" | "mine" | "unassigned" | <profile_uuid>
+  const [assigneeFilter, setAssigneeFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Bug | null>(null);
   const [reportOpen, setReportOpen] = useState(false);
@@ -196,13 +198,20 @@ export default function BugsView({ projectId }: Props) {
     return bugs.filter((b) => {
       if (typeFilter.size && !typeFilter.has(b.type)) return false;
       if (statusFilter.size && !statusFilter.has(b.status)) return false;
+      if (assigneeFilter === "mine") {
+        if (b.assignee_profile !== user?.id) return false;
+      } else if (assigneeFilter === "unassigned") {
+        if (b.assignee_profile !== null) return false;
+      } else if (assigneeFilter !== "all") {
+        if (b.assignee_profile !== assigneeFilter) return false;
+      }
       if (q) {
         const hay = `${b.title} ${b.description ?? ""}`.toLowerCase();
         if (!hay.includes(q)) return false;
       }
       return true;
     });
-  }, [bugs, typeFilter, statusFilter, search]);
+  }, [bugs, typeFilter, statusFilter, assigneeFilter, search, user?.id]);
 
   return (
     <div className="space-y-4">
@@ -242,6 +251,20 @@ export default function BugsView({ projectId }: Props) {
             ))}
           </div>
           <div className="ml-auto flex items-center gap-2">
+            <Select value={assigneeFilter} onValueChange={setAssigneeFilter}>
+              <SelectTrigger className="h-8 w-44 text-xs">
+                <SelectValue placeholder="Assignee" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All assignees</SelectItem>
+                <SelectItem value="mine">Assigned to me</SelectItem>
+                <SelectItem value="unassigned">Unassigned</SelectItem>
+                {members.length > 0 && <div className="my-1 h-px bg-white/10" />}
+                {members.map((m) => (
+                  <SelectItem key={m.id} value={m.id}>{m.full_name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <div className="relative">
               <Search className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
               <Input
