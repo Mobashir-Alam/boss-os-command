@@ -39,6 +39,7 @@ import {
   Plus,
   ListTodo,
   AlertTriangle,
+  Bug as BugIcon,
 } from "lucide-react";
 
 /* ── helpers ─────────────────────────────────────────────── */
