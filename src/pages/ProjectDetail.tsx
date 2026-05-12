@@ -501,92 +501,109 @@ const ProjectDetail = () => {
           </CardContent>
         </Card>
 
-        {/* My Tasks */}
-        {user && (
-          <div className="mb-6">
-            <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">
-              My Tasks{myTasks.length > 0 && ` — ${myTasks.length}`}
-            </h2>
-            {tasksLoading ? (
-              <p className="text-xs text-muted-foreground italic">Loading tasks...</p>
-            ) : myTasks.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-border/40 bg-muted/10 p-6 text-center">
-                <p className="text-xs text-muted-foreground italic">No tasks assigned to you on this project yet.</p>
+        <Tabs defaultValue="overview" className="space-y-4">
+          <TabsList>
+            <TabsTrigger value="overview">
+              <ListTodo className="h-3.5 w-3.5" /> Overview
+            </TabsTrigger>
+            <TabsTrigger value="bugs">
+              <BugIcon className="h-3.5 w-3.5" /> Bugs
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="overview" className="space-y-6">
+            {/* My Tasks */}
+            {user && (
+              <div>
+                <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">
+                  My Tasks{myTasks.length > 0 && ` — ${myTasks.length}`}
+                </h2>
+                {tasksLoading ? (
+                  <p className="text-xs text-muted-foreground italic">Loading tasks...</p>
+                ) : myTasks.length === 0 ? (
+                  <div className="rounded-xl border border-dashed border-border/40 bg-muted/10 p-6 text-center">
+                    <p className="text-xs text-muted-foreground italic">No tasks assigned to you on this project yet.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {myTasks.map((task) => (
+                      <TaskRow
+                        key={task.id}
+                        task={task}
+                        canEdit={true}
+                        canManageAll={canManageAll}
+                        onEdit={() => openEditTask(task)}
+                        onDelete={() => handleDeleteTask(task)}
+                      />
+                    ))}
+                  </div>
+                )}
               </div>
-            ) : (
+            )}
+
+            {/* Team Tasks (grouped by member) */}
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                  Team Tasks{taskTotal > 0 && ` — ${taskTotal}`}
+                </h2>
+                <div className="flex items-center gap-2">
+                  {canManageAll && (
+                    <>
+                      <Button size="sm" variant="outline" onClick={() => setAddMemberOpen(true)} className="h-7 text-xs gap-1">
+                        <UserPlus className="h-3 w-3" />
+                        Add Member
+                      </Button>
+                      <Button size="sm" onClick={() => openCreateTask()} className="h-7 text-xs gap-1">
+                        <Plus className="h-3 w-3" />
+                        Add Task
+                      </Button>
+                    </>
+                  )}
+                </div>
+              </div>
+
               <div className="space-y-2">
-                {myTasks.map((task) => (
-                  <TaskRow
-                    key={task.id}
-                    task={task}
-                    canEdit={true}
+                {unassignedTasks.length > 0 && (
+                  <MemberGroup
+                    member={null}
+                    tasks={unassignedTasks}
+                    isMe={false}
                     canManageAll={canManageAll}
-                    onEdit={() => openEditTask(task)}
-                    onDelete={() => handleDeleteTask(task)}
+                    onEditTask={openEditTask}
+                    onDeleteTask={handleDeleteTask}
+                    initialExpanded={true}
                   />
-                ))}
+                )}
+                {sortedMembers.map((member) => {
+                  const memberTasks = tasksByAssignee.get(member.profile_id) ?? [];
+                  const isMe = member.profile_id === user?.id;
+                  return (
+                    <MemberGroup
+                      key={member.id}
+                      member={member}
+                      tasks={memberTasks}
+                      isMe={isMe}
+                      canManageAll={canManageAll}
+                      onAddTask={canManageAll ? () => openCreateTask(member.profile_id) : undefined}
+                      onEditTask={openEditTask}
+                      onDeleteTask={handleDeleteTask}
+                      onRemoveMember={canManageAll ? () => handleRemoveMember(member.id, member.profile_name ?? "Member") : undefined}
+                      initialExpanded={isMe}
+                    />
+                  );
+                })}
               </div>
-            )}
-          </div>
-        )}
-
-        {/* Team Tasks (grouped by member) */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-              Team Tasks{taskTotal > 0 && ` — ${taskTotal}`}
-            </h2>
-            <div className="flex items-center gap-2">
-              {canManageAll && (
-                <>
-                  <Button size="sm" variant="outline" onClick={() => setAddMemberOpen(true)} className="h-7 text-xs gap-1">
-                    <UserPlus className="h-3 w-3" />
-                    Add Member
-                  </Button>
-                  <Button size="sm" onClick={() => openCreateTask()} className="h-7 text-xs gap-1">
-                    <Plus className="h-3 w-3" />
-                    Add Task
-                  </Button>
-                </>
-              )}
             </div>
-          </div>
 
-          <div className="space-y-2">
-            {unassignedTasks.length > 0 && (
-              <MemberGroup
-                member={null}
-                tasks={unassignedTasks}
-                isMe={false}
-                canManageAll={canManageAll}
-                onEditTask={openEditTask}
-                onDeleteTask={handleDeleteTask}
-                initialExpanded={true}
-              />
-            )}
-            {sortedMembers.map((member) => {
-              const memberTasks = tasksByAssignee.get(member.profile_id) ?? [];
-              const isMe = member.profile_id === user?.id;
-              return (
-                <MemberGroup
-                  key={member.id}
-                  member={member}
-                  tasks={memberTasks}
-                  isMe={isMe}
-                  canManageAll={canManageAll}
-                  onAddTask={canManageAll ? () => openCreateTask(member.profile_id) : undefined}
-                  onEditTask={openEditTask}
-                  onDeleteTask={handleDeleteTask}
-                  onRemoveMember={canManageAll ? () => handleRemoveMember(member.id, member.profile_name ?? "Member") : undefined}
-                  initialExpanded={isMe}
-                />
-              );
-            })}
-          </div>
-        </div>
+            {/* Discussion */}
+            {id && <ProjectDiscussion projectId={id} />}
+          </TabsContent>
 
-        {/* Discussion */}
-        {id && <ProjectDiscussion projectId={id} />}
+          <TabsContent value="bugs">
+            <BugsView projectId={id} />
+          </TabsContent>
+        </Tabs>
 
       </main>
 
