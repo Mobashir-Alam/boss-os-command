@@ -34,10 +34,10 @@ BEGIN
     RETURN;
   END IF;
 
-  -- Pull the 4 project members. Lead first, then others by joined_at.
+  -- Pull the 4 project members. Lead first, then others by assigned_at.
   SELECT array_agg(profile_id ORDER BY
     CASE WHEN role = 'lead' THEN 0 ELSE 1 END,
-    joined_at ASC
+    assigned_at ASC
   ) INTO members
   FROM public.project_members
   WHERE project_id = proj_id;
