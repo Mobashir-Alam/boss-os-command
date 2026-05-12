@@ -55,6 +55,59 @@ export type Database = {
           },
         ]
       }
+      bugs: {
+        Row: {
+          area: string
+          assignee_profile: string | null
+          created_at: string
+          description: string
+          id: string
+          project_id: string | null
+          reporter_profile: string | null
+          solved_at: string | null
+          status: string
+          title: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          area?: string
+          assignee_profile?: string | null
+          created_at?: string
+          description: string
+          id?: string
+          project_id?: string | null
+          reporter_profile?: string | null
+          solved_at?: string | null
+          status?: string
+          title: string
+          type?: string
+          updated_at?: string
+        }
+        Update: {
+          area?: string
+          assignee_profile?: string | null
+          created_at?: string
+          description?: string
+          id?: string
+          project_id?: string | null
+          reporter_profile?: string | null
+          solved_at?: string | null
+          status?: string
+          title?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bugs_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       burn_categories: {
         Row: {
           category_name: string
@@ -2155,6 +2208,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_manage_bugs: { Args: never; Returns: boolean }
       delete_email: {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
