@@ -17,6 +17,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTechMembers, useTechTasks, type TechMember, type TechTask } from "@/hooks/useTechTeam";
 import { AssignTaskModal } from "@/components/tech/AssignTaskModal";
+import BugsView from "@/components/bugs/BugsView";
 import CreateProjectModal from "@/components/project/CreateProjectModal";
 import { AddMemberModal, EditProjectModal } from "@/components/project/LeadControls";
 import type { Project } from "@/hooks/useEmployeeProjects";
