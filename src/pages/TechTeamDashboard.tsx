@@ -17,6 +17,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTechMembers, useTechTasks, type TechMember, type TechTask } from "@/hooks/useTechTeam";
 import { AssignTaskModal } from "@/components/tech/AssignTaskModal";
+import BugsView from "@/components/bugs/BugsView";
 import CreateProjectModal from "@/components/project/CreateProjectModal";
 import { AddMemberModal, EditProjectModal } from "@/components/project/LeadControls";
 import type { Project } from "@/hooks/useEmployeeProjects";
@@ -35,6 +36,7 @@ import {
   UserPlus,
   Pencil,
   ArrowUpRight,
+  Bug as BugIcon,
 } from "lucide-react";
 
 /* ───────── Mock data ───────── */
@@ -585,6 +587,9 @@ const TechTeamDashboard = () => {
             <TabsTrigger value="projects" className="data-[state=active]:bg-white/10">
               <FolderKanban className="h-3.5 w-3.5" /> My Projects
             </TabsTrigger>
+            <TabsTrigger value="bugs" className="data-[state=active]:bg-white/10">
+              <BugIcon className="h-3.5 w-3.5" /> Bugs
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="pulse"><PrPulse /></TabsContent>
@@ -654,6 +659,9 @@ const TechTeamDashboard = () => {
                 ))}
               </div>
             )}
+          </TabsContent>
+          <TabsContent value="bugs">
+            <BugsView />
           </TabsContent>
         </Tabs>
       </div>
