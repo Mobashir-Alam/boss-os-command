@@ -660,6 +660,9 @@ const TechTeamDashboard = () => {
               </div>
             )}
           </TabsContent>
+          <TabsContent value="bugs">
+            <BugsView />
+          </TabsContent>
         </Tabs>
       </div>
 
