@@ -587,6 +587,9 @@ const TechTeamDashboard = () => {
             <TabsTrigger value="projects" className="data-[state=active]:bg-white/10">
               <FolderKanban className="h-3.5 w-3.5" /> My Projects
             </TabsTrigger>
+            <TabsTrigger value="bugs" className="data-[state=active]:bg-white/10">
+              <BugIcon className="h-3.5 w-3.5" /> Bugs
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="pulse"><PrPulse /></TabsContent>
