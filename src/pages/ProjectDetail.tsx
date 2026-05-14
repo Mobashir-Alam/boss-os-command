@@ -45,6 +45,7 @@ import {
   Bug as BugIcon,
   Link as LinkIcon,
   FileText,
+  Activity as ActivityIcon,
 } from "lucide-react";
 
 /* ── helpers ─────────────────────────────────────────────── */
