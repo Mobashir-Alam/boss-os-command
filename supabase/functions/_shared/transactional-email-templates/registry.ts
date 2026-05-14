@@ -10,7 +10,9 @@ export interface TemplateEntry {
 }
 
 import { template as teamInvite } from './team-invite.tsx'
+import { template as mfaCode } from './mfa-code.tsx'
 
 export const TEMPLATES: Record<string, TemplateEntry> = {
   'team-invite': teamInvite,
+  'mfa-code': mfaCode,
 }

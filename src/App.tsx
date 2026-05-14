@@ -30,6 +30,7 @@ import TechTeamDashboard from "./pages/TechTeamDashboard.tsx";
 import TechDashboard from "./pages/TechDashboard.tsx";
 import ProfilePage from "./pages/ProfilePage.tsx";
 import InboxPage from "./pages/Inbox.tsx";
+import Verify2FA from "./pages/Verify2FA.tsx";
 import CommandPalette from "./components/CommandPalette";
 
 const queryClient = new QueryClient({});
@@ -47,6 +48,7 @@ const App = () => (
             <Routes>
               <Route path="/login" element={<Login />} />
               <Route path="/onboarding" element={<Onboarding />} />
+              <Route path="/verify" element={<AuthGuard><Verify2FA /></AuthGuard>} />
               <Route path="/" element={<AuthGuard><FounderCommandCenter /></AuthGuard>} />
               <Route path="/portfolio" element={<AuthGuard><Index /></AuthGuard>} />
               <Route path="/focus" element={<AuthGuard><Focus /></AuthGuard>} />

@@ -92,6 +92,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const signOut = async () => {
+    // Clear the per-session 2FA flag so the next person to sign in on this
+    // browser is forced to verify again.
+    sessionStorage.removeItem("mfa_verified");
     await supabase.auth.signOut();
     setProfile(null);
   };

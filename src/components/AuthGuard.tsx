@@ -24,6 +24,17 @@ const AuthGuard = ({ children }: { children: React.ReactNode }) => {
     return <Navigate to="/onboarding" replace />;
   }
 
+  // 2FA gate: if mfa_required is on for this profile and they haven't
+  // verified in this browser session, route them to /verify.
+  const mfaVerifiedThisSession = sessionStorage.getItem("mfa_verified") === "true";
+  if (
+    (profile as any)?.mfa_required &&
+    !mfaVerifiedThisSession &&
+    location.pathname !== "/verify"
+  ) {
+    return <Navigate to="/verify" state={{ from: location }} replace />;
+  }
+
   // Tech functional heads (department leads) get the Tech Team dashboard as
   // their home — not the generic /my-domain or /employee view.
   const isTechLead = profile?.role === "functional_head" && profile?.department === "tech";
