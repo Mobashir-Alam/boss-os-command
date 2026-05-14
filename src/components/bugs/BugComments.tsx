@@ -2,10 +2,13 @@ import { useState } from "react";
 import { useBugComments, useCreateBugComment, useDeleteBugComment } from "@/hooks/useBugComments";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Loader2, MessageSquare, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
+import MentionTextarea from "@/components/mentions/MentionTextarea";
+import MentionedText from "@/components/mentions/MentionedText";
+import { useMentionableProfiles, resolveMentions } from "@/hooks/useMentionableProfiles";
+import { insertMentionNotifications } from "@/hooks/useNotifications";
 
 interface Props {
   bugId: string;
@@ -35,15 +38,34 @@ export default function BugComments({ bugId }: Props) {
   const { data: comments = [], isLoading } = useBugComments(bugId);
   const createComment = useCreateBugComment();
   const deleteComment = useDeleteBugComment();
+  const { data: mentionableProfiles = [] } = useMentionableProfiles();
   const [draft, setDraft] = useState("");
 
   const handleSend = () => {
     const body = draft.trim();
-    if (!body) return;
+    if (!body || !user?.id) return;
     createComment.mutate(
       { bugId, body },
       {
-        onSuccess: () => setDraft(""),
+        onSuccess: async () => {
+          setDraft("");
+          // Fire-and-forget mention notifications
+          const mentioned = resolveMentions(body, mentionableProfiles);
+          if (mentioned.length > 0) {
+            const preview = body.length > 100 ? body.slice(0, 100) + "…" : body;
+            try {
+              await insertMentionNotifications({
+                mentionedProfileIds: mentioned,
+                actorProfileId: user.id,
+                message: `mentioned you in a bug comment: "${preview}"`,
+                link: null,
+                bugId,
+              });
+            } catch {
+              // Notification failure shouldn't block the comment from posting.
+            }
+          }
+        },
         onError: (e: any) => toast.error(e?.message ?? "Couldn't post"),
       }
     );
@@ -94,6 +116,7 @@ export default function BugComments({ bugId }: Props) {
                       </span>
                       {isMine && (
                         <button
+                          type="button"
                           onClick={() => handleDelete(c.id)}
                           className="rounded p-0.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                           aria-label="Delete comment"
@@ -103,7 +126,7 @@ export default function BugComments({ bugId }: Props) {
                       )}
                     </div>
                   </div>
-                  <p className="whitespace-pre-wrap text-sm leading-snug">{c.body}</p>
+                  <MentionedText text={c.body} className="whitespace-pre-wrap text-sm leading-snug" />
                 </div>
               </div>
             );
@@ -112,10 +135,10 @@ export default function BugComments({ bugId }: Props) {
       )}
 
       <div className="space-y-1.5 pt-2">
-        <Textarea
+        <MentionTextarea
           value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          placeholder="Write a comment… (Cmd/Ctrl+Enter to send)"
+          onChange={setDraft}
+          placeholder="Write a comment… type @ to mention someone (Cmd/Ctrl+Enter to send)"
           className="min-h-[60px] text-sm"
           onKeyDown={(e) => {
             if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
@@ -125,7 +148,7 @@ export default function BugComments({ bugId }: Props) {
           }}
         />
         <div className="flex items-center justify-end">
-          <Button size="sm" onClick={handleSend} disabled={!draft.trim() || createComment.isPending} className="gap-1.5">
+          <Button type="button" size="sm" onClick={handleSend} disabled={!draft.trim() || createComment.isPending} className="gap-1.5">
             {createComment.isPending && <Loader2 className="h-3 w-3 animate-spin" />}
             Send
           </Button>

@@ -29,6 +29,7 @@ import ProjectDetail from "./pages/ProjectDetail.tsx";
 import TechTeamDashboard from "./pages/TechTeamDashboard.tsx";
 import TechDashboard from "./pages/TechDashboard.tsx";
 import ProfilePage from "./pages/ProfilePage.tsx";
+import InboxPage from "./pages/Inbox.tsx";
 import CommandPalette from "./components/CommandPalette";
 
 const queryClient = new QueryClient({});
@@ -64,6 +65,7 @@ const App = () => (
               <Route path="/team/tech" element={<AuthGuard><TechTeamDashboard /></AuthGuard>} />
               <Route path="/department/tech" element={<AuthGuard><TechDashboard /></AuthGuard>} />
               <Route path="/profile/:id" element={<AuthGuard><ProfilePage /></AuthGuard>} />
+              <Route path="/inbox" element={<AuthGuard><InboxPage /></AuthGuard>} />
               <Route path="/unsubscribe" element={<Unsubscribe />} />
               <Route path="*" element={<NotFound />} />
             </Routes>

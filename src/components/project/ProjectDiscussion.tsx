@@ -9,10 +9,13 @@ import {
   type ProjectMessage,
 } from "@/hooks/useEmployeeProjects";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { MessageCircle, Send, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import MentionTextarea from "@/components/mentions/MentionTextarea";
+import MentionedText from "@/components/mentions/MentionedText";
+import { useMentionableProfiles, resolveMentions } from "@/hooks/useMentionableProfiles";
+import { insertMentionNotifications } from "@/hooks/useNotifications";
 
 function relativeTime(iso: string): string {
   const then = new Date(iso).getTime();
@@ -94,13 +97,32 @@ export default function ProjectDiscussion({ projectId }: { projectId: string }) 
 
   const visible = messages.filter((m) => !m.deleted_at);
 
+  const { data: mentionableProfiles = [] } = useMentionableProfiles();
+
   const handleSend = () => {
     const body = draft.trim();
-    if (!body || sendMessage.isPending) return;
+    if (!body || sendMessage.isPending || !user?.id) return;
     sendMessage.mutate(
       { projectId, body },
       {
-        onSuccess: () => setDraft(""),
+        onSuccess: async () => {
+          setDraft("");
+          const mentioned = resolveMentions(body, mentionableProfiles);
+          if (mentioned.length > 0) {
+            const preview = body.length > 100 ? body.slice(0, 100) + "…" : body;
+            try {
+              await insertMentionNotifications({
+                mentionedProfileIds: mentioned,
+                actorProfileId: user.id,
+                message: `mentioned you in project chat: "${preview}"`,
+                link: null,
+                projectId,
+              });
+            } catch {
+              /* swallow — chat send already succeeded */
+            }
+          }
+        },
         onError: (e: any) => toast.error(e.message ?? "Failed to send"),
       }
     );
@@ -176,9 +198,10 @@ export default function ProjectDiscussion({ projectId }: { projectId: string }) 
                         </button>
                       )}
                     </div>
-                    <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">
-                      {msg.body}
-                    </p>
+                    <MentionedText
+                      text={msg.body}
+                      className="text-sm leading-relaxed whitespace-pre-wrap break-words"
+                    />
                   </div>
                 </div>
               );
@@ -188,11 +211,11 @@ export default function ProjectDiscussion({ projectId }: { projectId: string }) 
 
         {/* Composer */}
         <div className="border-t border-border/40 bg-muted/10 p-3">
-          <Textarea
+          <MentionTextarea
             value={draft}
-            onChange={(e) => setDraft(e.target.value)}
+            onChange={setDraft}
             onKeyDown={handleKeyDown}
-            placeholder="Write a message... (Cmd/Ctrl + Enter to send)"
+            placeholder="Write a message... type @ to mention (Cmd/Ctrl + Enter to send)"
             className="min-h-[60px] text-sm resize-none border-border/50 bg-background"
             disabled={!user || sendMessage.isPending}
           />
