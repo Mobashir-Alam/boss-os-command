@@ -50,15 +50,25 @@ Deno.serve(async (req) => {
       });
     }
     const user = userData.user;
-    if (!user.email) {
+
+    // Service-role client for DB writes that bypass RLS
+    const admin = createClient(supabaseUrl, serviceRole);
+
+    // Decide where to send: prefer profiles.notification_email (so a test
+    // login like founder@test.com can route OTPs to a real inbox), fall
+    // back to auth.users.email otherwise.
+    const { data: profileRow } = await admin
+      .from("profiles")
+      .select("notification_email")
+      .eq("id", user.id)
+      .maybeSingle();
+    const recipientEmail = (profileRow?.notification_email || user.email || "").trim();
+    if (!recipientEmail) {
       return new Response(JSON.stringify({ error: "User has no email" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-
-    // Service-role client for DB writes that bypass RLS
-    const admin = createClient(supabaseUrl, serviceRole);
 
     // Rate-limit: at most 1 code request per 30 seconds
     const { data: recent } = await admin
@@ -96,7 +106,7 @@ Deno.serve(async (req) => {
       },
       body: JSON.stringify({
         templateName: "mfa-code",
-        recipientEmail: user.email,
+        recipientEmail,
         idempotencyKey: `mfa-${user.id}-${Date.now()}`,
         templateData: { code, expiresInMinutes: 10 },
       }),

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Loader2, ShieldCheck, Mail, RotateCw } from "lucide-react";
@@ -14,6 +15,21 @@ export default function Verify2FA() {
   const navigate = useNavigate();
   const location = useLocation();
   const from = (location.state as any)?.from?.pathname || "/";
+
+  // Show the real OTP destination (notification_email if set, else login email).
+  const { data: routedEmail } = useQuery({
+    queryKey: ["verify-email-destination", user?.id],
+    enabled: !!user?.id,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("notification_email")
+        .eq("id", user!.id)
+        .maybeSingle();
+      return (data as any)?.notification_email || user?.email || "";
+    },
+  });
+  const displayEmail = routedEmail || user?.email;
 
   const [digits, setDigits] = useState<string[]>(["", "", "", "", "", ""]);
   const [sending, setSending] = useState(false);
@@ -42,7 +58,7 @@ export default function Verify2FA() {
     try {
       const { error } = await supabase.functions.invoke("send-mfa-code");
       if (error) throw error;
-      toast.success(`Code sent to ${user?.email ?? "your email"}`);
+      toast.success(`Code sent to ${displayEmail ?? "your email"}`);
       setResendIn(30);
       // Focus first box
       setTimeout(() => inputs.current[0]?.focus(), 100);
@@ -111,7 +127,7 @@ export default function Verify2FA() {
               <h1 className="text-xl font-bold">Two-step verification</h1>
               <p className="text-sm text-muted-foreground mt-1">
                 We sent a 6-digit code to{" "}
-                <span className="font-medium text-foreground">{user?.email}</span>
+                <span className="font-medium text-foreground">{displayEmail}</span>
               </p>
             </div>
           </div>
