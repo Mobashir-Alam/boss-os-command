@@ -133,10 +133,15 @@ function useProfileData(profileId: string | undefined) {
 export default function ProfilePage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, profile: viewerProfile } = useAuth();
   const { data, isLoading } = useProfileData(id);
 
   const isMe = user?.id === id;
+  // Only founder + tech functional_head can navigate to /team/tech.
+  // For everyone else, we'll render the bug stats as plain (non-clickable) cards.
+  const viewerCanOpenTechBugs =
+    viewerProfile?.role === "founder" ||
+    (viewerProfile?.role === "functional_head" && viewerProfile?.department === "tech");
 
   const tasksByProject = useMemo(() => {
     const m = new Map<string, typeof data extends { openTasks: infer T } ? T : never>();
@@ -289,29 +294,35 @@ export default function ProfilePage() {
           ))}
         </div>
 
-        {/* Bugs */}
+        {/* Bugs — clickable only when the viewer can actually access /team/tech */}
         <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">Bugs</h2>
         <div className="grid grid-cols-2 gap-3">
-          <Link to="/team/tech?tab=bugs">
-            <Card className="border-border/40 hover:border-border transition-colors">
-              <CardContent className="p-4">
-                <p className="text-[10px] uppercase text-muted-foreground tracking-widest">Raised</p>
-                <p className="text-2xl font-bold tabular-nums mt-1">{bugsRaised}</p>
-              </CardContent>
-            </Card>
-          </Link>
-          <Link to="/team/tech?tab=bugs">
-            <Card className="border-border/40 hover:border-border transition-colors">
-              <CardContent className="p-4">
-                <p className="text-[10px] uppercase text-muted-foreground tracking-widest">Assigned · open</p>
-                <p className="text-2xl font-bold tabular-nums mt-1">{bugsAssigned}</p>
-              </CardContent>
-            </Card>
-          </Link>
+          <BugStatCard
+            label="Raised"
+            value={bugsRaised}
+            link={viewerCanOpenTechBugs ? "/team/tech?tab=bugs" : null}
+          />
+          <BugStatCard
+            label="Assigned · open"
+            value={bugsAssigned}
+            link={viewerCanOpenTechBugs ? "/team/tech?tab=bugs" : null}
+          />
         </div>
       </main>
     </div>
   );
+}
+
+function BugStatCard({ label, value, link }: { label: string; value: number; link: string | null }) {
+  const card = (
+    <Card className={cn("border-border/40", link && "hover:border-border transition-colors")}>
+      <CardContent className="p-4">
+        <p className="text-[10px] uppercase text-muted-foreground tracking-widest">{label}</p>
+        <p className="text-2xl font-bold tabular-nums mt-1">{value}</p>
+      </CardContent>
+    </Card>
+  );
+  return link ? <Link to={link}>{card}</Link> : card;
 }
 
 function ShipStat({

@@ -7,6 +7,7 @@ import { TaskProvider } from "@/contexts/TaskContext";
 import { EscalationProvider } from "@/contexts/EscalationContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 import AuthGuard from "@/components/AuthGuard";
+import TechLeadGuard from "@/components/TechLeadGuard";
 import Index from "./pages/Index.tsx";
 import FounderCommandCenter from "./pages/FounderCommandCenter.tsx";
 import Focus from "./pages/Focus.tsx";
@@ -64,8 +65,14 @@ const App = () => (
               <Route path="/people" element={<AuthGuard><PeopleOS /></AuthGuard>} />
               <Route path="/employee" element={<AuthGuard><EmployeeDashboard /></AuthGuard>} />
               <Route path="/project/:id" element={<AuthGuard><ProjectDetail /></AuthGuard>} />
-              <Route path="/team/tech" element={<AuthGuard><TechTeamDashboard /></AuthGuard>} />
-              <Route path="/department/tech" element={<AuthGuard><TechDashboard /></AuthGuard>} />
+              <Route
+                path="/team/tech"
+                element={<AuthGuard><TechLeadGuard><TechTeamDashboard /></TechLeadGuard></AuthGuard>}
+              />
+              <Route
+                path="/department/tech"
+                element={<AuthGuard><TechLeadGuard><TechDashboard /></TechLeadGuard></AuthGuard>}
+              />
               <Route path="/profile/:id" element={<AuthGuard><ProfilePage /></AuthGuard>} />
               <Route path="/inbox" element={<AuthGuard><InboxPage /></AuthGuard>} />
               <Route path="/unsubscribe" element={<Unsubscribe />} />
