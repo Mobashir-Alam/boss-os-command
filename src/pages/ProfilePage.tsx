@@ -24,6 +24,10 @@ function startOfMonthISO(): string {
   return new Date(d.getFullYear(), d.getMonth(), 1).toISOString();
 }
 
+function last7DaysISO(): string {
+  return new Date(Date.now() - 7 * 864e5).toISOString();
+}
+
 function useProfileData(profileId: string | undefined) {
   return useQuery({
     queryKey: ["profile-page", profileId],
@@ -32,21 +36,30 @@ function useProfileData(profileId: string | undefined) {
     queryFn: async () => {
       const pid = profileId!;
       const monthStart = startOfMonthISO();
+      const weekStart = last7DaysISO();
 
-      const [profileRes, memberRes, tasksDoneRes, bugsSolvedRes, openTasksRes, bugsRaisedRes, bugsAssignedRes] =
-        await Promise.all([
-          supabase.from("profiles").select("*").eq("id", pid).single(),
-          supabase.from("project_members").select("project_id,role").eq("profile_id", pid),
-          supabase.from("project_tasks").select("id", { count: "exact", head: true })
-            .eq("assignee_profile", pid).eq("status", "done").gte("updated_at", monthStart),
-          supabase.from("bugs").select("id", { count: "exact", head: true })
-            .eq("assignee_profile", pid).eq("status", "solved").gte("solved_at", monthStart),
-          supabase.from("project_tasks").select("id,title,status,project_id,deadline")
-            .eq("assignee_profile", pid).neq("status", "done"),
-          supabase.from("bugs").select("id", { count: "exact", head: true }).eq("reporter_profile", pid),
-          supabase.from("bugs").select("id", { count: "exact", head: true })
-            .eq("assignee_profile", pid).neq("status", "solved"),
-        ]);
+      const [
+        profileRes, memberRes,
+        tasksDoneMonthRes, bugsSolvedMonthRes,
+        tasksDoneWeekRes, bugsSolvedWeekRes,
+        openTasksRes, bugsRaisedRes, bugsAssignedRes,
+      ] = await Promise.all([
+        supabase.from("profiles").select("*").eq("id", pid).single(),
+        supabase.from("project_members").select("project_id,role").eq("profile_id", pid),
+        supabase.from("project_tasks").select("id", { count: "exact", head: true })
+          .eq("assignee_profile", pid).eq("status", "done").gte("updated_at", monthStart),
+        supabase.from("bugs").select("id", { count: "exact", head: true })
+          .eq("assignee_profile", pid).eq("status", "solved").gte("solved_at", monthStart),
+        supabase.from("project_tasks").select("id", { count: "exact", head: true })
+          .eq("assignee_profile", pid).eq("status", "done").gte("updated_at", weekStart),
+        supabase.from("bugs").select("id", { count: "exact", head: true })
+          .eq("assignee_profile", pid).eq("status", "solved").gte("solved_at", weekStart),
+        supabase.from("project_tasks").select("id,title,status,project_id,deadline")
+          .eq("assignee_profile", pid).neq("status", "done"),
+        supabase.from("bugs").select("id", { count: "exact", head: true }).eq("reporter_profile", pid),
+        supabase.from("bugs").select("id", { count: "exact", head: true })
+          .eq("assignee_profile", pid).neq("status", "solved"),
+      ]);
 
       const profile = profileRes.data as ProfileRow | null;
       const memberRows = (memberRes.data ?? []) as Array<{ project_id: string; role: string }>;
@@ -62,17 +75,30 @@ function useProfileData(profileId: string | undefined) {
         }));
       }
 
-      // Rough PR-merged-this-month via connector_data_github author_login match.
-      let prsMerged = 0;
+      // Rough PR-merged via connector_data_github author_login match.
+      // Two windows in parallel.
+      let prsMergedMonth = 0;
+      let prsMergedWeek = 0;
       if (profile?.full_name) {
-        const { count } = await supabase
-          .from("connector_data_github")
-          .select("id", { count: "exact", head: true })
-          .eq("record_type", "pull_request")
-          .eq("state", "merged")
-          .ilike("author_login", `%${profile.full_name.split(" ")[0]}%`)
-          .gte("merged_at_source", monthStart);
-        prsMerged = count ?? 0;
+        const handle = `%${profile.full_name.split(" ")[0]}%`;
+        const [monthCount, weekCount] = await Promise.all([
+          supabase
+            .from("connector_data_github")
+            .select("id", { count: "exact", head: true })
+            .eq("record_type", "pull_request")
+            .eq("state", "merged")
+            .ilike("author_login", handle)
+            .gte("merged_at_source", monthStart),
+          supabase
+            .from("connector_data_github")
+            .select("id", { count: "exact", head: true })
+            .eq("record_type", "pull_request")
+            .eq("state", "merged")
+            .ilike("author_login", handle)
+            .gte("merged_at_source", weekStart),
+        ]);
+        prsMergedMonth = monthCount.count ?? 0;
+        prsMergedWeek = weekCount.count ?? 0;
       }
 
       // Build project title map for open tasks
@@ -89,9 +115,12 @@ function useProfileData(profileId: string | undefined) {
       return {
         profile,
         projects,
-        tasksDoneThisMonth: tasksDoneRes.count ?? 0,
-        bugsSolvedThisMonth: bugsSolvedRes.count ?? 0,
-        prsMergedThisMonth: prsMerged,
+        tasksDoneThisMonth: tasksDoneMonthRes.count ?? 0,
+        bugsSolvedThisMonth: bugsSolvedMonthRes.count ?? 0,
+        prsMergedThisMonth: prsMergedMonth,
+        tasksDoneThisWeek: tasksDoneWeekRes.count ?? 0,
+        bugsSolvedThisWeek: bugsSolvedWeekRes.count ?? 0,
+        prsMergedThisWeek: prsMergedWeek,
         openTasks,
         taskProjectMap,
         bugsRaised: bugsRaisedRes.count ?? 0,
@@ -132,7 +161,12 @@ export default function ProfilePage() {
     );
   }
 
-  const { profile, projects, tasksDoneThisMonth, bugsSolvedThisMonth, prsMergedThisMonth, bugsRaised, bugsAssigned, taskProjectMap } = data;
+  const {
+    profile, projects,
+    tasksDoneThisMonth, bugsSolvedThisMonth, prsMergedThisMonth,
+    tasksDoneThisWeek, bugsSolvedThisWeek, prsMergedThisWeek,
+    bugsRaised, bugsAssigned, taskProjectMap,
+  } = data;
 
   if (!profile) {
     return (
@@ -196,12 +230,12 @@ export default function ProfilePage() {
           )}
         </div>
 
-        {/* What I shipped */}
-        <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">What I shipped this month</h2>
+        {/* What I shipped — month headline + week underline per stat */}
+        <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">What I shipped</h2>
         <div className="grid grid-cols-3 gap-3 mb-8">
-          <ShipStat icon={ListTodo} label="Tasks done" value={tasksDoneThisMonth} color="text-blue-600" />
-          <ShipStat icon={Bug}     label="Bugs solved" value={bugsSolvedThisMonth} color="text-emerald-600" />
-          <ShipStat icon={GitPullRequest} label="PRs merged" value={prsMergedThisMonth} color="text-purple-600" />
+          <ShipStat icon={ListTodo}       label="Tasks done"  monthValue={tasksDoneThisMonth}  weekValue={tasksDoneThisWeek}  color="text-blue-600" />
+          <ShipStat icon={Bug}            label="Bugs solved" monthValue={bugsSolvedThisMonth} weekValue={bugsSolvedThisWeek} color="text-emerald-600" />
+          <ShipStat icon={GitPullRequest} label="PRs merged"  monthValue={prsMergedThisMonth}  weekValue={prsMergedThisWeek}  color="text-purple-600" />
         </div>
 
         {/* Currently working on */}
@@ -280,7 +314,19 @@ export default function ProfilePage() {
   );
 }
 
-function ShipStat({ icon: Icon, label, value, color }: { icon: any; label: string; value: number; color: string }) {
+function ShipStat({
+  icon: Icon,
+  label,
+  monthValue,
+  weekValue,
+  color,
+}: {
+  icon: any;
+  label: string;
+  monthValue: number;
+  weekValue: number;
+  color: string;
+}) {
   return (
     <Card className="border-border/40">
       <CardContent className="p-4">
@@ -288,7 +334,12 @@ function ShipStat({ icon: Icon, label, value, color }: { icon: any; label: strin
           <Icon className={cn("h-4 w-4", color)} />
           <p className="text-[10px] uppercase tracking-widest text-muted-foreground">{label}</p>
         </div>
-        <p className="text-2xl font-bold tabular-nums mt-1">{value}</p>
+        <p className="text-2xl font-bold tabular-nums mt-1">{monthValue}</p>
+        <p className="text-[10px] text-muted-foreground">this month</p>
+        <div className="mt-2 pt-2 border-t border-border/30 flex items-baseline gap-1.5">
+          <span className="text-sm font-semibold tabular-nums">{weekValue}</span>
+          <span className="text-[10px] text-muted-foreground">in last 7 days</span>
+        </div>
       </CardContent>
     </Card>
   );

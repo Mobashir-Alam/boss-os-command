@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -24,7 +25,8 @@ const roleLabels: Record<string, string> = {
 
 const Navbar = () => {
   const [manageOpen, setManageOpen] = useState(false);
-  const { profile, signOut } = useAuth();
+  const { user, profile, signOut } = useAuth();
+  const navigate = useNavigate();
   const initials = profile?.full_name
     ? profile.full_name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
     : profile?.email?.slice(0, 2).toUpperCase() || "??";
@@ -81,9 +83,13 @@ const Navbar = () => {
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuItem className="gap-2">
+              <DropdownMenuItem
+                className="gap-2"
+                onClick={() => user?.id && navigate(`/profile/${user.id}`)}
+                disabled={!user?.id}
+              >
                 <User className="h-3.5 w-3.5" />
-                Profile
+                View Profile
               </DropdownMenuItem>
               {(profile?.role === "founder" || profile?.role === "mfo") && (
                 <DropdownMenuItem className="gap-2" onClick={() => setManageOpen(true)}>
