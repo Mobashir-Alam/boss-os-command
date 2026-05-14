@@ -286,6 +286,8 @@ function MemberGroup({
 const ProjectDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = searchParams.get("tab") ?? "overview";
   const { user, isFounder } = useAuth();
   const { data: project, isLoading } = useProjectDetail(id);
   const { data: tasks = [], isLoading: tasksLoading } = useProjectTasks(id);
