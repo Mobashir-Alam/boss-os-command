@@ -210,7 +210,15 @@ function MemberGroup({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <p className="text-sm font-semibold">
-              {name}
+              {member ? (
+                <Link
+                  to={`/profile/${member.profile_id}`}
+                  onClick={(e) => e.stopPropagation()}
+                  className="hover:underline"
+                >
+                  {name}
+                </Link>
+              ) : name}
               {isMe && <span className="text-[10px] text-primary ml-1">(you)</span>}
             </p>
             {member?.role === "lead" && (
