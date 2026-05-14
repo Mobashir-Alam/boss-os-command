@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams, Link } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -19,6 +19,7 @@ import {
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import ProjectDiscussion from "@/components/project/ProjectDiscussion";
+import ProjectActivity from "@/components/project/ProjectActivity";
 import { EditProjectModal, AddMemberModal } from "@/components/project/LeadControls";
 import TaskFormModal from "@/components/project/TaskFormModal";
 import BugsView from "@/components/bugs/BugsView";
@@ -44,6 +45,7 @@ import {
   Bug as BugIcon,
   Link as LinkIcon,
   FileText,
+  Activity as ActivityIcon,
 } from "lucide-react";
 
 /* ── helpers ─────────────────────────────────────────────── */
@@ -208,7 +210,15 @@ function MemberGroup({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <p className="text-sm font-semibold">
-              {name}
+              {member ? (
+                <Link
+                  to={`/profile/${member.profile_id}`}
+                  onClick={(e) => e.stopPropagation()}
+                  className="hover:underline"
+                >
+                  {name}
+                </Link>
+              ) : name}
               {isMe && <span className="text-[10px] text-primary ml-1">(you)</span>}
             </p>
             {member?.role === "lead" && (
@@ -284,6 +294,8 @@ function MemberGroup({
 const ProjectDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = searchParams.get("tab") ?? "overview";
   const { user, isFounder } = useAuth();
   const { data: project, isLoading } = useProjectDetail(id);
   const { data: tasks = [], isLoading: tasksLoading } = useProjectTasks(id);
@@ -505,10 +517,21 @@ const ProjectDetail = () => {
           </CardContent>
         </Card>
 
-        <Tabs defaultValue="overview" className="space-y-4">
+        <Tabs
+          value={tabParam}
+          onValueChange={(v) => {
+            const next = new URLSearchParams(searchParams);
+            if (v === "overview") next.delete("tab"); else next.set("tab", v);
+            setSearchParams(next, { replace: true });
+          }}
+          className="space-y-4"
+        >
           <TabsList>
             <TabsTrigger value="overview">
               <ListTodo className="h-3.5 w-3.5" /> Overview
+            </TabsTrigger>
+            <TabsTrigger value="activity">
+              <ActivityIcon className="h-3.5 w-3.5" /> Activity
             </TabsTrigger>
             <TabsTrigger value="bugs">
               <BugIcon className="h-3.5 w-3.5" /> Bugs
@@ -608,6 +631,10 @@ const ProjectDetail = () => {
 
             {/* Discussion */}
             {id && <ProjectDiscussion projectId={id} />}
+          </TabsContent>
+
+          <TabsContent value="activity">
+            {id && <ProjectActivity projectId={id} />}
           </TabsContent>
 
           <TabsContent value="bugs">

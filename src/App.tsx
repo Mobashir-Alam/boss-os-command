@@ -28,6 +28,8 @@ import EmployeeDashboard from "./pages/EmployeeDashboard.tsx";
 import ProjectDetail from "./pages/ProjectDetail.tsx";
 import TechTeamDashboard from "./pages/TechTeamDashboard.tsx";
 import TechDashboard from "./pages/TechDashboard.tsx";
+import ProfilePage from "./pages/ProfilePage.tsx";
+import CommandPalette from "./components/CommandPalette";
 
 const queryClient = new QueryClient({});
 
@@ -40,6 +42,7 @@ const App = () => (
           <Toaster />
           <Sonner />
           <BrowserRouter>
+            <CommandPalette />
             <Routes>
               <Route path="/login" element={<Login />} />
               <Route path="/onboarding" element={<Onboarding />} />
@@ -60,6 +63,7 @@ const App = () => (
               <Route path="/project/:id" element={<AuthGuard><ProjectDetail /></AuthGuard>} />
               <Route path="/team/tech" element={<AuthGuard><TechTeamDashboard /></AuthGuard>} />
               <Route path="/department/tech" element={<AuthGuard><TechDashboard /></AuthGuard>} />
+              <Route path="/profile/:id" element={<AuthGuard><ProfilePage /></AuthGuard>} />
               <Route path="/unsubscribe" element={<Unsubscribe />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
