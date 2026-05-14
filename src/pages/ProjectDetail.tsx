@@ -625,6 +625,10 @@ const ProjectDetail = () => {
             {id && <ProjectDiscussion projectId={id} />}
           </TabsContent>
 
+          <TabsContent value="activity">
+            {id && <ProjectActivity projectId={id} />}
+          </TabsContent>
+
           <TabsContent value="bugs">
             <BugsView projectId={id} />
           </TabsContent>
