@@ -509,10 +509,21 @@ const ProjectDetail = () => {
           </CardContent>
         </Card>
 
-        <Tabs defaultValue="overview" className="space-y-4">
+        <Tabs
+          value={tabParam}
+          onValueChange={(v) => {
+            const next = new URLSearchParams(searchParams);
+            if (v === "overview") next.delete("tab"); else next.set("tab", v);
+            setSearchParams(next, { replace: true });
+          }}
+          className="space-y-4"
+        >
           <TabsList>
             <TabsTrigger value="overview">
               <ListTodo className="h-3.5 w-3.5" /> Overview
+            </TabsTrigger>
+            <TabsTrigger value="activity">
+              <ActivityIcon className="h-3.5 w-3.5" /> Activity
             </TabsTrigger>
             <TabsTrigger value="bugs">
               <BugIcon className="h-3.5 w-3.5" /> Bugs
