@@ -16,7 +16,13 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.send-mfa-code]
-verify_jwt = true
+# Gateway JWT check disabled because the browser CORS preflight (OPTIONS)
+# doesn't carry the Authorization header — Supabase's gateway returns 401
+# on the preflight, browser blocks the real POST. The function does its
+# own JWT verification via auth.getUser(jwt) before any work runs, so this
+# is safe.
+verify_jwt = false
 
 [functions.verify-mfa-code]
-verify_jwt = true
+# Same reason — function-internal JWT verification is in place.
+verify_jwt = false
