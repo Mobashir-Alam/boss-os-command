@@ -55,6 +55,44 @@ export type Database = {
           },
         ]
       }
+      bug_comments: {
+        Row: {
+          author_id: string | null
+          body: string
+          bug_id: string
+          created_at: string
+          deleted_at: string | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          author_id?: string | null
+          body: string
+          bug_id: string
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          author_id?: string | null
+          body?: string
+          bug_id?: string
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bug_comments_bug_id_fkey"
+            columns: ["bug_id"]
+            isOneToOne: false
+            referencedRelation: "bugs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bugs: {
         Row: {
           area: string
@@ -1016,6 +1054,36 @@ export type Database = {
           },
         ]
       }
+      mfa_codes: {
+        Row: {
+          attempts: number
+          code_hash: string
+          created_at: string
+          expires_at: string
+          id: string
+          used_at: string | null
+          user_id: string
+        }
+        Insert: {
+          attempts?: number
+          code_hash: string
+          created_at?: string
+          expires_at: string
+          id?: string
+          used_at?: string | null
+          user_id: string
+        }
+        Update: {
+          attempts?: number
+          code_hash?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          used_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           created_at: string
@@ -1365,6 +1433,9 @@ export type Database = {
           email: string | null
           full_name: string | null
           id: string
+          last_mfa_verified_at: string | null
+          mfa_required: boolean
+          notification_email: string | null
           role: Database["public"]["Enums"]["app_role"]
           updated_at: string
         }
@@ -1375,6 +1446,9 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id: string
+          last_mfa_verified_at?: string | null
+          mfa_required?: boolean
+          notification_email?: string | null
           role?: Database["public"]["Enums"]["app_role"]
           updated_at?: string
         }
@@ -1385,6 +1459,9 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id?: string
+          last_mfa_verified_at?: string | null
+          mfa_required?: boolean
+          notification_email?: string | null
           role?: Database["public"]["Enums"]["app_role"]
           updated_at?: string
         }
@@ -1659,6 +1736,7 @@ export type Database = {
           description: string | null
           id: string
           overall_completion: number
+          readme_md: string | null
           startup_id: string
           status: string
           title: string
@@ -1672,6 +1750,7 @@ export type Database = {
           description?: string | null
           id?: string
           overall_completion?: number
+          readme_md?: string | null
           startup_id: string
           status?: string
           title: string
@@ -1685,6 +1764,7 @@ export type Database = {
           description?: string | null
           id?: string
           overall_completion?: number
+          readme_md?: string | null
           startup_id?: string
           status?: string
           title?: string
@@ -2337,6 +2417,7 @@ export type Database = {
         }
         Returns: number
       }
+      purge_expired_mfa_codes: { Args: never; Returns: undefined }
       read_email_batch: {
         Args: { batch_size: number; queue_name: string; vt: number }
         Returns: {
