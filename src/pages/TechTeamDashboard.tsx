@@ -20,6 +20,7 @@ import { AssignTaskModal } from "@/components/tech/AssignTaskModal";
 import BugsView from "@/components/bugs/BugsView";
 import CreateProjectModal from "@/components/project/CreateProjectModal";
 import { AddMemberModal, EditProjectModal } from "@/components/project/LeadControls";
+import WeeklyDigest from "@/components/tech/WeeklyDigest";
 import type { Project } from "@/hooks/useEmployeeProjects";
 import {
   GitPullRequest,
@@ -572,6 +573,7 @@ const TechTeamDashboard = () => {
           <Stat label="Avg completion" value={loadingTasks ? "—" : `${avgCompletion}%`} />
         </GlassCard>
 
+        <WeeklyDigest />
 
         <Tabs defaultValue="pulse" className="space-y-6">
           <TabsList className="bg-white/5 backdrop-blur-xl border border-white/10">
