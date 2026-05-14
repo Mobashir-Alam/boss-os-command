@@ -28,6 +28,8 @@ import EmployeeDashboard from "./pages/EmployeeDashboard.tsx";
 import ProjectDetail from "./pages/ProjectDetail.tsx";
 import TechTeamDashboard from "./pages/TechTeamDashboard.tsx";
 import TechDashboard from "./pages/TechDashboard.tsx";
+import ProfilePage from "./pages/ProfilePage.tsx";
+import CommandPalette from "./components/CommandPalette";
 
 const queryClient = new QueryClient({});
 
