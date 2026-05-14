@@ -25,6 +25,7 @@ import TaskFormModal from "@/components/project/TaskFormModal";
 import BugsView from "@/components/bugs/BugsView";
 import ProjectLinksTab from "@/components/project/ProjectLinksTab";
 import ProjectDocsTab from "@/components/project/ProjectDocsTab";
+import ProjectReadmeTab from "@/components/project/ProjectReadmeTab";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   ArrowLeft,
@@ -46,6 +47,7 @@ import {
   Link as LinkIcon,
   FileText,
   Activity as ActivityIcon,
+  BookOpen,
 } from "lucide-react";
 
 /* ── helpers ─────────────────────────────────────────────── */
@@ -536,6 +538,9 @@ const ProjectDetail = () => {
             <TabsTrigger value="bugs">
               <BugIcon className="h-3.5 w-3.5" /> Bugs
             </TabsTrigger>
+            <TabsTrigger value="readme">
+              <BookOpen className="h-3.5 w-3.5" /> Readme
+            </TabsTrigger>
             <TabsTrigger value="links">
               <LinkIcon className="h-3.5 w-3.5" /> Links
             </TabsTrigger>
@@ -639,6 +644,16 @@ const ProjectDetail = () => {
 
           <TabsContent value="bugs">
             <BugsView projectId={id} />
+          </TabsContent>
+
+          <TabsContent value="readme">
+            {id && (
+              <ProjectReadmeTab
+                projectId={id}
+                initialReadme={(project as any)?.readme_md ?? null}
+                canEdit={!!myMember || isFounder}
+              />
+            )}
           </TabsContent>
 
           <TabsContent value="links">

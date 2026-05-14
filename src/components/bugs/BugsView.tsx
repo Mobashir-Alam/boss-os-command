@@ -39,6 +39,7 @@ import {
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { Plus, Loader2, Bug as BugIcon, Search, Bookmark, BookmarkPlus, X } from "lucide-react";
+import BugComments from "./BugComments";
 
 const TYPES: BugType[] = [
   "bug",
@@ -617,6 +618,10 @@ function BugDetailSheet({
             {bug.solved_at && (
               <> · solved {relTime(bug.solved_at)}</>
             )}
+          </div>
+
+          <div className="border-t border-white/10 pt-4">
+            <BugComments bugId={bug.id} />
           </div>
         </div>
       </SheetContent>
