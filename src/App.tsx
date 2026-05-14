@@ -42,7 +42,7 @@ const App = () => (
           <Toaster />
           <Sonner />
           <BrowserRouter>
-            <Routes>
+            <CommandPalette />
               <Route path="/login" element={<Login />} />
               <Route path="/onboarding" element={<Onboarding />} />
               <Route path="/" element={<AuthGuard><FounderCommandCenter /></AuthGuard>} />
