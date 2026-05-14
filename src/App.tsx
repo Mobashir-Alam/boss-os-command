@@ -63,6 +63,7 @@ const App = () => (
               <Route path="/project/:id" element={<AuthGuard><ProjectDetail /></AuthGuard>} />
               <Route path="/team/tech" element={<AuthGuard><TechTeamDashboard /></AuthGuard>} />
               <Route path="/department/tech" element={<AuthGuard><TechDashboard /></AuthGuard>} />
+              <Route path="/profile/:id" element={<AuthGuard><ProfilePage /></AuthGuard>} />
               <Route path="/unsubscribe" element={<Unsubscribe />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
