@@ -22,6 +22,8 @@ import ProjectDiscussion from "@/components/project/ProjectDiscussion";
 import { EditProjectModal, AddMemberModal } from "@/components/project/LeadControls";
 import TaskFormModal from "@/components/project/TaskFormModal";
 import BugsView from "@/components/bugs/BugsView";
+import ProjectLinksTab from "@/components/project/ProjectLinksTab";
+import ProjectDocsTab from "@/components/project/ProjectDocsTab";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   ArrowLeft,
@@ -40,6 +42,8 @@ import {
   ListTodo,
   AlertTriangle,
   Bug as BugIcon,
+  Link as LinkIcon,
+  FileText,
 } from "lucide-react";
 
 /* ── helpers ─────────────────────────────────────────────── */
@@ -509,6 +513,12 @@ const ProjectDetail = () => {
             <TabsTrigger value="bugs">
               <BugIcon className="h-3.5 w-3.5" /> Bugs
             </TabsTrigger>
+            <TabsTrigger value="links">
+              <LinkIcon className="h-3.5 w-3.5" /> Links
+            </TabsTrigger>
+            <TabsTrigger value="docs">
+              <FileText className="h-3.5 w-3.5" /> Docs
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
@@ -602,6 +612,14 @@ const ProjectDetail = () => {
 
           <TabsContent value="bugs">
             <BugsView projectId={id} />
+          </TabsContent>
+
+          <TabsContent value="links">
+            {id && <ProjectLinksTab projectId={id} canWrite={!!myMember || isFounder} />}
+          </TabsContent>
+
+          <TabsContent value="docs">
+            {id && <ProjectDocsTab projectId={id} canWrite={!!myMember || isFounder} />}
           </TabsContent>
         </Tabs>
 

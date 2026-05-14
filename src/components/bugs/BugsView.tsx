@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -38,7 +38,7 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { Plus, Loader2, Bug as BugIcon, Search } from "lucide-react";
+import { Plus, Loader2, Bug as BugIcon, Search, Bookmark, BookmarkPlus, X } from "lucide-react";
 
 const TYPES: BugType[] = [
   "bug",
@@ -126,6 +126,62 @@ export default function BugsView({ projectId }: Props) {
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Bug | null>(null);
   const [reportOpen, setReportOpen] = useState(false);
+
+  // ── Saved filters (localStorage) ────────────────────────────────────────
+  // Per-user, per-scope (project vs all) presets. Each preset stores the
+  // type/status/assignee/search combo so a user can one-click "my critical bugs".
+  type SavedFilter = {
+    id: string;
+    name: string;
+    types: BugType[];
+    statuses: BugStatus[];
+    assignee: string;
+    search: string;
+  };
+  const storageKey = `bugfilters:${user?.id ?? "anon"}:${projectId ?? "all"}`;
+  const [savedFilters, setSavedFilters] = useState<SavedFilter[]>([]);
+  const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [filterName, setFilterName] = useState("");
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(storageKey);
+      if (raw) setSavedFilters(JSON.parse(raw));
+    } catch { /* ignore */ }
+  }, [storageKey]);
+
+  const persistFilters = (next: SavedFilter[]) => {
+    setSavedFilters(next);
+    try { localStorage.setItem(storageKey, JSON.stringify(next)); } catch { /* ignore */ }
+  };
+
+  const saveCurrentAsFilter = () => {
+    const name = filterName.trim();
+    if (!name) { toast.error("Name your filter"); return; }
+    const newFilter: SavedFilter = {
+      id: crypto.randomUUID(),
+      name,
+      types: Array.from(typeFilter),
+      statuses: Array.from(statusFilter),
+      assignee: assigneeFilter,
+      search: search.trim(),
+    };
+    persistFilters([...savedFilters, newFilter]);
+    setSaveDialogOpen(false);
+    setFilterName("");
+    toast.success(`Saved "${name}"`);
+  };
+
+  const applyFilter = (f: SavedFilter) => {
+    setTypeFilter(new Set(f.types));
+    setStatusFilter(new Set(f.statuses));
+    setAssigneeFilter(f.assignee);
+    setSearch(f.search);
+  };
+
+  const deleteFilter = (id: string) => {
+    persistFilters(savedFilters.filter((f) => f.id !== id));
+  };
 
   // Profile lookup for reporter/assignee names (covers non-tech profiles too)
   const profileIds = useMemo(() => {
@@ -215,6 +271,40 @@ export default function BugsView({ projectId }: Props) {
 
   return (
     <div className="space-y-4">
+      {/* Saved filters row */}
+      {(savedFilters.length > 0 || true) && (
+        <div className="flex flex-wrap items-center gap-2">
+          {savedFilters.map((f) => (
+            <div
+              key={f.id}
+              className="group inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/5 px-2.5 py-0.5 text-[11px] font-medium text-primary"
+            >
+              <button type="button" onClick={() => applyFilter(f)} className="flex items-center gap-1">
+                <Bookmark className="h-3 w-3" />
+                {f.name}
+              </button>
+              <button
+                type="button"
+                onClick={() => deleteFilter(f.id)}
+                className="ml-0.5 opacity-0 transition group-hover:opacity-100 hover:text-destructive"
+                aria-label="Delete saved filter"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={() => setSaveDialogOpen(true)}
+            className="inline-flex items-center gap-1 rounded-full border border-dashed border-white/15 bg-transparent px-2.5 py-0.5 text-[11px] font-medium text-muted-foreground hover:border-white/30 hover:text-foreground"
+            title="Save current filters as a preset"
+          >
+            <BookmarkPlus className="h-3 w-3" />
+            Save current
+          </button>
+        </div>
+      )}
+
       <GlassCard className="p-4">
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex flex-wrap items-center gap-1.5">
@@ -372,6 +462,29 @@ export default function BugsView({ projectId }: Props) {
         projectId={projectId}
         userId={user?.id ?? null}
       />
+
+      <Dialog open={saveDialogOpen} onOpenChange={(v) => { setSaveDialogOpen(v); if (!v) setFilterName(""); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>Save current filters</DialogTitle></DialogHeader>
+          <div className="space-y-2 py-2">
+            <Label className="text-xs uppercase tracking-wider text-muted-foreground">Name</Label>
+            <Input
+              autoFocus
+              value={filterName}
+              onChange={(e) => setFilterName(e.target.value)}
+              placeholder="e.g. My critical bugs"
+              onKeyDown={(e) => { if (e.key === "Enter") saveCurrentAsFilter(); }}
+            />
+            <p className="text-[11px] text-muted-foreground">
+              Saves the active type, status, assignee, and search as a one-click preset (just for you).
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setSaveDialogOpen(false)}>Cancel</Button>
+            <Button size="sm" onClick={saveCurrentAsFilter}>Save</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
