@@ -1390,6 +1390,100 @@ export type Database = {
         }
         Relationships: []
       }
+      project_documents: {
+        Row: {
+          created_at: string
+          description: string | null
+          display_name: string
+          id: string
+          mime_type: string | null
+          project_id: string
+          size_bytes: number | null
+          storage_path: string
+          updated_at: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          display_name: string
+          id?: string
+          mime_type?: string | null
+          project_id: string
+          size_bytes?: number | null
+          storage_path: string
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          display_name?: string
+          id?: string
+          mime_type?: string | null
+          project_id?: string
+          size_bytes?: number | null
+          storage_path?: string
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_documents_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_links: {
+        Row: {
+          added_by: string | null
+          category: string
+          created_at: string
+          description: string | null
+          id: string
+          is_pinned: boolean
+          project_id: string
+          title: string
+          updated_at: string
+          url: string
+        }
+        Insert: {
+          added_by?: string | null
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_pinned?: boolean
+          project_id: string
+          title: string
+          updated_at?: string
+          url: string
+        }
+        Update: {
+          added_by?: string | null
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_pinned?: boolean
+          project_id?: string
+          title?: string
+          updated_at?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_links_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_members: {
         Row: {
           assigned_at: string
@@ -2208,6 +2302,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_edit_any_bug: { Args: never; Returns: boolean }
       can_manage_bugs: { Args: never; Returns: boolean }
       delete_email: {
         Args: { message_id: number; queue_name: string }
@@ -2226,6 +2321,10 @@ export type Database = {
       }
       is_founder: { Args: { _user_id: string }; Returns: boolean }
       is_project_lead: {
+        Args: { _project_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_project_member: {
         Args: { _project_id: string; _user_id: string }
         Returns: boolean
       }
