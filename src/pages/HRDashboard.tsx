@@ -13,9 +13,11 @@ import {
 } from "@/components/ui/select";
 import {
   Users, CalendarCheck, Search, CheckCircle2, XCircle, Plane, Clock,
-  MessageSquare, AlertTriangle,
+  MessageSquare, AlertTriangle, CalendarDays, Banknote,
 } from "lucide-react";
 import LeaveRequestsTab from "@/components/leave/LeaveRequestsTab";
+import LeaveCalendar from "@/components/hr/LeaveCalendar";
+import PayrollTab from "@/components/hr/PayrollTab";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
@@ -141,6 +143,12 @@ export default function HRDashboard() {
             <TabsTrigger value="leaves">
               <Plane className="h-3.5 w-3.5" /> Leaves
             </TabsTrigger>
+            <TabsTrigger value="calendar">
+              <CalendarDays className="h-3.5 w-3.5" /> Calendar
+            </TabsTrigger>
+            <TabsTrigger value="payroll">
+              <Banknote className="h-3.5 w-3.5" /> Payroll
+            </TabsTrigger>
             <TabsTrigger value="updates">
               <MessageSquare className="h-3.5 w-3.5" /> Work updates
             </TabsTrigger>
@@ -223,6 +231,16 @@ export default function HRDashboard() {
           {/* ──────── Leaves ──────── */}
           <TabsContent value="leaves">
             <LeaveRequestsTab />
+          </TabsContent>
+
+          {/* ──────── Calendar ──────── */}
+          <TabsContent value="calendar">
+            <LeaveCalendar />
+          </TabsContent>
+
+          {/* ──────── Payroll ──────── */}
+          <TabsContent value="payroll">
+            <PayrollTab />
           </TabsContent>
 
           {/* ──────── Work updates ──────── */}
