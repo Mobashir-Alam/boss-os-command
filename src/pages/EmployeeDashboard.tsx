@@ -27,6 +27,10 @@ import {
   Crown,
 } from "lucide-react";
 import CreateProjectModal from "@/components/project/CreateProjectModal";
+import ApplyLeaveModal from "@/components/leave/ApplyLeaveModal";
+import { useMyLeaveRequests, useCancelLeaveRequest, type LeaveStatus } from "@/hooks/useLeaveRequests";
+import { Plane } from "lucide-react";
+import { toast } from "sonner";
 
 /* ── helpers ─────────────────────────────────────────────── */
 
@@ -247,6 +251,9 @@ const EmployeeDashboard = () => {
 
   const [showNotifications, setShowNotifications] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
+  const [leaveOpen, setLeaveOpen] = useState(false);
+  const { data: myLeaves = [] } = useMyLeaveRequests();
+  const cancelLeave = useCancelLeaveRequest();
 
   const canCreate = profile?.role === "project_manager" || profile?.role === "founder";
 
@@ -297,6 +304,15 @@ const EmployeeDashboard = () => {
             </p>
           </div>
           <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setLeaveOpen(true)}
+              className="h-8 gap-1.5 text-xs"
+            >
+              <Plane className="h-3.5 w-3.5" />
+              Apply Leave
+            </Button>
             {canCreate && (
               <Button
                 size="sm"
@@ -426,6 +442,61 @@ const EmployeeDashboard = () => {
             </div>
           </div>
         )}
+
+        {/* My recent leaves */}
+        {myLeaves.length > 0 && (
+          <div className="mt-10">
+            <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">
+              My leaves
+            </h2>
+            <div className="space-y-1.5">
+              {myLeaves.slice(0, 5).map((l) => {
+                const statusChip: Record<LeaveStatus, string> = {
+                  pending:   "bg-amber-500/15 text-amber-700 border-amber-500/30",
+                  approved:  "bg-emerald-500/15 text-emerald-700 border-emerald-500/30",
+                  rejected:  "bg-rose-500/15 text-rose-700 border-rose-500/30",
+                  cancelled: "bg-muted text-muted-foreground border-border",
+                };
+                const sameDay = l.start_date === l.end_date;
+                const dateStr = sameDay
+                  ? new Date(l.start_date).toLocaleDateString("en-IN", { day: "numeric", month: "short" })
+                  : `${new Date(l.start_date).toLocaleDateString("en-IN", { day: "numeric", month: "short" })} – ${new Date(l.end_date).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}`;
+                return (
+                  <div key={l.id} className="rounded-lg border border-border/40 bg-card p-3 flex items-center gap-3">
+                    <Plane className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm">
+                        <span className="font-medium capitalize">{l.leave_type.replace("_", " ")}</span>
+                        <span className="text-muted-foreground"> · {dateStr}</span>
+                      </p>
+                      {l.reason && (
+                        <p className="text-[11px] text-muted-foreground italic truncate">"{l.reason}"</p>
+                      )}
+                    </div>
+                    <Badge variant="outline" className={cn("text-[10px]", statusChip[l.status])}>
+                      {l.status}
+                    </Badge>
+                    {l.status === "pending" && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 text-[10px] text-muted-foreground"
+                        onClick={() =>
+                          cancelLeave.mutate(l.id, {
+                            onSuccess: () => toast.success("Cancelled"),
+                            onError: (e: any) => toast.error(e?.message ?? "Couldn't cancel"),
+                          })
+                        }
+                      >
+                        Cancel
+                      </Button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </main>
 
       {canCreate && (
@@ -435,6 +506,8 @@ const EmployeeDashboard = () => {
           onCreated={(projectId) => navigate(`/project/${projectId}`)}
         />
       )}
+
+      <ApplyLeaveModal open={leaveOpen} onOpenChange={setLeaveOpen} />
     </div>
   );
 };

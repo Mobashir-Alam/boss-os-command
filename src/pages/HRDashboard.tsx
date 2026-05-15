@@ -15,6 +15,7 @@ import {
   Users, CalendarCheck, Search, CheckCircle2, XCircle, Plane, Clock,
   MessageSquare, AlertTriangle,
 } from "lucide-react";
+import LeaveRequestsTab from "@/components/leave/LeaveRequestsTab";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
@@ -137,6 +138,9 @@ export default function HRDashboard() {
             <TabsTrigger value="directory">
               <Users className="h-3.5 w-3.5" /> Directory
             </TabsTrigger>
+            <TabsTrigger value="leaves">
+              <Plane className="h-3.5 w-3.5" /> Leaves
+            </TabsTrigger>
             <TabsTrigger value="updates">
               <MessageSquare className="h-3.5 w-3.5" /> Work updates
             </TabsTrigger>
@@ -214,6 +218,11 @@ export default function HRDashboard() {
           {/* ──────── Directory ──────── */}
           <TabsContent value="directory">
             <DirectoryTab employees={directory} loading={dirLoading} />
+          </TabsContent>
+
+          {/* ──────── Leaves ──────── */}
+          <TabsContent value="leaves">
+            <LeaveRequestsTab />
           </TabsContent>
 
           {/* ──────── Work updates ──────── */}
