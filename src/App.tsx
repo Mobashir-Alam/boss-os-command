@@ -8,6 +8,7 @@ import { EscalationProvider } from "@/contexts/EscalationContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 import AuthGuard from "@/components/AuthGuard";
 import TechLeadGuard from "@/components/TechLeadGuard";
+import HRGuard from "@/components/HRGuard";
 import Index from "./pages/Index.tsx";
 import FounderCommandCenter from "./pages/FounderCommandCenter.tsx";
 import Focus from "./pages/Focus.tsx";
@@ -32,6 +33,7 @@ import TechDashboard from "./pages/TechDashboard.tsx";
 import ProfilePage from "./pages/ProfilePage.tsx";
 import InboxPage from "./pages/Inbox.tsx";
 import Verify2FA from "./pages/Verify2FA.tsx";
+import HRDashboard from "./pages/HRDashboard.tsx";
 import CommandPalette from "./components/CommandPalette";
 
 const queryClient = new QueryClient({});
@@ -68,6 +70,10 @@ const App = () => (
               <Route
                 path="/team/tech"
                 element={<AuthGuard><TechLeadGuard><TechTeamDashboard /></TechLeadGuard></AuthGuard>}
+              />
+              <Route
+                path="/team/hr"
+                element={<AuthGuard><HRGuard><HRDashboard /></HRGuard></AuthGuard>}
               />
               <Route
                 path="/department/tech"

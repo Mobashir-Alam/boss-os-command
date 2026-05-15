@@ -42,6 +42,12 @@ const AuthGuard = ({ children }: { children: React.ReactNode }) => {
     return <Navigate to="/team/tech" replace />;
   }
 
+  // Same for HR heads — land on /team/hr instead of the generic dashboards.
+  const isHRHead = profile?.role === "functional_head" && profile?.department === "hr";
+  if (isHRHead && (location.pathname === "/" || location.pathname === "/my-domain")) {
+    return <Navigate to="/team/hr" replace />;
+  }
+
   // The CEO panel ("/") is for founders only. Everyone else lands on /employee.
   if (profile?.role && profile.role !== "founder" && location.pathname === "/") {
     return <Navigate to="/employee" replace />;
