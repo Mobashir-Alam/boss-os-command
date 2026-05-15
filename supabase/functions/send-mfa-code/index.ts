@@ -115,12 +115,16 @@ Deno.serve(async (req) => {
     });
 
     if (!sendRes.ok) {
-      const t = await sendRes.text();
-      console.error("send-transactional-email failed:", sendRes.status, t);
-      return new Response(JSON.stringify({ error: "Couldn't send email. Try again." }), {
-        status: 502,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      const underlyingBody = await sendRes.text();
+      console.error("send-transactional-email failed:", sendRes.status, underlyingBody);
+      return new Response(
+        JSON.stringify({
+          error: "Couldn't send email",
+          underlyingStatus: sendRes.status,
+          underlyingBody,
+        }),
+        { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     return new Response(JSON.stringify({ success: true, expiresAt }), {
