@@ -29,7 +29,9 @@ import {
 import CreateProjectModal from "@/components/project/CreateProjectModal";
 import ApplyLeaveModal from "@/components/leave/ApplyLeaveModal";
 import { useMyLeaveRequests, useCancelLeaveRequest, type LeaveStatus } from "@/hooks/useLeaveRequests";
-import { Plane } from "lucide-react";
+import { useMyReviews, type PerformanceReview } from "@/hooks/usePerformanceReviews";
+import ReviewDetailModal from "@/components/reviews/ReviewDetailModal";
+import { Plane, ClipboardCheck, Star } from "lucide-react";
 import { toast } from "sonner";
 
 /* ── helpers ─────────────────────────────────────────────── */
@@ -254,6 +256,8 @@ const EmployeeDashboard = () => {
   const [leaveOpen, setLeaveOpen] = useState(false);
   const { data: myLeaves = [] } = useMyLeaveRequests();
   const cancelLeave = useCancelLeaveRequest();
+  const { data: myReviews = [] } = useMyReviews();
+  const [openReview, setOpenReview] = useState<PerformanceReview | null>(null);
 
   const canCreate = profile?.role === "project_manager" || profile?.role === "founder";
 
@@ -497,6 +501,50 @@ const EmployeeDashboard = () => {
             </div>
           </div>
         )}
+        {/* My reviews */}
+        {myReviews.length > 0 && (
+          <div className="mt-10">
+            <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3 flex items-center gap-2">
+              <ClipboardCheck className="h-3.5 w-3.5" /> My reviews
+            </h2>
+            <div className="space-y-1.5">
+              {myReviews.slice(0, 5).map((r) => {
+                const needsAction = r.status === "submitted";
+                const reviewerName = r.reviewer?.full_name ?? "Reviewer";
+                return (
+                  <button
+                    key={r.id}
+                    type="button"
+                    onClick={() => setOpenReview(r)}
+                    className={cn(
+                      "w-full rounded-lg border p-3 flex items-center gap-3 text-left transition hover:border-border",
+                      needsAction
+                        ? "border-primary/40 bg-primary/[0.04]"
+                        : "border-border/40 bg-card hover:bg-muted/20"
+                    )}
+                  >
+                    <ClipboardCheck className={cn("h-3.5 w-3.5 shrink-0", needsAction ? "text-primary" : "text-muted-foreground")} />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm">
+                        <span className="font-medium">{r.cycle?.name ?? "Review"}</span>
+                        <span className="text-muted-foreground"> · written by {reviewerName}</span>
+                      </p>
+                      <p className="text-[11px] text-muted-foreground">
+                        {needsAction ? "New — please review and acknowledge" : `Status: ${r.status}`}
+                        {r.overall_rating && ` · ${r.overall_rating}/5`}
+                      </p>
+                    </div>
+                    {r.overall_rating && (
+                      <span className="inline-flex items-center gap-0.5 text-amber-600 text-xs font-bold tabular-nums">
+                        <Star className="h-3 w-3 fill-current" /> {r.overall_rating}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </main>
 
       {canCreate && (
@@ -508,6 +556,15 @@ const EmployeeDashboard = () => {
       )}
 
       <ApplyLeaveModal open={leaveOpen} onOpenChange={setLeaveOpen} />
+
+      {openReview && (
+        <ReviewDetailModal
+          open={!!openReview}
+          onOpenChange={(v) => !v && setOpenReview(null)}
+          review={openReview}
+          hidePrivateNotes
+        />
+      )}
     </div>
   );
 };
