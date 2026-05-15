@@ -56,14 +56,39 @@ export default function Verify2FA() {
   const send = async () => {
     setSending(true);
     try {
-      const { error } = await supabase.functions.invoke("send-mfa-code");
-      if (error) throw error;
+      const { data, error } = await supabase.functions.invoke("send-mfa-code");
+      if (error) {
+        // supabase-js wraps the response body in error.context.body for non-2xx.
+        // Try to parse it so we can show the real underlying email error.
+        const ctx: any = (error as any)?.context;
+        let detail = error.message;
+        if (ctx?.body) {
+          try {
+            const parsed = typeof ctx.body === "string" ? JSON.parse(ctx.body) : ctx.body;
+            if (parsed?.error) detail = parsed.error;
+            if (parsed?.underlyingBody) {
+              detail += ` — ${String(parsed.underlyingBody).slice(0, 200)}`;
+            }
+            if (parsed?.underlyingStatus) {
+              detail += ` (status ${parsed.underlyingStatus})`;
+            }
+          } catch { /* response wasn't JSON */ }
+        }
+        throw new Error(detail);
+      }
+      if ((data as any)?.error) throw new Error((data as any).error);
       toast.success(`Code sent to ${displayEmail ?? "your email"}`);
       setResendIn(30);
       // Focus first box
       setTimeout(() => inputs.current[0]?.focus(), 100);
     } catch (e: any) {
-      toast.error(e?.message ?? "Couldn't send code");
+      // Long detail — use toast.error with description so it's all visible.
+      const msg = String(e?.message ?? "Couldn't send code");
+      console.error("send-mfa-code error detail:", msg);
+      toast.error(msg.length > 80 ? msg.slice(0, 80) + "…" : msg, {
+        description: msg.length > 80 ? msg : undefined,
+        duration: 10000,
+      });
     } finally {
       setSending(false);
     }
