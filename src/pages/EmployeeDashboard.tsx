@@ -29,9 +29,11 @@ import {
 import CreateProjectModal from "@/components/project/CreateProjectModal";
 import ApplyLeaveModal from "@/components/leave/ApplyLeaveModal";
 import { useMyLeaveRequests, useCancelLeaveRequest, type LeaveStatus } from "@/hooks/useLeaveRequests";
-import { useMyReviews, type PerformanceReview } from "@/hooks/usePerformanceReviews";
+import { useMyReviews, useReviewsToWrite, type PerformanceReview } from "@/hooks/usePerformanceReviews";
 import ReviewDetailModal from "@/components/reviews/ReviewDetailModal";
-import { Plane, ClipboardCheck, Star } from "lucide-react";
+import ReviewFormModal from "@/components/reviews/ReviewFormModal";
+import { useOnboardingForProfile, useUpdateOnboardingItem, type OnboardingItem, type OnboardingStatus } from "@/hooks/useOnboarding";
+import { Plane, ClipboardCheck, Star, Edit3, UserPlus, CheckCircle2, Circle } from "lucide-react";
 import { toast } from "sonner";
 
 /* ── helpers ─────────────────────────────────────────────── */
@@ -245,7 +247,7 @@ function NotificationBell({ count }: { count: number }) {
 
 const EmployeeDashboard = () => {
   const navigate = useNavigate();
-  const { profile } = useAuth();
+  const { profile, user } = useAuth();
   const { data: projects = [], isLoading } = useMyProjects();
   const { data: myTasks = [] } = useMyTasks();
   const { data: notifications = [] } = useMyNotifications();
@@ -257,7 +259,11 @@ const EmployeeDashboard = () => {
   const { data: myLeaves = [] } = useMyLeaveRequests();
   const cancelLeave = useCancelLeaveRequest();
   const { data: myReviews = [] } = useMyReviews();
+  const { data: reviewsToWrite = [] } = useReviewsToWrite();
   const [openReview, setOpenReview] = useState<PerformanceReview | null>(null);
+  const [openReviewToWrite, setOpenReviewToWrite] = useState<PerformanceReview | null>(null);
+  const { data: myOnboarding = [] } = useOnboardingForProfile(user?.id);
+  const updateOnboarding = useUpdateOnboardingItem();
 
   const canCreate = profile?.role === "project_manager" || profile?.role === "founder";
 
@@ -501,6 +507,93 @@ const EmployeeDashboard = () => {
             </div>
           </div>
         )}
+        {/* My onboarding (only shows if HR has set items up for this user) */}
+        {myOnboarding.length > 0 && (
+          <div className="mt-10">
+            <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3 flex items-center gap-2">
+              <UserPlus className="h-3.5 w-3.5" /> My onboarding
+              {(() => {
+                const done = myOnboarding.filter((i) => i.status === "done").length;
+                return <span className="text-muted-foreground/70 normal-case font-normal">· {done}/{myOnboarding.length} done</span>;
+              })()}
+            </h2>
+            <div className="space-y-1.5">
+              {myOnboarding.slice(0, 8).map((item: OnboardingItem) => {
+                const done = item.status === "done";
+                return (
+                  <div
+                    key={item.id}
+                    className={cn(
+                      "rounded-lg border p-3 flex items-start gap-3",
+                      done ? "border-emerald-500/20 bg-emerald-500/[0.03]" : "border-border/40 bg-card"
+                    )}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const next: OnboardingStatus = done ? "pending" : "done";
+                        updateOnboarding.mutate(
+                          { id: item.id, profileId: user!.id, patch: { status: next } },
+                          { onError: (e: any) => toast.error(e?.message ?? "Couldn't update") }
+                        );
+                      }}
+                      className="mt-0.5"
+                    >
+                      {done
+                        ? <CheckCircle2 className="h-4 w-4 text-emerald-600 fill-emerald-100" />
+                        : <Circle className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors" />}
+                    </button>
+                    <div className="flex-1 min-w-0">
+                      <p className={cn("text-sm font-medium", done && "line-through text-muted-foreground")}>
+                        {item.title}
+                      </p>
+                      {item.description && (
+                        <p className="text-xs text-muted-foreground mt-0.5">{item.description}</p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Reviews to write (only shows if this user is assigned as a reviewer) */}
+        {reviewsToWrite.length > 0 && (
+          <div className="mt-10">
+            <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3 flex items-center gap-2">
+              <Edit3 className="h-3.5 w-3.5" /> Reviews you need to write
+            </h2>
+            <div className="space-y-1.5">
+              {reviewsToWrite.map((r) => {
+                const isDraft = r.status === "draft";
+                return (
+                  <button
+                    key={r.id}
+                    type="button"
+                    onClick={() => setOpenReviewToWrite(r)}
+                    className={cn(
+                      "w-full rounded-lg border p-3 flex items-center gap-3 text-left transition hover:border-border",
+                      isDraft ? "border-amber-500/40 bg-amber-500/[0.04]" : "border-border/40 bg-card hover:bg-muted/20"
+                    )}
+                  >
+                    <Edit3 className={cn("h-3.5 w-3.5 shrink-0", isDraft ? "text-amber-600" : "text-muted-foreground")} />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm">
+                        <span className="font-medium">{r.reviewee?.full_name ?? "Reviewee"}</span>
+                        <span className="text-muted-foreground"> · {r.cycle?.name}</span>
+                      </p>
+                      <p className="text-[11px] text-muted-foreground capitalize">
+                        Status: {r.status}{isDraft ? " — needs writing + submit" : " — submitted, awaiting acknowledgment"}
+                      </p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* My reviews */}
         {myReviews.length > 0 && (
           <div className="mt-10">
@@ -563,6 +656,14 @@ const EmployeeDashboard = () => {
           onOpenChange={(v) => !v && setOpenReview(null)}
           review={openReview}
           hidePrivateNotes
+        />
+      )}
+
+      {openReviewToWrite && (
+        <ReviewFormModal
+          open={!!openReviewToWrite}
+          onOpenChange={(v) => !v && setOpenReviewToWrite(null)}
+          review={openReviewToWrite}
         />
       )}
     </div>

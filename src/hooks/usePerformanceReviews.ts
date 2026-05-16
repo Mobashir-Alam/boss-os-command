@@ -208,6 +208,31 @@ export function useAllReviews() {
   };
 }
 
+// Reviews ASSIGNED TO me as the reviewer that I still need to write
+export function useReviewsToWrite() {
+  const { user } = useAuth();
+  const baseQuery = useQuery({
+    queryKey: [RV_KEY, "to-write", user?.id],
+    enabled: !!user?.id,
+    queryFn: async (): Promise<PerformanceReviewRow[]> => {
+      const { data, error } = await supabase
+        .from("performance_reviews")
+        .select("*")
+        .eq("reviewer_id", user!.id)
+        .in("status", ["draft", "submitted"])
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as PerformanceReviewRow[];
+    },
+  });
+  const names = useNameLookup(baseQuery.data ?? []);
+  const cycles = useCycleLookup(baseQuery.data ?? []);
+  return {
+    data: joinAll(baseQuery.data ?? [], names, cycles),
+    isLoading: baseQuery.isLoading,
+  };
+}
+
 // Reviews ABOUT me (reviewee)
 export function useMyReviews() {
   const { user } = useAuth();

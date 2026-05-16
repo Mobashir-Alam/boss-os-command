@@ -14,11 +14,14 @@ import {
 import {
   Users, CalendarCheck, Search, CheckCircle2, XCircle, Plane, Clock,
   MessageSquare, AlertTriangle, CalendarDays, Banknote, ClipboardCheck,
+  UserPlus, Briefcase,
 } from "lucide-react";
 import LeaveRequestsTab from "@/components/leave/LeaveRequestsTab";
 import LeaveCalendar from "@/components/hr/LeaveCalendar";
 import PayrollTab from "@/components/hr/PayrollTab";
 import ReviewsTab from "@/components/hr/ReviewsTab";
+import OnboardingTab from "@/components/hr/OnboardingTab";
+import HiringTab from "@/components/hr/HiringTab";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
@@ -153,6 +156,12 @@ export default function HRDashboard() {
             <TabsTrigger value="reviews">
               <ClipboardCheck className="h-3.5 w-3.5" /> Reviews
             </TabsTrigger>
+            <TabsTrigger value="onboarding">
+              <UserPlus className="h-3.5 w-3.5" /> Onboarding
+            </TabsTrigger>
+            <TabsTrigger value="hiring">
+              <Briefcase className="h-3.5 w-3.5" /> Hiring
+            </TabsTrigger>
             <TabsTrigger value="updates">
               <MessageSquare className="h-3.5 w-3.5" /> Work updates
             </TabsTrigger>
@@ -250,6 +259,16 @@ export default function HRDashboard() {
           {/* ──────── Reviews ──────── */}
           <TabsContent value="reviews">
             <ReviewsTab />
+          </TabsContent>
+
+          {/* ──────── Onboarding ──────── */}
+          <TabsContent value="onboarding">
+            <OnboardingTab />
+          </TabsContent>
+
+          {/* ──────── Hiring ──────── */}
+          <TabsContent value="hiring">
+            <HiringTab />
           </TabsContent>
 
           {/* ──────── Work updates ──────── */}
