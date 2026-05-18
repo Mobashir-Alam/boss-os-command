@@ -26,3 +26,9 @@ verify_jwt = false
 [functions.verify-mfa-code]
 # Same reason — function-internal JWT verification is in place.
 verify_jwt = false
+
+[functions.github-discovery]
+# One-shot discovery — invoked from the browser console or SQL editor.
+# Reads PAT from connector_credentials server-side, never accepts it
+# from the request body, so it's safe to expose without JWT auth.
+verify_jwt = false
