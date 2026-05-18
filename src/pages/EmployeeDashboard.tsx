@@ -19,12 +19,18 @@ import {
   Calendar,
   CheckCircle2,
   ChevronRight,
+  Circle,
+  ClipboardCheck,
   Clock,
+  Crown,
+  Edit3,
   Layers,
   AlertTriangle,
-  User,
+  Plane,
   Plus,
-  Crown,
+  Star,
+  User,
+  UserPlus,
 } from "lucide-react";
 import CreateProjectModal from "@/components/project/CreateProjectModal";
 import ApplyLeaveModal from "@/components/leave/ApplyLeaveModal";
@@ -33,7 +39,6 @@ import { useMyReviews, useReviewsToWrite, type PerformanceReview } from "@/hooks
 import ReviewDetailModal from "@/components/reviews/ReviewDetailModal";
 import ReviewFormModal from "@/components/reviews/ReviewFormModal";
 import { useOnboardingForProfile, useUpdateOnboardingItem, type OnboardingItem, type OnboardingStatus } from "@/hooks/useOnboarding";
-import { Plane, ClipboardCheck, Star, Edit3, UserPlus, CheckCircle2, Circle } from "lucide-react";
 import { toast } from "sonner";
 
 /* ── helpers ─────────────────────────────────────────────── */
