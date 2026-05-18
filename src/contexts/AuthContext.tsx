@@ -67,7 +67,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
+      async (event, session) => {
+        // If the refresh ever fails Supabase fires SIGNED_OUT with null session.
+        // Clean up our session-scoped flags too.
+        if (event === "SIGNED_OUT" || !session) {
+          sessionStorage.removeItem("mfa_verified");
+        }
         setSession(session);
         setUser(session?.user ?? null);
         if (session?.user) {
@@ -79,14 +84,32 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     );
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchProfile(session.user.id);
-      }
-      setLoading(false);
-    });
+    supabase.auth
+      .getSession()
+      .then(({ data: { session }, error }) => {
+        // If getSession errors (e.g. dead refresh token in localStorage),
+        // wipe everything and force the user back to login instead of
+        // running with a half-broken session.
+        if (error) {
+          console.warn("getSession failed — clearing local auth:", error.message);
+          void supabase.auth.signOut().catch(() => {});
+          setSession(null);
+          setUser(null);
+          setProfile(null);
+        } else {
+          setSession(session);
+          setUser(session?.user ?? null);
+          if (session?.user) {
+            fetchProfile(session.user.id);
+          }
+        }
+        setLoading(false);
+      })
+      .catch((e) => {
+        console.warn("getSession threw — clearing local auth:", e?.message ?? e);
+        void supabase.auth.signOut().catch(() => {});
+        setLoading(false);
+      });
 
     return () => subscription.unsubscribe();
   }, []);
