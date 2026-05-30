@@ -324,6 +324,185 @@ export function useYouTubeCredentials(startupId: string | undefined) {
   });
 }
 
+// ── Tier 2: Analytics + OAuth ─────────────────────────────────────────────
+
+export interface ChannelAnalyticsRow {
+  id: string;
+  channel_uuid: string;
+  date: string;
+  views: number;
+  estimated_minutes_watched: number;
+  average_view_duration_sec: number | null;
+  subscribers_gained: number;
+  subscribers_lost: number;
+  likes: number;
+  shares: number;
+  comments: number;
+  impressions: number | null;
+  impressions_ctr: number | null;
+  estimated_revenue_usd: number | null;
+  estimated_ad_revenue_usd: number | null;
+  cpm_usd: number | null;
+}
+
+export interface VideoAnalyticsRow {
+  id: string;
+  video_uuid: string;
+  date: string;
+  views: number;
+  estimated_minutes_watched: number;
+  average_view_duration_sec: number | null;
+  average_view_percentage: number | null;
+  likes: number;
+  comments: number;
+  shares: number;
+  subscribers_gained: number;
+  subscribers_lost: number;
+  estimated_revenue_usd: number | null;
+  cpm_usd: number | null;
+}
+
+// All authorized channels (has an OAuth token row)
+export function useAuthorizedChannelIds(startupId: string | undefined) {
+  return useQuery({
+    queryKey: ["youtube-authorized", startupId],
+    enabled: !!startupId,
+    queryFn: async (): Promise<string[]> => {
+      const { data, error } = await supabase
+        .from("connector_youtube_oauth")
+        .select("channel_id")
+        .eq("startup_id", startupId!);
+      if (error) throw error;
+      return (data ?? []).map((r: any) => r.channel_id);
+    },
+  });
+}
+
+// Daily channel-level analytics for the last N days
+export function useChannelAnalytics(channelUuid: string | undefined, days = 30) {
+  return useQuery({
+    queryKey: ["youtube-channel-analytics", channelUuid, days],
+    enabled: !!channelUuid,
+    queryFn: async (): Promise<ChannelAnalyticsRow[]> => {
+      const since = new Date(Date.now() - days * 864e5).toISOString().slice(0, 10);
+      const { data, error } = await supabase
+        .from("connector_data_youtube_channel_analytics")
+        .select("*")
+        .eq("channel_uuid", channelUuid!)
+        .gte("date", since)
+        .order("date", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as ChannelAnalyticsRow[];
+    },
+  });
+}
+
+// Top videos by revenue or watch time across the startup
+export function useTopVideosByMetric(
+  startupId: string | undefined,
+  metric: "estimated_revenue_usd" | "estimated_minutes_watched" | "views",
+  limit = 10
+) {
+  return useQuery({
+    queryKey: ["youtube-top-by-metric", startupId, metric, limit],
+    enabled: !!startupId,
+    queryFn: async (): Promise<Array<VideoAnalyticsRow & {
+      video_id: string;
+      video_title: string | null;
+      thumbnail_url: string | null;
+      channel_title: string | null;
+    }>> => {
+      // Get channels for this startup
+      const { data: channels } = await supabase
+        .from("connector_data_youtube_channels")
+        .select("id, title")
+        .eq("startup_id", startupId!);
+      if (!channels || channels.length === 0) return [];
+      const channelMap = new Map((channels ?? []).map((c: any) => [c.id, c]));
+      const channelIds = (channels ?? []).map((c: any) => c.id);
+
+      // Get videos for those channels
+      const { data: videos } = await supabase
+        .from("connector_data_youtube_videos")
+        .select("id, video_id, title, thumbnail_url, channel_uuid")
+        .in("channel_uuid", channelIds);
+      const videoMap = new Map((videos ?? []).map((v: any) => [v.id, v]));
+      const videoIds = (videos ?? []).map((v: any) => v.id);
+      if (videoIds.length === 0) return [];
+
+      // Get latest analytics row per video, sorted by metric
+      const { data: analytics, error } = await supabase
+        .from("connector_data_youtube_video_analytics")
+        .select("*")
+        .in("video_uuid", videoIds)
+        .order(metric, { ascending: false, nullsFirst: false })
+        .limit(limit);
+      if (error) throw error;
+
+      return (analytics ?? []).map((a: any) => {
+        const v = videoMap.get(a.video_uuid) as any;
+        const c = v ? channelMap.get(v.channel_uuid) as any : null;
+        return {
+          ...a,
+          video_id: v?.video_id ?? "",
+          video_title: v?.title ?? null,
+          thumbnail_url: v?.thumbnail_url ?? null,
+          channel_title: c?.title ?? null,
+        };
+      });
+    },
+  });
+}
+
+// Trigger the OAuth flow — opens a new tab with Google's consent screen
+export function useStartYouTubeOAuth() {
+  return useMutation({
+    mutationFn: async ({
+      startupId,
+      returnPath,
+    }: {
+      startupId: string;
+      returnPath?: string;
+    }) => {
+      const { data, error } = await supabase.functions.invoke("youtube-oauth-start", {
+        body: {
+          startup_id: startupId,
+          return_path: returnPath ?? window.location.pathname,
+        },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+      const url = (data as any)?.authorization_url as string;
+      if (!url) throw new Error("No authorization_url returned");
+      // Open in a new tab so the user can complete OAuth without losing the
+      // dashboard state. They'll be redirected back to returnPath after.
+      window.open(url, "_blank");
+      return url;
+    },
+  });
+}
+
+export function useTriggerYouTubeAnalyticsSync() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ startupId }: { startupId: string }) => {
+      const { data, error } = await supabase.functions.invoke("youtube-analytics-sync", {
+        body: { startup_id: startupId },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+      return data as any;
+    },
+    onSuccess: (_d, vars) => {
+      qc.invalidateQueries({ queryKey: ["youtube-channel-analytics"] });
+      qc.invalidateQueries({ queryKey: ["youtube-top-by-metric", vars.startupId] });
+      qc.invalidateQueries({ queryKey: ["youtube-authorized", vars.startupId] });
+    },
+  });
+}
+
+// ── Tier 1: Credentials ───────────────────────────────────────────────────
+
 export function useSaveYouTubeApiKey() {
   const qc = useQueryClient();
   return useMutation({

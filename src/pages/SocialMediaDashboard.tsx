@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,7 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Youtube, Settings, RefreshCw, Loader2, Users, Eye, Video, ThumbsUp, MessageSquare,
-  TrendingUp, ExternalLink, AlertTriangle, CheckCircle2,
+  TrendingUp, ExternalLink, AlertTriangle, CheckCircle2, ShieldCheck, KeyRound, BarChart3,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -20,10 +21,15 @@ import {
   useRecentYouTubeUploads,
   useTopYouTubeVideos,
   useTriggerYouTubeSync,
+  useAuthorizedChannelIds,
+  useStartYouTubeOAuth,
+  useTriggerYouTubeAnalyticsSync,
+  useTopVideosByMetric,
   type YouTubeChannel,
   type YouTubeVideoWithChannel,
 } from "@/hooks/useYouTube";
 import YouTubeConnectorSetup from "@/components/social/YouTubeConnectorSetup";
+import ChannelAnalyticsPanel from "@/components/social/ChannelAnalyticsPanel";
 
 function fmtNum(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
@@ -57,6 +63,34 @@ export default function SocialMediaDashboard() {
   const { data: recentUploads = [] } = useRecentYouTubeUploads(startupId, 12);
   const { data: topVideos = [] } = useTopYouTubeVideos(startupId, 10);
   const triggerSync = useTriggerYouTubeSync();
+  const { data: authorizedIds = [] } = useAuthorizedChannelIds(startupId);
+  const startOAuth = useStartYouTubeOAuth();
+  const triggerAnalyticsSync = useTriggerYouTubeAnalyticsSync();
+  const { data: topByRevenue = [] } = useTopVideosByMetric(startupId, "estimated_revenue_usd", 10);
+  const { data: topByWatchTime = [] } = useTopVideosByMetric(startupId, "estimated_minutes_watched", 10);
+
+  const authorizedSet = useMemo(() => new Set(authorizedIds), [authorizedIds]);
+  const anyAuthorized = authorizedIds.length > 0;
+
+  // Handle OAuth callback redirect (?yt_oauth=success|error)
+  const [searchParams, setSearchParams] = useSearchParams();
+  useEffect(() => {
+    const status = searchParams.get("yt_oauth");
+    if (!status) return;
+    if (status === "success") {
+      const channels = searchParams.get("channels");
+      toast.success(`Authorized ${channels ?? ""} channel(s) for analytics`);
+    } else {
+      const reason = searchParams.get("reason") ?? "unknown";
+      toast.error(`OAuth failed: ${reason}`);
+    }
+    // Clean the URL so a refresh doesn't re-toast
+    const next = new URLSearchParams(searchParams);
+    next.delete("yt_oauth");
+    next.delete("channels");
+    next.delete("reason");
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams]);
 
   // Aggregate stats
   const totals = useMemo(() => {
@@ -79,6 +113,35 @@ export default function SocialMediaDashboard() {
           toast.success(`Synced ${total} videos across ${data.results?.length ?? 0} channel(s)`);
         },
         onError: (e: any) => toast.error(e?.message ?? "Sync failed"),
+      }
+    );
+  };
+
+  const handleSyncAnalytics = () => {
+    if (!startupId) return;
+    triggerAnalyticsSync.mutate(
+      { startupId },
+      {
+        onSuccess: (data: any) => {
+          const channels = data.results?.length ?? 0;
+          const rows = data.results?.reduce(
+            (acc: number, r: any) => acc + r.channel_rows_upserted + r.video_rows_upserted,
+            0
+          ) ?? 0;
+          toast.success(`Analytics synced — ${rows} rows across ${channels} channel(s)`);
+        },
+        onError: (e: any) => toast.error(e?.message ?? "Analytics sync failed"),
+      }
+    );
+  };
+
+  const handleAuthorize = () => {
+    if (!startupId) return;
+    startOAuth.mutate(
+      { startupId, returnPath: "/team/social-media" },
+      {
+        onSuccess: () => toast.info("Opened Google consent in a new tab — complete sign-in there"),
+        onError: (e: any) => toast.error(e?.message ?? "Couldn't start OAuth"),
       }
     );
   };
@@ -112,9 +175,22 @@ export default function SocialMediaDashboard() {
             </p>
           </div>
           {canWrite && (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <Button size="sm" variant="outline" onClick={() => setSetupOpen(true)} className="gap-1.5">
                 <Settings className="h-3.5 w-3.5" /> Setup
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleAuthorize}
+                disabled={startOAuth.isPending || channels.length === 0}
+                className="gap-1.5"
+                title="Authorize a channel for analytics (revenue, watch time, CTR)"
+              >
+                {startOAuth.isPending
+                  ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  : <ShieldCheck className="h-3.5 w-3.5" />}
+                Authorize
               </Button>
               <Button
                 size="sm"
@@ -123,8 +199,22 @@ export default function SocialMediaDashboard() {
                 className="gap-1.5"
               >
                 {triggerSync.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
-                Sync now
+                Sync videos
               </Button>
+              {anyAuthorized && (
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={handleSyncAnalytics}
+                  disabled={triggerAnalyticsSync.isPending}
+                  className="gap-1.5"
+                >
+                  {triggerAnalyticsSync.isPending
+                    ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    : <BarChart3 className="h-3.5 w-3.5" />}
+                  Sync analytics
+                </Button>
+              )}
             </div>
           )}
         </div>
@@ -184,10 +274,11 @@ export default function SocialMediaDashboard() {
               <TabsTrigger value="recent">Recent uploads</TabsTrigger>
               <TabsTrigger value="top">Top performers</TabsTrigger>
               <TabsTrigger value="channels">Channels</TabsTrigger>
+              {anyAuthorized && <TabsTrigger value="analytics">Analytics</TabsTrigger>}
             </TabsList>
 
             <TabsContent value="recent">
-              <VideosGrid videos={recentUploads} loading={chLoading} emptyMessage="No uploads synced yet — click Sync now." />
+              <VideosGrid videos={recentUploads} loading={chLoading} emptyMessage="No uploads synced yet — click Sync videos." />
             </TabsContent>
 
             <TabsContent value="top">
@@ -195,8 +286,90 @@ export default function SocialMediaDashboard() {
             </TabsContent>
 
             <TabsContent value="channels">
-              <ChannelsGrid channels={channels} loading={chLoading} />
+              <ChannelsGrid channels={channels} loading={chLoading} authorizedSet={authorizedSet} />
             </TabsContent>
+
+            {anyAuthorized && (
+              <TabsContent value="analytics" className="space-y-6">
+                {/* Per-channel analytics panels */}
+                {channels.filter((c) => authorizedSet.has(c.channel_id)).map((c) => (
+                  <div key={c.id}>
+                    <div className="flex items-center gap-2 mb-2">
+                      {c.thumbnail_url && <img src={c.thumbnail_url} alt="" className="h-6 w-6 rounded-full" />}
+                      <p className="text-sm font-semibold">{c.title}</p>
+                      <Badge variant="outline" className="text-[10px] border-emerald-500/30 bg-emerald-500/15 text-emerald-700 gap-1">
+                        <ShieldCheck className="h-2.5 w-2.5" /> Authorized
+                      </Badge>
+                    </div>
+                    <ChannelAnalyticsPanel channel={c} isAuthorized />
+                  </div>
+                ))}
+
+                {/* Top by revenue */}
+                {topByRevenue.length > 0 && (
+                  <div>
+                    <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">
+                      Top revenue (30d)
+                    </h3>
+                    <div className="space-y-2">
+                      {topByRevenue.slice(0, 5).map((v, i) => (
+                        <a
+                          key={v.id}
+                          href={`https://youtube.com/watch?v=${v.video_id}`}
+                          target="_blank" rel="noopener noreferrer"
+                          className="flex items-center gap-3 rounded-lg border border-border/40 bg-card p-3 hover:bg-muted/20"
+                        >
+                          <Badge className="bg-amber-500 text-white">#{i + 1}</Badge>
+                          {v.thumbnail_url && <img src={v.thumbnail_url} alt="" className="h-10 w-16 rounded object-cover" />}
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium truncate">{v.video_title}</p>
+                            <p className="text-[10px] text-muted-foreground truncate">{v.channel_title}</p>
+                          </div>
+                          <div className="text-right tabular-nums">
+                            <p className="text-sm font-bold text-emerald-600">
+                              ${v.estimated_revenue_usd?.toFixed(2) ?? "0.00"}
+                            </p>
+                            <p className="text-[10px] text-muted-foreground">{v.views.toLocaleString()} views</p>
+                          </div>
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Top by watch time */}
+                {topByWatchTime.length > 0 && (
+                  <div>
+                    <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">
+                      Top watch time (30d)
+                    </h3>
+                    <div className="space-y-2">
+                      {topByWatchTime.slice(0, 5).map((v, i) => (
+                        <a
+                          key={v.id}
+                          href={`https://youtube.com/watch?v=${v.video_id}`}
+                          target="_blank" rel="noopener noreferrer"
+                          className="flex items-center gap-3 rounded-lg border border-border/40 bg-card p-3 hover:bg-muted/20"
+                        >
+                          <Badge className="bg-purple-500 text-white">#{i + 1}</Badge>
+                          {v.thumbnail_url && <img src={v.thumbnail_url} alt="" className="h-10 w-16 rounded object-cover" />}
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium truncate">{v.video_title}</p>
+                            <p className="text-[10px] text-muted-foreground truncate">{v.channel_title}</p>
+                          </div>
+                          <div className="text-right tabular-nums">
+                            <p className="text-sm font-bold text-purple-600">
+                              {Math.round(v.estimated_minutes_watched).toLocaleString()} min
+                            </p>
+                            <p className="text-[10px] text-muted-foreground">{v.views.toLocaleString()} views</p>
+                          </div>
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </TabsContent>
+            )}
           </Tabs>
         )}
       </main>
@@ -306,45 +479,54 @@ function VideosGrid({
 }
 
 function ChannelsGrid({
-  channels, loading,
+  channels, loading, authorizedSet,
 }: {
   channels: YouTubeChannel[];
   loading: boolean;
+  authorizedSet: Set<string>;
 }) {
   if (loading) return <Skeleton className="h-40 w-full" />;
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-      {channels.map((c) => (
-        <Card key={c.id} className="border-border/50">
-          <CardContent className="p-4 flex items-center gap-4">
-            {c.thumbnail_url ? (
-              <img src={c.thumbnail_url} alt="" className="h-14 w-14 rounded-full" />
-            ) : (
-              <div className="h-14 w-14 rounded-full bg-muted flex items-center justify-center">
-                <Youtube className="h-6 w-6 text-muted-foreground" />
+      {channels.map((c) => {
+        const isAuth = authorizedSet.has(c.channel_id);
+        return (
+          <Card key={c.id} className="border-border/50">
+            <CardContent className="p-4 flex items-center gap-4">
+              {c.thumbnail_url ? (
+                <img src={c.thumbnail_url} alt="" className="h-14 w-14 rounded-full" />
+              ) : (
+                <div className="h-14 w-14 rounded-full bg-muted flex items-center justify-center">
+                  <Youtube className="h-6 w-6 text-muted-foreground" />
+                </div>
+              )}
+              <div className="min-w-0 flex-1">
+                <a
+                  href={`https://youtube.com/channel/${c.channel_id}`}
+                  target="_blank" rel="noopener noreferrer"
+                  className="text-sm font-semibold hover:underline truncate block"
+                >
+                  {c.title ?? c.channel_id}
+                </a>
+                <p className="text-[10px] text-muted-foreground truncate mt-0.5">
+                  {c.custom_url ?? c.handle ?? c.channel_id}
+                </p>
+                <div className="flex items-center gap-3 mt-2 text-[11px] text-muted-foreground tabular-nums">
+                  <span><Users className="h-3 w-3 inline mr-0.5" /> {fmtNum(c.subscriber_count)}</span>
+                  <span><Eye className="h-3 w-3 inline mr-0.5" /> {fmtNum(c.view_count)}</span>
+                  <span><Video className="h-3 w-3 inline mr-0.5" /> {c.video_count}</span>
+                  {!c.is_active && <Badge variant="outline" className="text-[9px]">paused</Badge>}
+                  {isAuth && (
+                    <Badge variant="outline" className="text-[9px] gap-0.5 border-emerald-500/30 bg-emerald-500/15 text-emerald-700">
+                      <ShieldCheck className="h-2.5 w-2.5" /> Analytics
+                    </Badge>
+                  )}
+                </div>
               </div>
-            )}
-            <div className="min-w-0 flex-1">
-              <a
-                href={`https://youtube.com/channel/${c.channel_id}`}
-                target="_blank" rel="noopener noreferrer"
-                className="text-sm font-semibold hover:underline truncate block"
-              >
-                {c.title ?? c.channel_id}
-              </a>
-              <p className="text-[10px] text-muted-foreground truncate mt-0.5">
-                {c.custom_url ?? c.handle ?? c.channel_id}
-              </p>
-              <div className="flex items-center gap-3 mt-2 text-[11px] text-muted-foreground tabular-nums">
-                <span><Users className="h-3 w-3 inline mr-0.5" /> {fmtNum(c.subscriber_count)}</span>
-                <span><Eye className="h-3 w-3 inline mr-0.5" /> {fmtNum(c.view_count)}</span>
-                <span><Video className="h-3 w-3 inline mr-0.5" /> {c.video_count}</span>
-                {!c.is_active && <Badge variant="outline" className="text-[9px]">paused</Badge>}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
+            </CardContent>
+          </Card>
+        );
+      })}
     </div>
   );
 }

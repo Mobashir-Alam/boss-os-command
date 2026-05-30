@@ -41,3 +41,16 @@ verify_jwt = false
 [functions.youtube-sync]
 # Same.
 verify_jwt = false
+
+[functions.youtube-oauth-start]
+# Generates Google consent URL — invoked from frontend; doesn't touch
+# any user-supplied secrets, only reads from Supabase env vars.
+verify_jwt = false
+
+[functions.youtube-oauth-callback]
+# Receives Google's redirect — Google won't include a JWT.
+verify_jwt = false
+
+[functions.youtube-analytics-sync]
+# Reads OAuth tokens server-side from connector_youtube_oauth.
+verify_jwt = false

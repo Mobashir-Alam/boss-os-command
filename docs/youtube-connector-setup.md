@@ -135,3 +135,91 @@ The schema is already prepared. Tier 2 is purely additive — Tier 1 data keeps 
 - **Never paste the API key in chat, email, or screenshots** — store it only in the app's Setup modal (which writes to the encrypted `connector_credentials` table)
 - If the key ever leaks (suspicious quota usage, public commit, screenshot), revoke + regenerate from Google Cloud Console → Credentials → key → **Delete** + create new one
 - The Setup modal supports replacing the key — paste a new value over the old one, Save
+
+---
+
+# Tier 2 — OAuth setup (unlocks revenue, watch time, CTR, demographics)
+
+When you're ready for richer analytics, follow this section. **It does not replace Tier 1** — Tier 1 keeps running. Tier 2 layers analytics on top.
+
+## What you'll produce
+
+- A Google **OAuth Client ID** + **Client Secret**
+- A **redirect URI** registered with the OAuth client
+
+These go into Supabase secrets (NOT in the app DB).
+
+## Step T2-1 — Configure OAuth consent screen (~5 min, one-time)
+
+1. https://console.cloud.google.com/ → same project as Tier 1 → **APIs & Services** → **OAuth consent screen**
+2. **User Type:** `Internal` if your team uses Google Workspace (no Google verification needed), otherwise `External` (you'll be in "Testing" mode — add your test users by email)
+3. Fill in app name (e.g. "Founder OS Analytics"), support email, developer contact email
+4. **Scopes:** click "Add or Remove Scopes" → search and add:
+   - `.../auth/youtube.readonly`
+   - `.../auth/yt-analytics.readonly`
+   - `.../auth/yt-analytics-monetary.readonly` *(only request if channel is in Partner Program)*
+5. **Test users** (for External type): add each Google account that will authorize a channel
+6. Save & continue
+
+## Step T2-2 — Enable the YouTube Analytics API
+
+1. **APIs & Services** → **Library**
+2. Search **YouTube Analytics API** → **Enable**
+
+## Step T2-3 — Create OAuth client (~2 min)
+
+1. **APIs & Services** → **Credentials** → **+ Create Credentials** → **OAuth client ID**
+2. **Application type:** Web application
+3. **Name:** `Founder OS OAuth`
+4. **Authorized redirect URIs:** add exactly this URL (replace the Supabase project ref if different):
+   ```
+   https://gnkyujdmrnoprwredzcy.supabase.co/functions/v1/youtube-oauth-callback
+   ```
+5. Click **Create**
+6. Copy the **Client ID** and **Client Secret** that appear
+
+## Step T2-4 — Add secrets to Supabase / Lovable
+
+In Lovable, find the Edge Function secrets (or Supabase Dashboard → Project Settings → Edge Functions → Secrets). Add:
+
+| Secret name | Value |
+|---|---|
+| `GOOGLE_OAUTH_CLIENT_ID` | The Client ID from step T2-3 |
+| `GOOGLE_OAUTH_CLIENT_SECRET` | The Client Secret from step T2-3 |
+| `GOOGLE_OAUTH_REDIRECT_URI` | `https://gnkyujdmrnoprwredzcy.supabase.co/functions/v1/youtube-oauth-callback` (exact same URI you registered) |
+| `APP_BASE_URL` | `http://localhost:8080` for dev OR your deployed app URL (e.g. `https://preview--boss-os-command.lovable.app`) — used by the callback to redirect back |
+
+## Step T2-5 — Authorize each channel
+
+1. In Founder OS, go to `/team/social-media`
+2. Click **Authorize** in the header
+3. A new tab opens with Google's consent screen
+4. Sign in **with the Google account that owns the YouTube channels**
+5. Accept the requested scopes
+6. You'll be redirected back to `/team/social-media` with a success toast
+7. The dashboard now shows an **Analytics** tab — click to see revenue / watch time / CTR
+
+Repeat for each Google account that owns Nasheedio channels (e.g. if Nasheedio Bangla and Nasheedio Beats are on different Google accounts, each one authorizes once).
+
+## Step T2-6 — Pull the first analytics snapshot
+
+1. Click **Sync analytics** (new button in the header, appears once any channel is authorized)
+2. Wait ~30–60 seconds depending on number of channels and videos
+3. The Analytics tab fills in with the last 30 days of data
+
+## Troubleshooting Tier 2
+
+| Symptom | Cause / Fix |
+|---|---|
+| "Error 400: redirect_uri_mismatch" on Google consent | The `GOOGLE_OAUTH_REDIRECT_URI` secret must EXACTLY match the URI registered in step T2-3. Watch for trailing slashes. |
+| "Access blocked: This app's request is invalid" | OAuth consent screen is in `Testing` mode AND the signing-in email isn't a test user. Add it under Test users in the consent screen settings. |
+| OAuth completes but no analytics data appears | Click "Sync analytics" — the OAuth flow only stores tokens, doesn't auto-pull data |
+| Channel authorized but revenue shows "—" | Channel isn't in YouTube Partner Program (not monetized), OR `yt-analytics-monetary.readonly` scope wasn't granted. Re-authorize and accept that scope. |
+| "no_refresh_token" error in callback | Google didn't issue a refresh token. Revoke the app's access at https://myaccount.google.com/permissions → re-authorize. We force prompt=consent, this should be rare. |
+
+## Why this matters
+
+Before Tier 2: dashboard shows views, likes, comments — the public stuff anyone can see on the watch page.
+
+After Tier 2: revenue per video, watch time, click-through rate on thumbnails, where viewers drop off, audience demographics. The metrics YouTube's algorithm actually uses to rank you — and the numbers that turn the dashboard into a real intelligence tool for the Social Media team and the CEO.
+
