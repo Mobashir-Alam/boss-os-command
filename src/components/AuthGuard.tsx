@@ -48,6 +48,12 @@ const AuthGuard = ({ children }: { children: React.ReactNode }) => {
     return <Navigate to="/team/hr" replace />;
   }
 
+  // Same for Social Media heads.
+  const isSMHead = profile?.role === "functional_head" && profile?.department === "social_media";
+  if (isSMHead && (location.pathname === "/" || location.pathname === "/my-domain")) {
+    return <Navigate to="/team/social-media" replace />;
+  }
+
   // The CEO panel ("/") is for founders only. Everyone else lands on /employee.
   if (profile?.role && profile.role !== "founder" && location.pathname === "/") {
     return <Navigate to="/employee" replace />;

@@ -32,3 +32,12 @@ verify_jwt = false
 # Reads PAT from connector_credentials server-side, never accepts it
 # from the request body, so it's safe to expose without JWT auth.
 verify_jwt = false
+
+[functions.youtube-discovery]
+# Same pattern as github-discovery — API key read from connector_credentials,
+# never from request body. Safe to expose without JWT.
+verify_jwt = false
+
+[functions.youtube-sync]
+# Same.
+verify_jwt = false
