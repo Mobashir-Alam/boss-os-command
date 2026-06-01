@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -59,29 +58,11 @@ export interface YouTubeVideoSnapshot {
 // ── Channels ──────────────────────────────────────────────────────────────
 
 export function useYouTubeChannels(startupId: string | undefined) {
-  const qc = useQueryClient();
-
-  // Realtime so the dashboard updates after a sync
-  useEffect(() => {
-    if (!startupId) return;
-    const ch = supabase
-      .channel(`youtube-channels-${startupId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "connector_data_youtube_channels",
-          filter: `startup_id=eq.${startupId}`,
-        },
-        () => qc.invalidateQueries({ queryKey: ["youtube-channels", startupId] })
-      )
-      .subscribe();
-    return () => {
-      supabase.removeChannel(ch);
-    };
-  }, [startupId, qc]);
-
+  // Note: realtime subscription removed because the Supabase client's
+  // channel pattern conflicts with React Strict Mode's double-invoke of
+  // useEffect. All our mutations (useTriggerYouTubeSync, useAddYouTubeChannel,
+  // etc.) already invalidate this query on success, so the dashboard stays
+  // fresh without needing realtime here.
   return useQuery({
     queryKey: ["youtube-channels", startupId],
     enabled: !!startupId,
