@@ -12,6 +12,10 @@ dist
 dist-ssr
 *.local
 
+# Local-only docs (credentials, personal notes) — never commit
+*.local.md
+docs/credentials.local.md
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
