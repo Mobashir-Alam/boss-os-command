@@ -295,7 +295,7 @@ export default function SocialMediaDashboard() {
                 {channels.filter((c) => authorizedSet.has(c.channel_id)).map((c) => (
                   <div key={c.id}>
                     <div className="flex items-center gap-2 mb-2">
-                      {c.thumbnail_url && <img src={c.thumbnail_url} alt="" className="h-6 w-6 rounded-full" />}
+                      {c.thumbnail_url && <img src={c.thumbnail_url} alt="" referrerPolicy="no-referrer" className="h-6 w-6 rounded-full" />}
                       <p className="text-sm font-semibold">{c.title}</p>
                       <Badge variant="outline" className="text-[10px] border-emerald-500/30 bg-emerald-500/15 text-emerald-700 gap-1">
                         <ShieldCheck className="h-2.5 w-2.5" /> Authorized
@@ -320,7 +320,7 @@ export default function SocialMediaDashboard() {
                           className="flex items-center gap-3 rounded-lg border border-border/40 bg-card p-3 hover:bg-muted/20"
                         >
                           <Badge className="bg-amber-500 text-white">#{i + 1}</Badge>
-                          {v.thumbnail_url && <img src={v.thumbnail_url} alt="" className="h-10 w-16 rounded object-cover" />}
+                          {v.thumbnail_url && <img src={v.thumbnail_url} alt="" referrerPolicy="no-referrer" className="h-10 w-16 rounded object-cover" />}
                           <div className="min-w-0 flex-1">
                             <p className="text-sm font-medium truncate">{v.video_title}</p>
                             <p className="text-[10px] text-muted-foreground truncate">{v.channel_title}</p>
@@ -352,7 +352,7 @@ export default function SocialMediaDashboard() {
                           className="flex items-center gap-3 rounded-lg border border-border/40 bg-card p-3 hover:bg-muted/20"
                         >
                           <Badge className="bg-purple-500 text-white">#{i + 1}</Badge>
-                          {v.thumbnail_url && <img src={v.thumbnail_url} alt="" className="h-10 w-16 rounded object-cover" />}
+                          {v.thumbnail_url && <img src={v.thumbnail_url} alt="" referrerPolicy="no-referrer" className="h-10 w-16 rounded object-cover" />}
                           <div className="min-w-0 flex-1">
                             <p className="text-sm font-medium truncate">{v.video_title}</p>
                             <p className="text-[10px] text-muted-foreground truncate">{v.channel_title}</p>
@@ -435,6 +435,7 @@ function VideosGrid({
               <img
                 src={v.thumbnail_url}
                 alt=""
+                referrerPolicy="no-referrer"
                 className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-300"
               />
             ) : (
@@ -494,7 +495,7 @@ function ChannelsGrid({
           <Card key={c.id} className="border-border/50">
             <CardContent className="p-4 flex items-center gap-4">
               {c.thumbnail_url ? (
-                <img src={c.thumbnail_url} alt="" className="h-14 w-14 rounded-full" />
+                <img src={c.thumbnail_url} alt="" referrerPolicy="no-referrer" className="h-14 w-14 rounded-full" />
               ) : (
                 <div className="h-14 w-14 rounded-full bg-muted flex items-center justify-center">
                   <Youtube className="h-6 w-6 text-muted-foreground" />

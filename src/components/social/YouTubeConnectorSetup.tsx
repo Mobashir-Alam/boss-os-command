@@ -166,6 +166,7 @@ export default function YouTubeConnectorSetup({ open, onOpenChange, startupId }:
                       <img
                         src={discoveryPreview.channel.thumbnail_url}
                         alt=""
+                        referrerPolicy="no-referrer"
                         className="h-10 w-10 rounded-full"
                       />
                     )}
@@ -201,7 +202,7 @@ export default function YouTubeConnectorSetup({ open, onOpenChange, startupId }:
                 {channels.map((c) => (
                   <div key={c.id} className="flex items-center gap-2 rounded-lg border border-border/40 bg-card p-2">
                     {c.thumbnail_url ? (
-                      <img src={c.thumbnail_url} alt="" className="h-7 w-7 rounded-full" />
+                      <img src={c.thumbnail_url} alt="" referrerPolicy="no-referrer" className="h-7 w-7 rounded-full" />
                     ) : (
                       <div className="h-7 w-7 rounded-full bg-muted" />
                     )}

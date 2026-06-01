@@ -248,6 +248,37 @@ export function useYouTubeVideoSnapshots(videoUuid: string | undefined, days = 3
 
 // ── Mutations: discovery + sync ───────────────────────────────────────────
 
+// supabase.functions.invoke swallows the response body when status is 4xx/5xx
+// and just throws "Edge Function returned a non-2xx status code". Pull the
+// real error message out of error.context.body so we can show it.
+async function extractFnError(error: any): Promise<Error> {
+  const ctx = error?.context;
+  if (ctx) {
+    try {
+      // ctx.body can be a string OR a ReadableStream depending on supabase-js version
+      let bodyText = "";
+      if (typeof ctx.body === "string") {
+        bodyText = ctx.body;
+      } else if (ctx.text) {
+        bodyText = await ctx.text();
+      } else if (ctx.json) {
+        bodyText = JSON.stringify(await ctx.json());
+      }
+      if (bodyText) {
+        try {
+          const parsed = JSON.parse(bodyText);
+          if (parsed?.error) return new Error(parsed.error);
+        } catch {
+          return new Error(bodyText.slice(0, 300));
+        }
+      }
+    } catch {
+      /* fall through */
+    }
+  }
+  return new Error(error?.message ?? "Edge function failed");
+}
+
 export function useTriggerYouTubeDiscovery() {
   return useMutation({
     mutationFn: async ({
@@ -260,7 +291,7 @@ export function useTriggerYouTubeDiscovery() {
       const { data, error } = await supabase.functions.invoke("youtube-discovery", {
         body: { startup_id: startupId, channel_input: channelInput },
       });
-      if (error) throw error;
+      if (error) throw await extractFnError(error);
       if ((data as any)?.error) throw new Error((data as any).error);
       return data as any;
     },
@@ -274,7 +305,7 @@ export function useTriggerYouTubeSync() {
       const { data, error } = await supabase.functions.invoke("youtube-sync", {
         body: { startup_id: startupId },
       });
-      if (error) throw error;
+      if (error) throw await extractFnError(error);
       if ((data as any)?.error) throw new Error((data as any).error);
       return data as any;
     },
@@ -451,7 +482,7 @@ export function useStartYouTubeOAuth() {
           return_path: returnPath ?? window.location.pathname,
         },
       });
-      if (error) throw error;
+      if (error) throw await extractFnError(error);
       if ((data as any)?.error) throw new Error((data as any).error);
       const url = (data as any)?.authorization_url as string;
       if (!url) throw new Error("No authorization_url returned");
@@ -470,7 +501,7 @@ export function useTriggerYouTubeAnalyticsSync() {
       const { data, error } = await supabase.functions.invoke("youtube-analytics-sync", {
         body: { startup_id: startupId },
       });
-      if (error) throw error;
+      if (error) throw await extractFnError(error);
       if ((data as any)?.error) throw new Error((data as any).error);
       return data as any;
     },
