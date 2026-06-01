@@ -14,6 +14,60 @@ export type Database = {
   }
   public: {
     Tables: {
+      attendance_records: {
+        Row: {
+          attendance_date: string
+          created_at: string
+          first_in_at: string | null
+          id: string
+          last_out_at: string | null
+          marked_by: string | null
+          needs_review: boolean
+          notes: string | null
+          profile_id: string
+          raw_events: Json
+          session_count: number
+          source: string
+          status: string
+          total_minutes: number | null
+          updated_at: string
+        }
+        Insert: {
+          attendance_date: string
+          created_at?: string
+          first_in_at?: string | null
+          id?: string
+          last_out_at?: string | null
+          marked_by?: string | null
+          needs_review?: boolean
+          notes?: string | null
+          profile_id: string
+          raw_events?: Json
+          session_count?: number
+          source?: string
+          status?: string
+          total_minutes?: number | null
+          updated_at?: string
+        }
+        Update: {
+          attendance_date?: string
+          created_at?: string
+          first_in_at?: string | null
+          id?: string
+          last_out_at?: string | null
+          marked_by?: string | null
+          needs_review?: boolean
+          notes?: string | null
+          profile_id?: string
+          raw_events?: Json
+          session_count?: number
+          source?: string
+          status?: string
+          total_minutes?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       board_seats: {
         Row: {
           created_at: string
@@ -186,6 +240,74 @@ export type Database = {
             columns: ["startup_id"]
             isOneToOne: false
             referencedRelation: "startups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      candidates: {
+        Row: {
+          applied_at: string
+          created_at: string
+          created_by: string | null
+          email: string | null
+          full_name: string
+          hired_at: string | null
+          hired_profile_id: string | null
+          id: string
+          job_id: string | null
+          notes: string | null
+          phone: string | null
+          rating: number | null
+          rejected_reason: string | null
+          resume_url: string | null
+          source: string | null
+          stage: string
+          updated_at: string
+        }
+        Insert: {
+          applied_at?: string
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          full_name: string
+          hired_at?: string | null
+          hired_profile_id?: string | null
+          id?: string
+          job_id?: string | null
+          notes?: string | null
+          phone?: string | null
+          rating?: number | null
+          rejected_reason?: string | null
+          resume_url?: string | null
+          source?: string | null
+          stage?: string
+          updated_at?: string
+        }
+        Update: {
+          applied_at?: string
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          full_name?: string
+          hired_at?: string | null
+          hired_profile_id?: string | null
+          id?: string
+          job_id?: string | null
+          notes?: string | null
+          phone?: string | null
+          rating?: number | null
+          rejected_reason?: string | null
+          resume_url?: string | null
+          source?: string | null
+          stage?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "candidates_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "job_postings"
             referencedColumns: ["id"]
           },
         ]
@@ -410,6 +532,387 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "connector_data_slack_startup_id_fkey"
+            columns: ["startup_id"]
+            isOneToOne: false
+            referencedRelation: "startups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      connector_data_youtube_channel_analytics: {
+        Row: {
+          average_view_duration_sec: number | null
+          channel_uuid: string
+          comments: number
+          cpm_usd: number | null
+          created_at: string
+          date: string
+          estimated_ad_revenue_usd: number | null
+          estimated_minutes_watched: number
+          estimated_revenue_usd: number | null
+          id: string
+          impressions: number | null
+          impressions_ctr: number | null
+          likes: number
+          raw_payload: Json
+          shares: number
+          subscribers_gained: number
+          subscribers_lost: number
+          updated_at: string
+          views: number
+        }
+        Insert: {
+          average_view_duration_sec?: number | null
+          channel_uuid: string
+          comments?: number
+          cpm_usd?: number | null
+          created_at?: string
+          date: string
+          estimated_ad_revenue_usd?: number | null
+          estimated_minutes_watched?: number
+          estimated_revenue_usd?: number | null
+          id?: string
+          impressions?: number | null
+          impressions_ctr?: number | null
+          likes?: number
+          raw_payload?: Json
+          shares?: number
+          subscribers_gained?: number
+          subscribers_lost?: number
+          updated_at?: string
+          views?: number
+        }
+        Update: {
+          average_view_duration_sec?: number | null
+          channel_uuid?: string
+          comments?: number
+          cpm_usd?: number | null
+          created_at?: string
+          date?: string
+          estimated_ad_revenue_usd?: number | null
+          estimated_minutes_watched?: number
+          estimated_revenue_usd?: number | null
+          id?: string
+          impressions?: number | null
+          impressions_ctr?: number | null
+          likes?: number
+          raw_payload?: Json
+          shares?: number
+          subscribers_gained?: number
+          subscribers_lost?: number
+          updated_at?: string
+          views?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "connector_data_youtube_channel_analytics_channel_uuid_fkey"
+            columns: ["channel_uuid"]
+            isOneToOne: false
+            referencedRelation: "connector_data_youtube_channels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      connector_data_youtube_channels: {
+        Row: {
+          channel_created: string | null
+          channel_id: string
+          country: string | null
+          created_at: string
+          custom_url: string | null
+          description: string | null
+          handle: string | null
+          id: string
+          is_active: boolean
+          is_monetized: boolean
+          last_synced_at: string | null
+          raw_payload: Json
+          startup_id: string
+          subscriber_count: number | null
+          thumbnail_url: string | null
+          title: string | null
+          updated_at: string
+          uploads_playlist: string | null
+          video_count: number | null
+          view_count: number | null
+        }
+        Insert: {
+          channel_created?: string | null
+          channel_id: string
+          country?: string | null
+          created_at?: string
+          custom_url?: string | null
+          description?: string | null
+          handle?: string | null
+          id?: string
+          is_active?: boolean
+          is_monetized?: boolean
+          last_synced_at?: string | null
+          raw_payload?: Json
+          startup_id: string
+          subscriber_count?: number | null
+          thumbnail_url?: string | null
+          title?: string | null
+          updated_at?: string
+          uploads_playlist?: string | null
+          video_count?: number | null
+          view_count?: number | null
+        }
+        Update: {
+          channel_created?: string | null
+          channel_id?: string
+          country?: string | null
+          created_at?: string
+          custom_url?: string | null
+          description?: string | null
+          handle?: string | null
+          id?: string
+          is_active?: boolean
+          is_monetized?: boolean
+          last_synced_at?: string | null
+          raw_payload?: Json
+          startup_id?: string
+          subscriber_count?: number | null
+          thumbnail_url?: string | null
+          title?: string | null
+          updated_at?: string
+          uploads_playlist?: string | null
+          video_count?: number | null
+          view_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "connector_data_youtube_channels_startup_id_fkey"
+            columns: ["startup_id"]
+            isOneToOne: false
+            referencedRelation: "startups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      connector_data_youtube_video_analytics: {
+        Row: {
+          average_view_duration_sec: number | null
+          average_view_percentage: number | null
+          comments: number
+          cpm_usd: number | null
+          created_at: string
+          date: string
+          estimated_minutes_watched: number
+          estimated_revenue_usd: number | null
+          id: string
+          likes: number
+          raw_payload: Json
+          shares: number
+          subscribers_gained: number
+          subscribers_lost: number
+          updated_at: string
+          video_uuid: string
+          views: number
+        }
+        Insert: {
+          average_view_duration_sec?: number | null
+          average_view_percentage?: number | null
+          comments?: number
+          cpm_usd?: number | null
+          created_at?: string
+          date: string
+          estimated_minutes_watched?: number
+          estimated_revenue_usd?: number | null
+          id?: string
+          likes?: number
+          raw_payload?: Json
+          shares?: number
+          subscribers_gained?: number
+          subscribers_lost?: number
+          updated_at?: string
+          video_uuid: string
+          views?: number
+        }
+        Update: {
+          average_view_duration_sec?: number | null
+          average_view_percentage?: number | null
+          comments?: number
+          cpm_usd?: number | null
+          created_at?: string
+          date?: string
+          estimated_minutes_watched?: number
+          estimated_revenue_usd?: number | null
+          id?: string
+          likes?: number
+          raw_payload?: Json
+          shares?: number
+          subscribers_gained?: number
+          subscribers_lost?: number
+          updated_at?: string
+          video_uuid?: string
+          views?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "connector_data_youtube_video_analytics_video_uuid_fkey"
+            columns: ["video_uuid"]
+            isOneToOne: false
+            referencedRelation: "connector_data_youtube_videos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      connector_data_youtube_video_snapshots: {
+        Row: {
+          comment_count: number
+          created_at: string
+          delta_views: number | null
+          id: string
+          like_count: number
+          snapshot_date: string
+          video_uuid: string
+          view_count: number
+        }
+        Insert: {
+          comment_count?: number
+          created_at?: string
+          delta_views?: number | null
+          id?: string
+          like_count?: number
+          snapshot_date: string
+          video_uuid: string
+          view_count?: number
+        }
+        Update: {
+          comment_count?: number
+          created_at?: string
+          delta_views?: number | null
+          id?: string
+          like_count?: number
+          snapshot_date?: string
+          video_uuid?: string
+          view_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "connector_data_youtube_video_snapshots_video_uuid_fkey"
+            columns: ["video_uuid"]
+            isOneToOne: false
+            referencedRelation: "connector_data_youtube_videos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      connector_data_youtube_videos: {
+        Row: {
+          category_id: string | null
+          channel_uuid: string
+          comment_count: number
+          created_at: string
+          description: string | null
+          duration_seconds: number | null
+          id: string
+          last_synced_at: string | null
+          like_count: number
+          privacy: string | null
+          published_at: string | null
+          raw_payload: Json
+          tags: string[]
+          thumbnail_url: string | null
+          title: string | null
+          updated_at: string
+          video_id: string
+          view_count: number
+        }
+        Insert: {
+          category_id?: string | null
+          channel_uuid: string
+          comment_count?: number
+          created_at?: string
+          description?: string | null
+          duration_seconds?: number | null
+          id?: string
+          last_synced_at?: string | null
+          like_count?: number
+          privacy?: string | null
+          published_at?: string | null
+          raw_payload?: Json
+          tags?: string[]
+          thumbnail_url?: string | null
+          title?: string | null
+          updated_at?: string
+          video_id: string
+          view_count?: number
+        }
+        Update: {
+          category_id?: string | null
+          channel_uuid?: string
+          comment_count?: number
+          created_at?: string
+          description?: string | null
+          duration_seconds?: number | null
+          id?: string
+          last_synced_at?: string | null
+          like_count?: number
+          privacy?: string | null
+          published_at?: string | null
+          raw_payload?: Json
+          tags?: string[]
+          thumbnail_url?: string | null
+          title?: string | null
+          updated_at?: string
+          video_id?: string
+          view_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "connector_data_youtube_videos_channel_uuid_fkey"
+            columns: ["channel_uuid"]
+            isOneToOne: false
+            referencedRelation: "connector_data_youtube_channels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      connector_youtube_oauth: {
+        Row: {
+          access_token: string
+          authorized_at: string
+          authorized_by: string | null
+          channel_id: string
+          created_at: string
+          id: string
+          refresh_token: string
+          scopes: string[]
+          startup_id: string
+          token_expires_at: string
+          updated_at: string
+        }
+        Insert: {
+          access_token: string
+          authorized_at?: string
+          authorized_by?: string | null
+          channel_id: string
+          created_at?: string
+          id?: string
+          refresh_token: string
+          scopes?: string[]
+          startup_id: string
+          token_expires_at: string
+          updated_at?: string
+        }
+        Update: {
+          access_token?: string
+          authorized_at?: string
+          authorized_by?: string | null
+          channel_id?: string
+          created_at?: string
+          id?: string
+          refresh_token?: string
+          scopes?: string[]
+          startup_id?: string
+          token_expires_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "connector_youtube_oauth_startup_id_fkey"
             columns: ["startup_id"]
             isOneToOne: false
             referencedRelation: "startups"
@@ -918,6 +1421,51 @@ export type Database = {
           },
         ]
       }
+      job_postings: {
+        Row: {
+          closing_at: string | null
+          created_at: string
+          created_by: string | null
+          department: string | null
+          description: string | null
+          hiring_manager: string | null
+          id: string
+          positions: number
+          posted_at: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          closing_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          department?: string | null
+          description?: string | null
+          hiring_manager?: string | null
+          id?: string
+          positions?: number
+          posted_at?: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          closing_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          department?: string | null
+          description?: string | null
+          hiring_manager?: string | null
+          id?: string
+          positions?: number
+          posted_at?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       kai_insights: {
         Row: {
           body: string
@@ -995,6 +1543,57 @@ export type Database = {
           id?: string
           memory?: string
           startup_id?: string
+        }
+        Relationships: []
+      }
+      leave_requests: {
+        Row: {
+          created_at: string
+          end_date: string
+          half_day_part: string | null
+          id: string
+          leave_type: string
+          profile_id: string
+          reason: string | null
+          requested_by: string | null
+          review_note: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          start_date: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          end_date: string
+          half_day_part?: string | null
+          id?: string
+          leave_type?: string
+          profile_id: string
+          reason?: string | null
+          requested_by?: string | null
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          start_date: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          end_date?: string
+          half_day_part?: string | null
+          id?: string
+          leave_type?: string
+          profile_id?: string
+          reason?: string | null
+          requested_by?: string | null
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          start_date?: string
+          status?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -1122,6 +1721,105 @@ export type Database = {
           },
         ]
       }
+      onboarding_items: {
+        Row: {
+          assigned_to: string | null
+          category: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          done_at: string | null
+          done_by: string | null
+          due_date: string | null
+          id: string
+          notes: string | null
+          profile_id: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          done_at?: string | null
+          done_by?: string | null
+          due_date?: string | null
+          id?: string
+          notes?: string | null
+          profile_id: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          done_at?: string | null
+          done_by?: string | null
+          due_date?: string | null
+          id?: string
+          notes?: string | null
+          profile_id?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      payroll_payments: {
+        Row: {
+          base_salary: number
+          bonus: number
+          created_at: string
+          created_by: string | null
+          deductions: number
+          id: string
+          month_year: string
+          net_pay: number | null
+          notes: string | null
+          paid_at: string | null
+          profile_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          base_salary?: number
+          bonus?: number
+          created_at?: string
+          created_by?: string | null
+          deductions?: number
+          id?: string
+          month_year: string
+          net_pay?: number | null
+          notes?: string | null
+          paid_at?: string | null
+          profile_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          base_salary?: number
+          bonus?: number
+          created_at?: string
+          created_by?: string | null
+          deductions?: number
+          id?: string
+          month_year?: string
+          net_pay?: number | null
+          notes?: string | null
+          paid_at?: string | null
+          profile_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       people: {
         Row: {
           cost_to_company: number
@@ -1198,6 +1896,71 @@ export type Database = {
             columns: ["reporting_manager_id"]
             isOneToOne: false
             referencedRelation: "people"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      performance_reviews: {
+        Row: {
+          acknowledged_at: string | null
+          acknowledgment_note: string | null
+          created_at: string
+          cycle_id: string
+          goals: string | null
+          id: string
+          improvements: string | null
+          overall_rating: number | null
+          ratings: Json
+          reviewee_id: string
+          reviewer_id: string
+          reviewer_notes: string | null
+          status: string
+          strengths: string | null
+          submitted_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          acknowledged_at?: string | null
+          acknowledgment_note?: string | null
+          created_at?: string
+          cycle_id: string
+          goals?: string | null
+          id?: string
+          improvements?: string | null
+          overall_rating?: number | null
+          ratings?: Json
+          reviewee_id: string
+          reviewer_id: string
+          reviewer_notes?: string | null
+          status?: string
+          strengths?: string | null
+          submitted_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          acknowledged_at?: string | null
+          acknowledgment_note?: string | null
+          created_at?: string
+          cycle_id?: string
+          goals?: string | null
+          id?: string
+          improvements?: string | null
+          overall_rating?: number | null
+          ratings?: Json
+          reviewee_id?: string
+          reviewer_id?: string
+          reviewer_notes?: string | null
+          status?: string
+          strengths?: string | null
+          submitted_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "performance_reviews_cycle_id_fkey"
+            columns: ["cycle_id"]
+            isOneToOne: false
+            referencedRelation: "review_cycles"
             referencedColumns: ["id"]
           },
         ]
@@ -1432,6 +2195,7 @@ export type Database = {
           department: string | null
           email: string | null
           full_name: string | null
+          github_username: string | null
           id: string
           last_mfa_verified_at: string | null
           mfa_required: boolean
@@ -1445,6 +2209,7 @@ export type Database = {
           department?: string | null
           email?: string | null
           full_name?: string | null
+          github_username?: string | null
           id: string
           last_mfa_verified_at?: string | null
           mfa_required?: boolean
@@ -1458,6 +2223,7 @@ export type Database = {
           department?: string | null
           email?: string | null
           full_name?: string | null
+          github_username?: string | null
           id?: string
           last_mfa_verified_at?: string | null
           mfa_required?: boolean
@@ -1779,6 +2545,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      review_cycles: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          end_date: string
+          id: string
+          name: string
+          start_date: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          end_date: string
+          id?: string
+          name: string
+          start_date: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          end_date?: string
+          id?: string
+          name?: string
+          start_date?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       special_rights: {
         Row: {
@@ -2377,6 +3179,41 @@ export type Database = {
         }
         Relationships: []
       }
+      youtube_oauth_states: {
+        Row: {
+          created_at: string
+          expires_at: string
+          initiated_by: string | null
+          return_path: string | null
+          startup_id: string
+          state: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string
+          initiated_by?: string | null
+          return_path?: string | null
+          startup_id: string
+          state: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          initiated_by?: string | null
+          return_path?: string | null
+          startup_id?: string
+          state?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "youtube_oauth_states_startup_id_fkey"
+            columns: ["startup_id"]
+            isOneToOne: false
+            referencedRelation: "startups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -2400,6 +3237,7 @@ export type Database = {
         Returns: boolean
       }
       is_founder: { Args: { _user_id: string }; Returns: boolean }
+      is_hr_or_founder: { Args: never; Returns: boolean }
       is_project_lead: {
         Args: { _project_id: string; _user_id: string }
         Returns: boolean
@@ -2408,6 +3246,7 @@ export type Database = {
         Args: { _project_id: string; _user_id: string }
         Returns: boolean
       }
+      is_social_media_lead: { Args: never; Returns: boolean }
       move_to_dlq: {
         Args: {
           dlq_name: string
