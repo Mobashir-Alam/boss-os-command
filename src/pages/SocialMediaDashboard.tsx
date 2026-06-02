@@ -32,6 +32,7 @@ import {
 } from "@/hooks/useYouTube";
 import YouTubeConnectorSetup from "@/components/social/YouTubeConnectorSetup";
 import ChannelAnalyticsPanel from "@/components/social/ChannelAnalyticsPanel";
+import PulseTab from "@/components/social/PulseTab";
 
 function fmtNum(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
@@ -339,9 +340,10 @@ export default function SocialMediaDashboard() {
 
         {/* Tabs */}
         {channels.length > 0 && (
-          <Tabs defaultValue="recent" className="space-y-4">
+          <Tabs defaultValue={anyAuthorized ? "pulse" : "recent"} className="space-y-4">
             <div className="flex items-center justify-between flex-wrap gap-3">
               <TabsList>
+                {anyAuthorized && <TabsTrigger value="pulse">Pulse</TabsTrigger>}
                 <TabsTrigger value="recent">Recent uploads</TabsTrigger>
                 <TabsTrigger value="top">Top performers</TabsTrigger>
                 <TabsTrigger value="channels">Channels</TabsTrigger>
@@ -368,6 +370,12 @@ export default function SocialMediaDashboard() {
                 </Select>
               </div>
             </div>
+
+            {anyAuthorized && (
+              <TabsContent value="pulse">
+                <PulseTab startupId={startupId} channelFilterUuid={filterUuid} />
+              </TabsContent>
+            )}
 
             <TabsContent value="recent">
               <VideosGrid

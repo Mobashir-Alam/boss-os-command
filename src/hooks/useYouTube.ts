@@ -425,6 +425,231 @@ export function useChannelAnalytics(channelUuid: string | undefined, days = 30) 
   });
 }
 
+// ── Pulse: most-recent-day vs 7-day baseline + channel anomalies ──────────
+
+export interface PulseMetricSnapshot {
+  views: number;
+  estimated_minutes_watched: number;
+  estimated_revenue_usd: number;
+  subscribers_gained: number;
+  subscribers_lost: number;
+  likes: number;
+  comments: number;
+  shares: number;
+}
+
+export interface PulseTrendPoint extends PulseMetricSnapshot {
+  date: string;
+}
+
+export interface PulseAnomaly {
+  channel_uuid: string;
+  channel_title: string | null;
+  channel_thumbnail: string | null;
+  metric: keyof PulseMetricSnapshot;
+  current: number;
+  baseline: number;
+  delta_pct: number; // signed; positive = above baseline
+}
+
+export interface PulseSnapshot {
+  latest_date: string | null;            // most recent day with data
+  current: PulseMetricSnapshot;          // sums across channels on latest_date
+  baseline: PulseMetricSnapshot;         // avg of latest_date-1 .. latest_date-7
+  delta_pct: PulseMetricSnapshot;        // signed % change; 0 if baseline is 0
+  trend: PulseTrendPoint[];              // last 14 days, oldest → newest
+  anomalies: PulseAnomaly[];             // top per-channel outliers
+}
+
+function emptyMetrics(): PulseMetricSnapshot {
+  return {
+    views: 0, estimated_minutes_watched: 0, estimated_revenue_usd: 0,
+    subscribers_gained: 0, subscribers_lost: 0, likes: 0, comments: 0, shares: 0,
+  };
+}
+
+function pctDelta(current: number, baseline: number): number {
+  if (baseline === 0) return current === 0 ? 0 : 100;
+  return ((current - baseline) / baseline) * 100;
+}
+
+export function usePulseSnapshot(
+  startupId: string | undefined,
+  channelUuid?: string | null
+) {
+  return useQuery({
+    queryKey: ["youtube-pulse", startupId, channelUuid ?? "all"],
+    enabled: !!startupId,
+    queryFn: async (): Promise<PulseSnapshot> => {
+      // 1. Channels in scope
+      const { data: channels } = await supabase
+        .from("connector_data_youtube_channels")
+        .select("id, title, thumbnail_url")
+        .eq("startup_id", startupId!);
+      const allChannels = (channels ?? []) as Array<{
+        id: string; title: string | null; thumbnail_url: string | null;
+      }>;
+      const scoped = channelUuid
+        ? allChannels.filter((c) => c.id === channelUuid)
+        : allChannels;
+      const ids = scoped.map((c) => c.id);
+      const channelMap = new Map(allChannels.map((c) => [c.id, c]));
+
+      const empty: PulseSnapshot = {
+        latest_date: null,
+        current: emptyMetrics(),
+        baseline: emptyMetrics(),
+        delta_pct: emptyMetrics(),
+        trend: [],
+        anomalies: [],
+      };
+      if (ids.length === 0) return empty;
+
+      // 2. Last 14 days of channel analytics for those channels
+      const since = new Date(Date.now() - 14 * 864e5).toISOString().slice(0, 10);
+      const { data: rows, error } = await supabase
+        .from("connector_data_youtube_channel_analytics")
+        .select("*")
+        .in("channel_uuid", ids)
+        .gte("date", since)
+        .order("date", { ascending: true });
+      if (error) throw error;
+      const analytics = (rows ?? []) as ChannelAnalyticsRow[];
+      if (analytics.length === 0) return empty;
+
+      // 3. Aggregate per-date sums across channels in scope
+      const byDate = new Map<string, PulseMetricSnapshot>();
+      for (const r of analytics) {
+        const cur = byDate.get(r.date) ?? emptyMetrics();
+        cur.views += Number(r.views ?? 0);
+        cur.estimated_minutes_watched += Number(r.estimated_minutes_watched ?? 0);
+        cur.estimated_revenue_usd += Number(r.estimated_revenue_usd ?? 0);
+        cur.subscribers_gained += Number(r.subscribers_gained ?? 0);
+        cur.subscribers_lost += Number(r.subscribers_lost ?? 0);
+        cur.likes += Number(r.likes ?? 0);
+        cur.comments += Number(r.comments ?? 0);
+        cur.shares += Number(r.shares ?? 0);
+        byDate.set(r.date, cur);
+      }
+
+      const sortedDates = Array.from(byDate.keys()).sort();
+      const latest_date = sortedDates[sortedDates.length - 1];
+      const current = byDate.get(latest_date)!;
+
+      // 4. Baseline = avg of the 7 days immediately before latest_date
+      const baselineDates = sortedDates.slice(-8, -1); // up to 7 days before latest
+      const baseline = emptyMetrics();
+      if (baselineDates.length > 0) {
+        for (const d of baselineDates) {
+          const m = byDate.get(d)!;
+          baseline.views += m.views;
+          baseline.estimated_minutes_watched += m.estimated_minutes_watched;
+          baseline.estimated_revenue_usd += m.estimated_revenue_usd;
+          baseline.subscribers_gained += m.subscribers_gained;
+          baseline.subscribers_lost += m.subscribers_lost;
+          baseline.likes += m.likes;
+          baseline.comments += m.comments;
+          baseline.shares += m.shares;
+        }
+        const n = baselineDates.length;
+        baseline.views /= n;
+        baseline.estimated_minutes_watched /= n;
+        baseline.estimated_revenue_usd /= n;
+        baseline.subscribers_gained /= n;
+        baseline.subscribers_lost /= n;
+        baseline.likes /= n;
+        baseline.comments /= n;
+        baseline.shares /= n;
+      }
+
+      const delta_pct: PulseMetricSnapshot = {
+        views: pctDelta(current.views, baseline.views),
+        estimated_minutes_watched: pctDelta(current.estimated_minutes_watched, baseline.estimated_minutes_watched),
+        estimated_revenue_usd: pctDelta(current.estimated_revenue_usd, baseline.estimated_revenue_usd),
+        subscribers_gained: pctDelta(current.subscribers_gained, baseline.subscribers_gained),
+        subscribers_lost: pctDelta(current.subscribers_lost, baseline.subscribers_lost),
+        likes: pctDelta(current.likes, baseline.likes),
+        comments: pctDelta(current.comments, baseline.comments),
+        shares: pctDelta(current.shares, baseline.shares),
+      };
+
+      const trend: PulseTrendPoint[] = sortedDates.map((d) => ({ date: d, ...byDate.get(d)! }));
+
+      // 5. Per-channel anomalies — only when looking across all channels.
+      // For each channel, compare its own latest day vs its own 7-day baseline.
+      const anomalies: PulseAnomaly[] = [];
+      if (!channelUuid) {
+        const byChannelDate = new Map<string, Map<string, PulseMetricSnapshot>>();
+        for (const r of analytics) {
+          if (!byChannelDate.has(r.channel_uuid)) byChannelDate.set(r.channel_uuid, new Map());
+          const m = byChannelDate.get(r.channel_uuid)!;
+          const cur = m.get(r.date) ?? emptyMetrics();
+          cur.views += Number(r.views ?? 0);
+          cur.estimated_minutes_watched += Number(r.estimated_minutes_watched ?? 0);
+          cur.estimated_revenue_usd += Number(r.estimated_revenue_usd ?? 0);
+          cur.subscribers_gained += Number(r.subscribers_gained ?? 0);
+          cur.likes += Number(r.likes ?? 0);
+          cur.comments += Number(r.comments ?? 0);
+          cur.shares += Number(r.shares ?? 0);
+          cur.subscribers_lost += Number(r.subscribers_lost ?? 0);
+          m.set(r.date, cur);
+        }
+        const focusMetrics: Array<keyof PulseMetricSnapshot> = [
+          "views", "estimated_revenue_usd", "estimated_minutes_watched", "subscribers_gained",
+        ];
+        for (const [cid, dateMap] of byChannelDate.entries()) {
+          const dates = Array.from(dateMap.keys()).sort();
+          if (dates.length < 2) continue;
+          const last = dates[dates.length - 1];
+          const baseDates = dates.slice(-8, -1);
+          if (baseDates.length === 0) continue;
+          const cur = dateMap.get(last)!;
+          const base = emptyMetrics();
+          for (const d of baseDates) {
+            const m = dateMap.get(d)!;
+            base.views += m.views;
+            base.estimated_revenue_usd += m.estimated_revenue_usd;
+            base.estimated_minutes_watched += m.estimated_minutes_watched;
+            base.subscribers_gained += m.subscribers_gained;
+          }
+          for (const m of focusMetrics) {
+            (base as any)[m] = (base as any)[m] / baseDates.length;
+          }
+          const channel = channelMap.get(cid);
+          for (const m of focusMetrics) {
+            const cv = (cur as any)[m] as number;
+            const bv = (base as any)[m] as number;
+            // Skip noise: tiny absolute numbers shouldn't trigger anomalies
+            if (Math.abs(cv) < 10 && Math.abs(bv) < 10) continue;
+            const pct = pctDelta(cv, bv);
+            if (Math.abs(pct) >= 50) {
+              anomalies.push({
+                channel_uuid: cid,
+                channel_title: channel?.title ?? null,
+                channel_thumbnail: channel?.thumbnail_url ?? null,
+                metric: m,
+                current: cv,
+                baseline: bv,
+                delta_pct: pct,
+              });
+            }
+          }
+        }
+        anomalies.sort((a, b) => Math.abs(b.delta_pct) - Math.abs(a.delta_pct));
+      }
+
+      return {
+        latest_date,
+        current,
+        baseline,
+        delta_pct,
+        trend,
+        anomalies: anomalies.slice(0, 5),
+      };
+    },
+  });
+}
+
 // Top videos by revenue or watch time across the startup
 export function useTopVideosByMetric(
   startupId: string | undefined,
