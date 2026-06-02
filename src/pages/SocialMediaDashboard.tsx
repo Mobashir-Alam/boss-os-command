@@ -109,8 +109,30 @@ export default function SocialMediaDashboard() {
       { startupId },
       {
         onSuccess: (data: any) => {
-          const total = data.results?.reduce((acc: number, r: any) => acc + r.videos_synced, 0) ?? 0;
-          toast.success(`Synced ${total} videos across ${data.results?.length ?? 0} channel(s)`);
+          const results = (data?.results ?? []) as Array<{
+            channel_id: string; channel_title?: string | null;
+            videos_synced: number; errors: string[];
+          }>;
+          const total = results.reduce((acc, r) => acc + r.videos_synced, 0);
+          const failed = results.filter((r) => r.errors.length > 0);
+          const succeeded = results.filter((r) => r.errors.length === 0 && r.videos_synced > 0);
+
+          if (failed.length === 0) {
+            toast.success(`Synced ${total} videos across ${results.length} channel(s)`);
+          } else {
+            // Mixed outcome — show breakdown with failing channel names
+            const failedNames = failed
+              .map((r) => r.channel_title ?? r.channel_id.slice(0, 8))
+              .join(", ");
+            toast.warning(
+              `Synced ${total} videos · ${succeeded.length} channel(s) OK · ${failed.length} failed`,
+              {
+                description: `Failing: ${failedNames}. First error: ${failed[0].errors[0]?.slice(0, 200) ?? "unknown"}`,
+                duration: 15000,
+              }
+            );
+            console.warn("YouTube sync per-channel results:", results);
+          }
         },
         onError: (e: any) => toast.error(e?.message ?? "Sync failed"),
       }
