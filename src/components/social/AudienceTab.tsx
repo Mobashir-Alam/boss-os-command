@@ -17,6 +17,7 @@ import {
   type AudienceDeviceRow,
   type AudienceTrafficRow,
 } from "@/hooks/useYouTube";
+import InfoTooltip from "./InfoTooltip";
 
 interface Props {
   startupId: string;
@@ -176,9 +177,19 @@ export default function AudienceTab({ startupId, channelFilterUuid }: Props) {
       {/* Header strip */}
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
-          <p className="text-[10px] uppercase tracking-widest text-muted-foreground">
-            Audience snapshot · trailing 30-day window
-          </p>
+          <div className="flex items-center gap-1">
+            <p className="text-[10px] uppercase tracking-widest text-muted-foreground">
+              Audience snapshot · trailing 30-day window
+            </p>
+            <InfoTooltip title="Why a 30-day window">
+              Demographics, geography, traffic, and device data isn't reported
+              by-day like the Pulse metrics — YouTube only returns it
+              aggregated over a date range. We use a rolling <b>30-day window
+              ending on the latest reported day</b>. Each Sync analytics click
+              writes a new snapshot, so historical comparisons accumulate over
+              time.
+            </InfoTooltip>
+          </div>
           <p className="text-sm font-semibold">
             Period ending {periodLabel}
           </p>
@@ -196,7 +207,26 @@ export default function AudienceTab({ startupId, channelFilterUuid }: Props) {
         {/* Demographics — 2/3 width */}
         <Card className="border-border/40 lg:col-span-2">
           <CardContent className="p-5">
-            <SectionHeader icon={Users} title="Demographics" subtitle="Viewer share by age & gender" />
+            <SectionHeader
+              icon={Users}
+              title="Demographics"
+              subtitle="Viewer share by age & gender"
+              help={{
+                title: "How demographics are reported",
+                body: (
+                  <>
+                    YouTube reports demographics as the <b>% of total viewer-minutes</b>
+                    for each age × gender bucket. Stacked bars per age group should sum
+                    to roughly 100%. <b>Caveats:</b> YouTube hides buckets with under
+                    ~100 viewers for privacy, so small audiences may show fewer bars.
+                    COPPA-flagged "Made for Kids" channels are blocked from demographic
+                    reporting entirely. When showing multiple channels, we average each
+                    channel's % — close enough for orientation; views-weighted later if
+                    one channel dwarfs the others.
+                  </>
+                ),
+              }}
+            />
             {demoPivot.length === 0 ? (
               <EmptyHint text="YouTube hides demographics when an audience bucket is too small." />
             ) : (
@@ -237,7 +267,22 @@ export default function AudienceTab({ startupId, channelFilterUuid }: Props) {
         {/* Devices — 1/3 width */}
         <Card className="border-border/40">
           <CardContent className="p-5">
-            <SectionHeader icon={Smartphone} title="Devices" subtitle="Watch share by device type" />
+            <SectionHeader
+              icon={Smartphone}
+              title="Devices"
+              subtitle="Watch share by device type"
+              help={{
+                title: "Device split",
+                body: (
+                  <>
+                    Each slice is the share of <b>views</b> (not watch time) coming from
+                    each device class. "TV" includes smart TVs and casted sessions —
+                    typically the longest watch sessions. "Other" is YouTube's
+                    catch-all for browsers/devices it couldn't classify.
+                  </>
+                ),
+              }}
+            />
             <DeviceChart devices={aud.devices} />
           </CardContent>
         </Card>
@@ -246,7 +291,24 @@ export default function AudienceTab({ startupId, channelFilterUuid }: Props) {
       {/* Geography */}
       <Card className="border-border/40">
         <CardContent className="p-5">
-          <SectionHeader icon={MapPin} title="Geography" subtitle="Top countries by views in window" />
+          <SectionHeader
+            icon={MapPin}
+            title="Geography"
+            subtitle="Top countries by views in window"
+            help={{
+              title: "Country rankings",
+              body: (
+                <>
+                  Top 12 countries by <b>view count</b> over the 30-day window.
+                  Bar length is relative to the #1 country. The right-hand
+                  number shows <b>revenue from that country</b> when the
+                  channel is monetized, otherwise its <b>share of total
+                  views</b>. Useful for spotting unexpected geographies —
+                  e.g., heavy Diaspora viewership outside the home market.
+                </>
+              ),
+            }}
+          />
           <GeographyList rows={aud.geography} totalViews={totalViews} />
         </CardContent>
       </Card>
@@ -258,6 +320,23 @@ export default function AudienceTab({ startupId, channelFilterUuid }: Props) {
             icon={Compass}
             title="Traffic sources"
             subtitle="Where viewers came from"
+            help={{
+              title: "Traffic-source labels",
+              body: (
+                <>
+                  How viewers landed on each video. The big four to watch:
+                  <ul className="mt-1.5 space-y-0.5 list-disc pl-4">
+                    <li><b>Suggested videos</b> — YouTube's recommendation rail. Growth gold.</li>
+                    <li><b>YouTube search</b> — discovery via keyword. SEO signal.</li>
+                    <li><b>Subscriber feed</b> — your loyal base. Stability signal.</li>
+                    <li><b>Channel page</b> — viewers browsing your back catalog.</li>
+                  </ul>
+                  Low % from Suggested/Search and high % from Subscriber feed
+                  often means YouTube isn't pushing you to new audiences — a
+                  retention problem upstream.
+                </>
+              ),
+            }}
           />
           <TrafficSourceList rows={aud.traffic_sources} />
         </CardContent>
@@ -269,13 +348,19 @@ export default function AudienceTab({ startupId, channelFilterUuid }: Props) {
 /* ──────── small subcomponents ──────── */
 
 function SectionHeader({
-  icon: Icon, title, subtitle,
-}: { icon: any; title: string; subtitle: string }) {
+  icon: Icon, title, subtitle, help,
+}: {
+  icon: any; title: string; subtitle: string;
+  help?: { title: string; body: React.ReactNode };
+}) {
   return (
     <div className="flex items-center gap-2 mb-4">
       <Icon className="h-3.5 w-3.5 text-muted-foreground" />
-      <div className="min-w-0">
-        <h3 className="text-sm font-semibold leading-none">{title}</h3>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-1.5">
+          <h3 className="text-sm font-semibold leading-none">{title}</h3>
+          {help && <InfoTooltip title={help.title}>{help.body}</InfoTooltip>}
+        </div>
         <p className="text-[10px] text-muted-foreground mt-1">{subtitle}</p>
       </div>
     </div>

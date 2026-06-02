@@ -16,6 +16,45 @@ import {
   type PulseAnomaly,
   type PulseChannelRow,
 } from "@/hooks/useYouTube";
+import InfoTooltip from "./InfoTooltip";
+
+// Tooltip copy per metric — used in BOTH the combined KPI cards and the
+// per-channel breakdown rows so the meaning is one click away wherever a
+// user sees the metric.
+const METRIC_HELP: Record<keyof PulseMetricSnapshot, { title: string; body: React.ReactNode }> = {
+  views: {
+    title: "Views",
+    body: <>The number of times your videos were watched on the latest reported day. YouTube reports with a 24–48hr lag, so "today" usually means yesterday or the day before.</>,
+  },
+  estimated_minutes_watched: {
+    title: "Watch time",
+    body: <>Total minutes viewers spent watching your videos on the day. This is the metric YouTube weights most heavily for ranking and recommendations.</>,
+  },
+  estimated_revenue_usd: {
+    title: "Revenue",
+    body: <>Your <b>net</b> estimated earnings for the day in USD — already after YouTube's revenue share (typically 45%). Includes ads + YouTube Premium watch time. Requires the monetary scope you granted at OAuth.</>,
+  },
+  subscribers_gained: {
+    title: "Subs gained",
+    body: <>Gross new subscribers — not net of unsubs. To see net, subtract "subscribers lost" from this number. Recent YouTube algorithm changes make this a noisier signal than it used to be.</>,
+  },
+  subscribers_lost: {
+    title: "Subs lost",
+    body: <>Subscribers who left or were removed (deleted accounts) on the day. Subtract from gained to get net change.</>,
+  },
+  likes: {
+    title: "Likes",
+    body: <>Like-button presses across all your videos on the day. Doesn't count dislikes — YouTube stopped reporting those publicly.</>,
+  },
+  comments: {
+    title: "Comments",
+    body: <>New comments posted across your videos on the day. Comment-to-view ratio is a strong engagement signal.</>,
+  },
+  shares: {
+    title: "Shares",
+    body: <>Times viewers shared via YouTube's native share dialog. Doesn't capture URL copies.</>,
+  },
+};
 
 interface Props {
   startupId: string;
@@ -121,13 +160,26 @@ export default function PulseTab({ startupId, channelFilterUuid }: Props) {
       {/* Header strip */}
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
-          <p className="text-[10px] uppercase tracking-widest text-muted-foreground">
-            Most recent reported day
-          </p>
+          <div className="flex items-center gap-1">
+            <p className="text-[10px] uppercase tracking-widest text-muted-foreground">
+              Most recent reported day
+            </p>
+            <InfoTooltip title="Reporting lag">
+              YouTube finalizes analytics with a <b>24–48 hour delay</b>. The date
+              shown here is the latest day for which YouTube has finished
+              reporting — typically yesterday or the day before, never today.
+            </InfoTooltip>
+          </div>
           <p className="text-sm font-semibold">{dateLabel}</p>
         </div>
         <div className="flex items-center gap-2">
           <p className="text-[10px] text-muted-foreground">Baseline window</p>
+          <InfoTooltip title="Baseline window">
+            We compare the latest day's number to the <b>average of the N days
+            immediately before it</b>. <b>7d</b> reacts fast but is noisy; <b>28d</b>
+            (= 4 full weeks) is steadier and cancels day-of-week effects.
+            Switching is instant — both are cached.
+          </InfoTooltip>
           <div className="inline-flex rounded-md border border-border/50 bg-card overflow-hidden">
             {([7, 28] as const).map((n) => (
               <Button
@@ -155,12 +207,14 @@ export default function PulseTab({ startupId, channelFilterUuid }: Props) {
             tone === "flat" ? "flat" : (tone === "up") === def.positiveIsGood ? "good" : "bad";
           const Icon = def.icon;
           const points = sparkSeries[def.key] ?? [];
+          const help = METRIC_HELP[def.key];
           return (
             <Card key={def.key} className="border-border/60">
               <CardContent className="p-3.5">
-                <div className="flex items-center gap-1.5 text-muted-foreground">
+                <div className="flex items-center gap-1 text-muted-foreground">
                   <Icon className="h-3 w-3" />
                   <span className="text-[10px] uppercase tracking-widest">{def.label}</span>
+                  {help && <InfoTooltip title={help.title} size="xs">{help.body}</InfoTooltip>}
                 </div>
                 <p className="text-2xl font-bold tabular-nums mt-1.5">{def.format(cur)}</p>
                 <div className="flex items-center gap-1 mt-0.5">
@@ -211,8 +265,14 @@ export default function PulseTab({ startupId, channelFilterUuid }: Props) {
       {/* Anomalies */}
       {pulse.anomalies.length > 0 && (
         <div>
-          <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">
+          <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3 flex items-center gap-1.5">
             What's unusual today
+            <InfoTooltip title="Anomaly detection" size="xs">
+              We flag a channel + metric when it moved <b>more than ±50%</b> off
+              its own {baselineDays}-day baseline. Sorted by absolute size of move.
+              We skip tiny absolute numbers (current and baseline both &lt;10)
+              so a 2→4 bounce doesn't show up as "+100%". Capped at top 5.
+            </InfoTooltip>
           </h3>
           <div className="space-y-2">
             {pulse.anomalies.map((a, idx) => (

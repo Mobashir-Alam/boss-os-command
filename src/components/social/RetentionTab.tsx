@@ -13,6 +13,7 @@ import {
   LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip, ReferenceLine,
 } from "recharts";
 import { useRetentionCurves, type VideoRetentionCurve } from "@/hooks/useYouTube";
+import InfoTooltip from "./InfoTooltip";
 
 interface Props {
   startupId: string;
@@ -114,11 +115,16 @@ export default function RetentionTab({ startupId, channelFilterUuid }: Props) {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-2">
           <Activity className="h-3.5 w-3.5 text-muted-foreground" />
-          <p className="text-sm">
+          <p className="text-sm flex items-center gap-1">
             <span className="font-semibold">{curves.length}</span>{" "}
             <span className="text-muted-foreground">video{curves.length === 1 ? "" : "s"} with retention data · </span>
             <span className="text-muted-foreground">cohort avg </span>
             <span className="font-semibold tabular-nums">{fmtPct(meanRetention, 1)}</span>
+            <InfoTooltip title="Cohort average">
+              The average <b>watch ratio</b> across all videos shown on this tab.
+              We compare each video's own average to this cohort average to decide
+              whether to tint its card green (above average) or red (below).
+            </InfoTooltip>
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -137,10 +143,23 @@ export default function RetentionTab({ startupId, channelFilterUuid }: Props) {
       </div>
 
       {/* Cohort orientation strip */}
-      <p className="text-[11px] text-muted-foreground">
-        Each card shows the % of the original audience still watching at each point in the video.
-        Steeper drops = worse hooks. Colored by retention vs the cohort average.
-      </p>
+      <div className="flex items-start gap-1.5 text-[11px] text-muted-foreground">
+        <p className="leading-relaxed">
+          Each card shows the <b>watch ratio</b> across the video — how many times
+          each moment was watched relative to total views. <b>Above 100%</b>
+          means viewers rewound or re-watched that part (Shorts often loop, so
+          end-of-video bumps are normal). Steep early drops = a weak hook.
+        </p>
+        <InfoTooltip title="Reading the curve" side="bottom">
+          YouTube's <code className="text-[10px]">audienceWatchRatio</code> isn't
+          "% still watching" — it's <b>times-watched ÷ total views</b> at each moment.
+          <ul className="mt-1.5 space-y-1 list-disc pl-4">
+            <li><b>100%</b> = watched as many times as the video has views</li>
+            <li><b>&gt;100%</b> = re-watched / rewound (engagement, or loop)</li>
+            <li><b>&lt;100%</b> = some viewers skipped or dropped off</li>
+          </ul>
+        </InfoTooltip>
+      </div>
 
       {/* Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -234,13 +253,49 @@ function CurveCard({
 
         {/* Inline stats */}
         <div className="grid grid-cols-3 gap-1.5 text-center pt-1">
-          <Stat label="Start" value={fmtPct(curve.points[0]?.audience_watch_ratio ?? 0)} />
-          <Stat label="Mid" value={curve.retention_at_50pct != null ? fmtPct(curve.retention_at_50pct) : "—"} />
-          <Stat label="End" value={fmtPct(curve.points[curve.points.length - 1]?.audience_watch_ratio ?? 0)} />
+          <Stat
+            label="Start"
+            value={fmtPct(curve.points[0]?.audience_watch_ratio ?? 0)}
+            tooltip={
+              <>
+                Watch ratio at the very beginning of the video (elapsed time 0%).
+                Often slightly above 100% on Shorts because YouTube auto-loops
+                the playback.
+              </>
+            }
+          />
+          <Stat
+            label="Mid"
+            value={curve.retention_at_50pct != null ? fmtPct(curve.retention_at_50pct) : "—"}
+            tooltip={
+              <>
+                Watch ratio at <b>50% of the video's length</b>. A common analyst
+                bench — if this is much lower than Start, viewers dropped off in
+                the first half. If it's near or above Start, the middle holds
+                attention well.
+              </>
+            }
+          />
+          <Stat
+            label="End"
+            value={fmtPct(curve.points[curve.points.length - 1]?.audience_watch_ratio ?? 0)}
+            tooltip={
+              <>
+                Watch ratio at the very end (elapsed time 100%). Bumps above
+                100% here usually mean Shorts loops or viewers rewatching the
+                climax. Steep cliffs into the end mean people are bailing on
+                outros.
+              </>
+            }
+          />
         </div>
         <div className="flex items-center justify-between pt-0.5 text-[10px]">
-          <span className="text-muted-foreground">
+          <span className="text-muted-foreground inline-flex items-center gap-1">
             Avg <span className="font-semibold tabular-nums text-foreground">{fmtPct(curve.avg_audience_watch_ratio, 1)}</span>
+            <InfoTooltip title="Average watch ratio" size="xs">
+              Mean of the watch-ratio curve across the whole video. Higher = more
+              minutes watched per view; >100% means viewers rewind on average.
+            </InfoTooltip>
           </span>
           {curve.avg_relative_performance != null && (
             <PerformanceChip value={curve.avg_relative_performance} />
@@ -251,10 +306,15 @@ function CurveCard({
   );
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+function Stat({
+  label, value, tooltip,
+}: { label: string; value: string; tooltip?: React.ReactNode }) {
   return (
     <div className="rounded-md border border-border/30 bg-muted/10 py-0.5">
-      <p className="text-[9px] uppercase tracking-wider text-muted-foreground leading-none mt-0.5">{label}</p>
+      <div className="flex items-center justify-center gap-0.5 leading-none mt-0.5">
+        <p className="text-[9px] uppercase tracking-wider text-muted-foreground">{label}</p>
+        {tooltip && <InfoTooltip title={label} size="xs">{tooltip}</InfoTooltip>}
+      </div>
       <p className="text-xs font-semibold tabular-nums leading-tight">{value}</p>
     </div>
   );
@@ -272,11 +332,20 @@ function PerformanceChip({ value }: { value: number }) {
            : "text-red-700 bg-red-500/15 border-red-500/30";
   const Icon = Math.abs(pct) < 3 ? Minus : isUp ? ArrowUpRight : ArrowDownRight;
   return (
-    <Badge variant="outline" className={cn("h-4 px-1 gap-0.5 text-[10px] tabular-nums", cls)}>
-      <Icon className="h-2.5 w-2.5" />
-      {Math.abs(pct) < 1 ? "0%" : `${pct > 0 ? "+" : ""}${pct.toFixed(0)}%`}
-      <span className="hidden sm:inline ml-0.5 font-normal opacity-70">vs YT avg</span>
-    </Badge>
+    <span className="inline-flex items-center gap-0.5">
+      <Badge variant="outline" className={cn("h-4 px-1 gap-0.5 text-[10px] tabular-nums", cls)}>
+        <Icon className="h-2.5 w-2.5" />
+        {Math.abs(pct) < 1 ? "0%" : `${pct > 0 ? "+" : ""}${pct.toFixed(0)}%`}
+        <span className="hidden sm:inline ml-0.5 font-normal opacity-70">vs YT avg</span>
+      </Badge>
+      <InfoTooltip title="vs YouTube average" size="xs">
+        YouTube's <code className="text-[10px]">relativeRetentionPerformance</code>
+        — how this video holds attention vs <b>similar YouTube videos</b> (same
+        length, topic). +X% means viewers stay X% longer than typical for the
+        category; −X% means they drop off faster than the category norm. This
+        is the most honest "is the content actually good?" read.
+      </InfoTooltip>
+    </span>
   );
 }
 
