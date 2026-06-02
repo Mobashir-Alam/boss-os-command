@@ -709,6 +709,175 @@ export function usePulseSnapshot(
   });
 }
 
+// ── Audience: demographics + geography + devices + traffic sources ────────
+
+export interface AudienceDemoRow {
+  age_group: string;             // e.g. "age25-34"
+  gender: string;                // "male" | "female" | "user_specified"
+  viewer_percentage: number;     // 0–100; avg across channels in scope
+}
+
+export interface AudienceGeoRow {
+  country_code: string;
+  views: number;
+  estimated_minutes_watched: number;
+  estimated_revenue_usd: number | null;
+}
+
+export interface AudienceDeviceRow {
+  device_type: string;           // "MOBILE", "DESKTOP", "TV", "TABLET", etc.
+  views: number;
+  estimated_minutes_watched: number;
+}
+
+export interface AudienceTrafficRow {
+  source_type: string;           // YouTube insightTrafficSourceType codes
+  views: number;
+  estimated_minutes_watched: number;
+}
+
+export interface AudienceSnapshot {
+  latest_period_end: string | null;
+  demographics: AudienceDemoRow[];
+  geography: AudienceGeoRow[];
+  devices: AudienceDeviceRow[];
+  traffic_sources: AudienceTrafficRow[];
+}
+
+export function useAudienceSnapshot(
+  startupId: string | undefined,
+  channelUuid?: string | null
+) {
+  return useQuery({
+    queryKey: ["youtube-audience", startupId, channelUuid ?? "all"],
+    enabled: !!startupId,
+    queryFn: async (): Promise<AudienceSnapshot> => {
+      // Resolve channel scope
+      const { data: channels } = await supabase
+        .from("connector_data_youtube_channels")
+        .select("id")
+        .eq("startup_id", startupId!);
+      const all = (channels ?? []) as Array<{ id: string }>;
+      const scoped = channelUuid ? all.filter((c) => c.id === channelUuid) : all;
+      const ids = scoped.map((c) => c.id);
+
+      const empty: AudienceSnapshot = {
+        latest_period_end: null,
+        demographics: [],
+        geography: [],
+        devices: [],
+        traffic_sources: [],
+      };
+      if (ids.length === 0) return empty;
+
+      // Four tables in parallel — small payloads, all keyed by channel_uuid + period_end_date
+      const [demoRes, geoRes, devRes, trafRes] = await Promise.all([
+        supabase.from("connector_data_youtube_demographics")
+          .select("channel_uuid, period_end_date, age_group, gender, viewer_percentage")
+          .in("channel_uuid", ids)
+          .order("period_end_date", { ascending: false }),
+        supabase.from("connector_data_youtube_geography")
+          .select("channel_uuid, period_end_date, country_code, views, estimated_minutes_watched, estimated_revenue_usd")
+          .in("channel_uuid", ids)
+          .order("period_end_date", { ascending: false }),
+        supabase.from("connector_data_youtube_device_types")
+          .select("channel_uuid, period_end_date, device_type, views, estimated_minutes_watched")
+          .in("channel_uuid", ids)
+          .order("period_end_date", { ascending: false }),
+        supabase.from("connector_data_youtube_traffic_sources")
+          .select("channel_uuid, period_end_date, source_type, views, estimated_minutes_watched")
+          .in("channel_uuid", ids)
+          .order("period_end_date", { ascending: false }),
+      ]);
+      if (demoRes.error) throw demoRes.error;
+      if (geoRes.error) throw geoRes.error;
+      if (devRes.error) throw devRes.error;
+      if (trafRes.error) throw trafRes.error;
+
+      // Identify the latest period_end_date that has data anywhere
+      const allDates = new Set<string>();
+      (demoRes.data ?? []).forEach((r: any) => allDates.add(r.period_end_date));
+      (geoRes.data ?? []).forEach((r: any) => allDates.add(r.period_end_date));
+      (devRes.data ?? []).forEach((r: any) => allDates.add(r.period_end_date));
+      (trafRes.data ?? []).forEach((r: any) => allDates.add(r.period_end_date));
+      const sortedDates = Array.from(allDates).sort();
+      const latest = sortedDates[sortedDates.length - 1] ?? null;
+      if (!latest) return empty;
+
+      // ── Demographics ────────────────────────────
+      // viewer_percentage is per-channel %; averaging across channels is a fair
+      // approximation for combined audience. (Strictly correct would be a
+      // views-weighted average — defer until/unless this matters in practice.)
+      const demoLatest = (demoRes.data ?? []).filter((r: any) => r.period_end_date === latest);
+      const demoAccum = new Map<string, { sum: number; n: number }>();
+      for (const r of demoLatest) {
+        const key = `${r.age_group}|${r.gender}`;
+        const cur = demoAccum.get(key) ?? { sum: 0, n: 0 };
+        cur.sum += Number(r.viewer_percentage ?? 0);
+        cur.n += 1;
+        demoAccum.set(key, cur);
+      }
+      const demographics: AudienceDemoRow[] = Array.from(demoAccum.entries()).map(([k, v]) => {
+        const [age_group, gender] = k.split("|");
+        return { age_group, gender, viewer_percentage: v.sum / v.n };
+      });
+
+      // ── Geography ────────────────────────────────
+      const geoLatest = (geoRes.data ?? []).filter((r: any) => r.period_end_date === latest);
+      const geoAccum = new Map<string, AudienceGeoRow>();
+      for (const r of geoLatest) {
+        const cur = geoAccum.get(r.country_code) ?? {
+          country_code: r.country_code,
+          views: 0,
+          estimated_minutes_watched: 0,
+          estimated_revenue_usd: 0,
+        };
+        cur.views += Number(r.views ?? 0);
+        cur.estimated_minutes_watched += Number(r.estimated_minutes_watched ?? 0);
+        if (r.estimated_revenue_usd != null) {
+          cur.estimated_revenue_usd = (cur.estimated_revenue_usd ?? 0) + Number(r.estimated_revenue_usd);
+        }
+        geoAccum.set(r.country_code, cur);
+      }
+      const geography = Array.from(geoAccum.values()).sort((a, b) => b.views - a.views);
+
+      // ── Devices ──────────────────────────────────
+      const devLatest = (devRes.data ?? []).filter((r: any) => r.period_end_date === latest);
+      const devAccum = new Map<string, AudienceDeviceRow>();
+      for (const r of devLatest) {
+        const cur = devAccum.get(r.device_type) ?? {
+          device_type: r.device_type, views: 0, estimated_minutes_watched: 0,
+        };
+        cur.views += Number(r.views ?? 0);
+        cur.estimated_minutes_watched += Number(r.estimated_minutes_watched ?? 0);
+        devAccum.set(r.device_type, cur);
+      }
+      const devices = Array.from(devAccum.values()).sort((a, b) => b.views - a.views);
+
+      // ── Traffic sources ──────────────────────────
+      const trafLatest = (trafRes.data ?? []).filter((r: any) => r.period_end_date === latest);
+      const trafAccum = new Map<string, AudienceTrafficRow>();
+      for (const r of trafLatest) {
+        const cur = trafAccum.get(r.source_type) ?? {
+          source_type: r.source_type, views: 0, estimated_minutes_watched: 0,
+        };
+        cur.views += Number(r.views ?? 0);
+        cur.estimated_minutes_watched += Number(r.estimated_minutes_watched ?? 0);
+        trafAccum.set(r.source_type, cur);
+      }
+      const traffic_sources = Array.from(trafAccum.values()).sort((a, b) => b.views - a.views);
+
+      return {
+        latest_period_end: latest,
+        demographics,
+        geography,
+        devices,
+        traffic_sources,
+      };
+    },
+  });
+}
+
 // Top videos by revenue or watch time across the startup
 export function useTopVideosByMetric(
   startupId: string | undefined,
