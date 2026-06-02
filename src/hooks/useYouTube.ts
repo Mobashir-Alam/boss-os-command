@@ -1023,6 +1023,248 @@ export function useRetentionCurves(
   });
 }
 
+// ── Content lab: upload-timing heatmap, title-length, duration, tags ──────
+
+export interface ContentLabHeatCell {
+  day_of_week: number;       // 0 = Sunday, 6 = Saturday (local tz)
+  hour_of_day: number;       // 0-23 (local tz)
+  video_count: number;
+  avg_views: number;
+  total_views: number;
+}
+
+export interface ContentLabBucket {
+  label: string;
+  min: number;               // chars or seconds, depending on context
+  max: number | null;        // null = open-ended top bucket
+  video_count: number;
+  avg_views: number;
+  median_views: number;
+  avg_view_percentage: number | null;
+}
+
+export interface ContentLabTagRow {
+  tag: string;
+  video_count: number;
+  avg_views: number;
+  total_views: number;
+}
+
+export interface ContentLabData {
+  videos_in_scope: number;
+  videos_with_publish_time: number;
+  timezone: string;          // IANA tz used for heatmap (e.g. "Asia/Kolkata")
+  upload_heatmap: ContentLabHeatCell[];
+  title_length_buckets: ContentLabBucket[];
+  duration_buckets: ContentLabBucket[];
+  top_tags: ContentLabTagRow[];
+}
+
+const TITLE_LENGTH_BUCKETS: Array<{ label: string; min: number; max: number | null }> = [
+  { label: "≤30",     min: 0,   max: 30  },
+  { label: "31–50",   min: 31,  max: 50  },
+  { label: "51–70",   min: 51,  max: 70  },
+  { label: "71–100",  min: 71,  max: 100 },
+  { label: "100+",    min: 101, max: null },
+];
+
+const DURATION_BUCKETS: Array<{ label: string; min: number; max: number | null }> = [
+  { label: "Shorts (<60s)", min: 0,    max: 59   },
+  { label: "1–3 min",       min: 60,   max: 180  },
+  { label: "3–10 min",      min: 181,  max: 600  },
+  { label: "10–20 min",     min: 601,  max: 1200 },
+  { label: "20+ min",       min: 1201, max: null },
+];
+
+function median(arr: number[]): number {
+  if (arr.length === 0) return 0;
+  const sorted = [...arr].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
+}
+
+export function useContentLab(
+  startupId: string | undefined,
+  channelUuid?: string | null
+) {
+  return useQuery({
+    queryKey: ["youtube-content-lab", startupId, channelUuid ?? "all"],
+    enabled: !!startupId,
+    queryFn: async (): Promise<ContentLabData> => {
+      const empty: ContentLabData = {
+        videos_in_scope: 0,
+        videos_with_publish_time: 0,
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
+        upload_heatmap: [],
+        title_length_buckets: [],
+        duration_buckets: [],
+        top_tags: [],
+      };
+
+      // 1. Channels in scope
+      const { data: channels } = await supabase
+        .from("connector_data_youtube_channels")
+        .select("id")
+        .eq("startup_id", startupId!);
+      const all = (channels ?? []) as Array<{ id: string }>;
+      const scoped = channelUuid ? all.filter((c) => c.id === channelUuid) : all;
+      if (scoped.length === 0) return empty;
+      const channelIds = scoped.map((c) => c.id);
+
+      // 2. All videos for those channels
+      const { data: videos, error } = await supabase
+        .from("connector_data_youtube_videos")
+        .select("id, title, tags, duration_seconds, published_at, view_count")
+        .in("channel_uuid", channelIds);
+      if (error) throw error;
+      const vids = (videos ?? []) as Array<{
+        id: string;
+        title: string | null;
+        tags: string[] | null;
+        duration_seconds: number | null;
+        published_at: string | null;
+        view_count: number;
+      }>;
+      if (vids.length === 0) return empty;
+
+      // Optional: avg_view_percentage per video from latest analytics row
+      // (only matters for duration buckets — small payload, single in() query)
+      const videoIds = vids.map((v) => v.id);
+      const { data: analytics } = await supabase
+        .from("connector_data_youtube_video_analytics")
+        .select("video_uuid, average_view_percentage, date")
+        .in("video_uuid", videoIds);
+      // Keep the most recent date per video
+      const latestAvgPct = new Map<string, number>();
+      const latestDateByVideo = new Map<string, string>();
+      for (const a of analytics ?? []) {
+        const vid = (a as any).video_uuid as string;
+        const date = (a as any).date as string;
+        const cur = latestDateByVideo.get(vid);
+        if (!cur || date > cur) {
+          latestDateByVideo.set(vid, date);
+          if ((a as any).average_view_percentage != null) {
+            latestAvgPct.set(vid, Number((a as any).average_view_percentage));
+          }
+        }
+      }
+
+      const localTz =
+        Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+
+      // ── 3. Upload-timing heatmap ──────────────────────────
+      // Use Intl to convert published_at (UTC) to weekday/hour in viewer tz.
+      // Build a lookup table of weekday(0-6) × hour(0-23).
+      const heatBuckets = new Map<string, { count: number; totalViews: number }>();
+      let withPublish = 0;
+      const weekdayFmt = new Intl.DateTimeFormat("en-US", {
+        timeZone: localTz, weekday: "short", hour: "2-digit", hour12: false,
+      });
+      const WEEKDAY_INDEX: Record<string, number> = {
+        Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6,
+      };
+      for (const v of vids) {
+        if (!v.published_at) continue;
+        withPublish++;
+        const parts = weekdayFmt.formatToParts(new Date(v.published_at));
+        const wd = parts.find((p) => p.type === "weekday")?.value ?? "Sun";
+        const hour = Number(parts.find((p) => p.type === "hour")?.value ?? "0");
+        const day = WEEKDAY_INDEX[wd] ?? 0;
+        const key = `${day}|${hour}`;
+        const cur = heatBuckets.get(key) ?? { count: 0, totalViews: 0 };
+        cur.count++;
+        cur.totalViews += v.view_count;
+        heatBuckets.set(key, cur);
+      }
+      const upload_heatmap: ContentLabHeatCell[] = [];
+      for (const [key, val] of heatBuckets.entries()) {
+        const [day, hour] = key.split("|").map(Number);
+        upload_heatmap.push({
+          day_of_week: day,
+          hour_of_day: hour,
+          video_count: val.count,
+          total_views: val.totalViews,
+          avg_views: val.count > 0 ? val.totalViews / val.count : 0,
+        });
+      }
+
+      // ── 4. Title-length buckets ───────────────────────────
+      const title_length_buckets: ContentLabBucket[] = TITLE_LENGTH_BUCKETS.map((b) => {
+        const matches = vids.filter((v) => {
+          const len = (v.title ?? "").length;
+          return len >= b.min && (b.max == null || len <= b.max);
+        });
+        const views = matches.map((v) => v.view_count);
+        return {
+          label: b.label,
+          min: b.min,
+          max: b.max,
+          video_count: matches.length,
+          avg_views: matches.length > 0 ? views.reduce((a, b) => a + b, 0) / matches.length : 0,
+          median_views: median(views),
+          avg_view_percentage: null,
+        };
+      });
+
+      // ── 5. Duration buckets ───────────────────────────────
+      const duration_buckets: ContentLabBucket[] = DURATION_BUCKETS.map((b) => {
+        const matches = vids.filter((v) => {
+          const d = v.duration_seconds ?? 0;
+          return d >= b.min && (b.max == null || d <= b.max);
+        });
+        const views = matches.map((v) => v.view_count);
+        const pcts = matches
+          .map((v) => latestAvgPct.get(v.id))
+          .filter((x): x is number => x != null);
+        return {
+          label: b.label,
+          min: b.min,
+          max: b.max,
+          video_count: matches.length,
+          avg_views: matches.length > 0 ? views.reduce((a, b) => a + b, 0) / matches.length : 0,
+          median_views: median(views),
+          avg_view_percentage:
+            pcts.length > 0 ? pcts.reduce((a, b) => a + b, 0) / pcts.length : null,
+        };
+      });
+
+      // ── 6. Top tags ──────────────────────────────────────
+      const tagAccum = new Map<string, { count: number; totalViews: number }>();
+      for (const v of vids) {
+        if (!v.tags || v.tags.length === 0) continue;
+        for (const raw of v.tags) {
+          const tag = raw.trim().toLowerCase();
+          if (!tag || tag.length < 2) continue;
+          const cur = tagAccum.get(tag) ?? { count: 0, totalViews: 0 };
+          cur.count++;
+          cur.totalViews += v.view_count;
+          tagAccum.set(tag, cur);
+        }
+      }
+      const top_tags: ContentLabTagRow[] = Array.from(tagAccum.entries())
+        .filter(([, v]) => v.count >= 3) // exclude tags that appear in <3 videos (noise)
+        .map(([tag, v]) => ({
+          tag,
+          video_count: v.count,
+          total_views: v.totalViews,
+          avg_views: v.count > 0 ? v.totalViews / v.count : 0,
+        }))
+        .sort((a, b) => b.avg_views - a.avg_views)
+        .slice(0, 25);
+
+      return {
+        videos_in_scope: vids.length,
+        videos_with_publish_time: withPublish,
+        timezone: localTz,
+        upload_heatmap,
+        title_length_buckets,
+        duration_buckets,
+        top_tags,
+      };
+    },
+  });
+}
+
 // Top videos by revenue or watch time across the startup
 export function useTopVideosByMetric(
   startupId: string | undefined,
