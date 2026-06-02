@@ -34,6 +34,7 @@ import YouTubeConnectorSetup from "@/components/social/YouTubeConnectorSetup";
 import ChannelAnalyticsPanel from "@/components/social/ChannelAnalyticsPanel";
 import PulseTab from "@/components/social/PulseTab";
 import AudienceTab from "@/components/social/AudienceTab";
+import RetentionTab from "@/components/social/RetentionTab";
 
 function fmtNum(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
@@ -346,6 +347,7 @@ export default function SocialMediaDashboard() {
               <TabsList>
                 {anyAuthorized && <TabsTrigger value="pulse">Pulse</TabsTrigger>}
                 {anyAuthorized && <TabsTrigger value="audience">Audience</TabsTrigger>}
+                {anyAuthorized && <TabsTrigger value="retention">Retention</TabsTrigger>}
                 <TabsTrigger value="recent">Recent uploads</TabsTrigger>
                 <TabsTrigger value="top">Top performers</TabsTrigger>
                 <TabsTrigger value="channels">Channels</TabsTrigger>
@@ -382,6 +384,12 @@ export default function SocialMediaDashboard() {
             {anyAuthorized && (
               <TabsContent value="audience">
                 <AudienceTab startupId={startupId} channelFilterUuid={filterUuid} />
+              </TabsContent>
+            )}
+
+            {anyAuthorized && (
+              <TabsContent value="retention">
+                <RetentionTab startupId={startupId} channelFilterUuid={filterUuid} />
               </TabsContent>
             )}
 

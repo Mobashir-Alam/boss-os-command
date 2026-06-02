@@ -878,6 +878,148 @@ export function useAudienceSnapshot(
   });
 }
 
+// ── Retention: per-video audience drop-off curves ────────────────────────
+
+export interface RetentionPoint {
+  elapsed_ratio: number;             // 0.0 – 1.0
+  audience_watch_ratio: number;      // fraction of original audience still watching
+  relative_retention_performance: number | null; // vs comparable videos, may be NULL
+}
+
+export interface VideoRetentionCurve {
+  video_uuid: string;
+  video_id: string;
+  video_title: string | null;
+  thumbnail_url: string | null;
+  duration_seconds: number | null;
+  channel_uuid: string;
+  channel_title: string | null;
+  channel_thumbnail: string | null;
+  view_count: number;
+  // Curve and derived metrics
+  points: RetentionPoint[];
+  avg_audience_watch_ratio: number;        // mean of audience_watch_ratio across points
+  retention_at_50pct: number | null;       // ratio at elapsed_ratio nearest 0.5
+  retention_at_25pct: number | null;       // ratio at elapsed_ratio nearest 0.25
+  retention_at_75pct: number | null;       // ratio at elapsed_ratio nearest 0.75
+  avg_relative_performance: number | null; // mean across points, when available
+}
+
+export function useRetentionCurves(
+  startupId: string | undefined,
+  channelUuid?: string | null
+) {
+  return useQuery({
+    queryKey: ["youtube-retention", startupId, channelUuid ?? "all"],
+    enabled: !!startupId,
+    queryFn: async (): Promise<VideoRetentionCurve[]> => {
+      // 1. Channels in scope
+      const { data: channels } = await supabase
+        .from("connector_data_youtube_channels")
+        .select("id, title, thumbnail_url")
+        .eq("startup_id", startupId!);
+      const all = (channels ?? []) as Array<{
+        id: string; title: string | null; thumbnail_url: string | null;
+      }>;
+      const scoped = channelUuid ? all.filter((c) => c.id === channelUuid) : all;
+      if (scoped.length === 0) return [];
+      const channelMap = new Map(all.map((c) => [c.id, c]));
+      const channelIds = scoped.map((c) => c.id);
+
+      // 2. Videos in those channels
+      const { data: videos } = await supabase
+        .from("connector_data_youtube_videos")
+        .select("id, video_id, title, thumbnail_url, duration_seconds, channel_uuid, view_count")
+        .in("channel_uuid", channelIds);
+      const videoList = (videos ?? []) as Array<{
+        id: string; video_id: string; title: string | null;
+        thumbnail_url: string | null; duration_seconds: number | null;
+        channel_uuid: string; view_count: number;
+      }>;
+      const videoMap = new Map(videoList.map((v) => [v.id, v]));
+      const videoUuids = videoList.map((v) => v.id);
+      if (videoUuids.length === 0) return [];
+
+      // 3. Retention rows for those videos. Order by date desc so the first
+      // period_end_date we see (per video) is the most recent — we then keep
+      // only that latest period per video.
+      const { data: retention, error } = await supabase
+        .from("connector_data_youtube_video_retention")
+        .select("video_uuid, period_end_date, elapsed_video_time_ratio, audience_watch_ratio, relative_retention_performance")
+        .in("video_uuid", videoUuids)
+        .order("period_end_date", { ascending: false })
+        .order("elapsed_video_time_ratio", { ascending: true });
+      if (error) throw error;
+
+      // 4. Group: video_uuid → only the latest period_end_date's rows
+      const latestPeriodByVideo = new Map<string, string>();
+      const pointsByVideo = new Map<string, RetentionPoint[]>();
+      for (const r of retention ?? []) {
+        const vid = (r as any).video_uuid as string;
+        const pe = (r as any).period_end_date as string;
+        const existing = latestPeriodByVideo.get(vid);
+        if (existing && existing !== pe) continue; // skip older periods once we've seen latest
+        if (!existing) {
+          latestPeriodByVideo.set(vid, pe);
+          pointsByVideo.set(vid, []);
+        }
+        pointsByVideo.get(vid)!.push({
+          elapsed_ratio: Number((r as any).elapsed_video_time_ratio),
+          audience_watch_ratio: Number((r as any).audience_watch_ratio),
+          relative_retention_performance:
+            (r as any).relative_retention_performance != null
+              ? Number((r as any).relative_retention_performance)
+              : null,
+        });
+      }
+
+      // 5. Build the curves with derived metrics
+      const curves: VideoRetentionCurve[] = [];
+      for (const [vid, points] of pointsByVideo.entries()) {
+        const v = videoMap.get(vid);
+        if (!v || points.length === 0) continue;
+        points.sort((a, b) => a.elapsed_ratio - b.elapsed_ratio);
+        const avg =
+          points.reduce((acc, p) => acc + p.audience_watch_ratio, 0) / points.length;
+        const findAt = (target: number) => {
+          // Closest point to target elapsed_ratio
+          let best = points[0];
+          for (const p of points) {
+            if (Math.abs(p.elapsed_ratio - target) < Math.abs(best.elapsed_ratio - target)) best = p;
+          }
+          return best.audience_watch_ratio;
+        };
+        const relPerf = points
+          .map((p) => p.relative_retention_performance)
+          .filter((x): x is number => x != null);
+        const channel = channelMap.get(v.channel_uuid);
+        curves.push({
+          video_uuid: vid,
+          video_id: v.video_id,
+          video_title: v.title,
+          thumbnail_url: v.thumbnail_url,
+          duration_seconds: v.duration_seconds,
+          channel_uuid: v.channel_uuid,
+          channel_title: channel?.title ?? null,
+          channel_thumbnail: channel?.thumbnail_url ?? null,
+          view_count: v.view_count,
+          points,
+          avg_audience_watch_ratio: avg,
+          retention_at_25pct: points.length > 0 ? findAt(0.25) : null,
+          retention_at_50pct: points.length > 0 ? findAt(0.5) : null,
+          retention_at_75pct: points.length > 0 ? findAt(0.75) : null,
+          avg_relative_performance:
+            relPerf.length > 0 ? relPerf.reduce((a, b) => a + b, 0) / relPerf.length : null,
+        });
+      }
+
+      // Default: sort by views desc so highest-impact videos are first
+      curves.sort((a, b) => b.view_count - a.view_count);
+      return curves;
+    },
+  });
+}
+
 // Top videos by revenue or watch time across the startup
 export function useTopVideosByMetric(
   startupId: string | undefined,
