@@ -144,9 +144,9 @@ async function syncChannelAnalytics(
     "shares",
     "comments",
   ];
-  // Note: impressions + impressionCtr require the channel to have enough data
-  // — may fail for very small channels. We try them in a second request so a
-  // failure doesn't kill the basic metrics.
+  // Note: YouTube no longer exposes `impressions` / `impressionsClickThroughRate`
+  // via the public Analytics API (those are Studio-only). Leaving the columns
+  // in the table as NULL — they may come back, but for now we skip the call.
   const monetaryMetrics = ["estimatedRevenue", "estimatedAdRevenue", "cpm"];
 
   let primary;
@@ -161,20 +161,6 @@ async function syncChannelAnalytics(
   } catch (e: any) {
     errors.push(`channel base metrics ${oauth.channel_id}: ${e.message}`);
     return 0;
-  }
-
-  // Impressions in a separate try because some channels don't have it
-  let impressions: { columnHeaders: any[]; rows: any[] } = { columnHeaders: [], rows: [] };
-  try {
-    impressions = await analyticsQuery(oauth.channel_id, accessToken, {
-      startDate,
-      endDate,
-      dimensions: "day",
-      metrics: "impressions,impressionsClickThroughRate",
-      sort: "day",
-    });
-  } catch (e: any) {
-    errors.push(`channel impressions ${oauth.channel_id}: ${e.message}`);
   }
 
   // Monetary in a separate try
@@ -195,12 +181,7 @@ async function syncChannelAnalytics(
     }
   }
 
-  // Index impressions + monetary by day for join
-  const impressionsByDay = new Map<string, any>();
-  impressions.rows.forEach((r) => {
-    const o = rowToObject(r, impressions.columnHeaders);
-    impressionsByDay.set(o.day, o);
-  });
+  // Index monetary by day for join
   const monetaryByDay = new Map<string, any>();
   monetary.rows.forEach((r) => {
     const o = rowToObject(r, monetary.columnHeaders);
@@ -210,7 +191,6 @@ async function syncChannelAnalytics(
   // Build upsert rows
   const upserts = primary.rows.map((r) => {
     const o = rowToObject(r, primary.columnHeaders);
-    const imp = impressionsByDay.get(o.day) ?? {};
     const mon = monetaryByDay.get(o.day) ?? {};
     return {
       channel_uuid: channelUuid,
@@ -223,13 +203,12 @@ async function syncChannelAnalytics(
       likes: Number(o.likes ?? 0),
       shares: Number(o.shares ?? 0),
       comments: Number(o.comments ?? 0),
-      impressions: imp.impressions != null ? Number(imp.impressions) : null,
-      impressions_ctr:
-        imp.impressionsClickThroughRate != null ? Number(imp.impressionsClickThroughRate) : null,
+      impressions: null,       // not exposed by public Analytics API
+      impressions_ctr: null,   // ditto
       estimated_revenue_usd: mon.estimatedRevenue != null ? Number(mon.estimatedRevenue) : null,
       estimated_ad_revenue_usd: mon.estimatedAdRevenue != null ? Number(mon.estimatedAdRevenue) : null,
       cpm_usd: mon.cpm != null ? Number(mon.cpm) : null,
-      raw_payload: { primary: o, impressions: imp, monetary: mon },
+      raw_payload: { primary: o, monetary: mon },
     };
   });
 
