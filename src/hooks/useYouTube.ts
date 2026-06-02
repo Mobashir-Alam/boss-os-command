@@ -581,68 +581,69 @@ export function usePulseSnapshot(
 
       const trend: PulseTrendPoint[] = sortedDates.map((d) => ({ date: d, ...byDate.get(d)! }));
 
-      // 5. Per-channel anomalies — only when looking across all channels.
-      // For each channel, compare its own latest day vs its own 7-day baseline.
+      // 5. Per-channel anomalies. Runs in both modes:
+      //    - All channels: surfaces top movers across every channel
+      //    - Single channel: surfaces which metrics moved for that one channel
+      // Either way: for each (channel, metric), compare its own latest day to
+      // its own N-day baseline and flag |delta| ≥ 50%.
       const anomalies: PulseAnomaly[] = [];
-      if (!channelUuid) {
-        const byChannelDate = new Map<string, Map<string, PulseMetricSnapshot>>();
-        for (const r of analytics) {
-          if (!byChannelDate.has(r.channel_uuid)) byChannelDate.set(r.channel_uuid, new Map());
-          const m = byChannelDate.get(r.channel_uuid)!;
-          const cur = m.get(r.date) ?? emptyMetrics();
-          cur.views += Number(r.views ?? 0);
-          cur.estimated_minutes_watched += Number(r.estimated_minutes_watched ?? 0);
-          cur.estimated_revenue_usd += Number(r.estimated_revenue_usd ?? 0);
-          cur.subscribers_gained += Number(r.subscribers_gained ?? 0);
-          cur.likes += Number(r.likes ?? 0);
-          cur.comments += Number(r.comments ?? 0);
-          cur.shares += Number(r.shares ?? 0);
-          cur.subscribers_lost += Number(r.subscribers_lost ?? 0);
-          m.set(r.date, cur);
-        }
-        const focusMetrics: Array<keyof PulseMetricSnapshot> = [
-          "views", "estimated_revenue_usd", "estimated_minutes_watched", "subscribers_gained",
-        ];
-        for (const [cid, dateMap] of byChannelDate.entries()) {
-          const dates = Array.from(dateMap.keys()).sort();
-          if (dates.length < 2) continue;
-          const last = dates[dates.length - 1];
-          const baseDates = dates.slice(-(baselineDays + 1), -1);
-          if (baseDates.length === 0) continue;
-          const cur = dateMap.get(last)!;
-          const base = emptyMetrics();
-          for (const d of baseDates) {
-            const m = dateMap.get(d)!;
-            base.views += m.views;
-            base.estimated_revenue_usd += m.estimated_revenue_usd;
-            base.estimated_minutes_watched += m.estimated_minutes_watched;
-            base.subscribers_gained += m.subscribers_gained;
-          }
-          for (const m of focusMetrics) {
-            (base as any)[m] = (base as any)[m] / baseDates.length;
-          }
-          const channel = channelMap.get(cid);
-          for (const m of focusMetrics) {
-            const cv = (cur as any)[m] as number;
-            const bv = (base as any)[m] as number;
-            // Skip noise: tiny absolute numbers shouldn't trigger anomalies
-            if (Math.abs(cv) < 10 && Math.abs(bv) < 10) continue;
-            const pct = pctDelta(cv, bv);
-            if (Math.abs(pct) >= 50) {
-              anomalies.push({
-                channel_uuid: cid,
-                channel_title: channel?.title ?? null,
-                channel_thumbnail: channel?.thumbnail_url ?? null,
-                metric: m,
-                current: cv,
-                baseline: bv,
-                delta_pct: pct,
-              });
-            }
-          }
-        }
-        anomalies.sort((a, b) => Math.abs(b.delta_pct) - Math.abs(a.delta_pct));
+      const byChannelDate = new Map<string, Map<string, PulseMetricSnapshot>>();
+      for (const r of analytics) {
+        if (!byChannelDate.has(r.channel_uuid)) byChannelDate.set(r.channel_uuid, new Map());
+        const m = byChannelDate.get(r.channel_uuid)!;
+        const cur = m.get(r.date) ?? emptyMetrics();
+        cur.views += Number(r.views ?? 0);
+        cur.estimated_minutes_watched += Number(r.estimated_minutes_watched ?? 0);
+        cur.estimated_revenue_usd += Number(r.estimated_revenue_usd ?? 0);
+        cur.subscribers_gained += Number(r.subscribers_gained ?? 0);
+        cur.likes += Number(r.likes ?? 0);
+        cur.comments += Number(r.comments ?? 0);
+        cur.shares += Number(r.shares ?? 0);
+        cur.subscribers_lost += Number(r.subscribers_lost ?? 0);
+        m.set(r.date, cur);
       }
+      const focusMetrics: Array<keyof PulseMetricSnapshot> = [
+        "views", "estimated_revenue_usd", "estimated_minutes_watched", "subscribers_gained",
+      ];
+      for (const [cid, dateMap] of byChannelDate.entries()) {
+        const dates = Array.from(dateMap.keys()).sort();
+        if (dates.length < 2) continue;
+        const last = dates[dates.length - 1];
+        const baseDates = dates.slice(-(baselineDays + 1), -1);
+        if (baseDates.length === 0) continue;
+        const cur = dateMap.get(last)!;
+        const base = emptyMetrics();
+        for (const d of baseDates) {
+          const m = dateMap.get(d)!;
+          base.views += m.views;
+          base.estimated_revenue_usd += m.estimated_revenue_usd;
+          base.estimated_minutes_watched += m.estimated_minutes_watched;
+          base.subscribers_gained += m.subscribers_gained;
+        }
+        for (const m of focusMetrics) {
+          (base as any)[m] = (base as any)[m] / baseDates.length;
+        }
+        const channel = channelMap.get(cid);
+        for (const m of focusMetrics) {
+          const cv = (cur as any)[m] as number;
+          const bv = (base as any)[m] as number;
+          // Skip noise: tiny absolute numbers shouldn't trigger anomalies
+          if (Math.abs(cv) < 10 && Math.abs(bv) < 10) continue;
+          const pct = pctDelta(cv, bv);
+          if (Math.abs(pct) >= 50) {
+            anomalies.push({
+              channel_uuid: cid,
+              channel_title: channel?.title ?? null,
+              channel_thumbnail: channel?.thumbnail_url ?? null,
+              metric: m,
+              current: cv,
+              baseline: bv,
+              delta_pct: pct,
+            });
+          }
+        }
+      }
+      anomalies.sort((a, b) => Math.abs(b.delta_pct) - Math.abs(a.delta_pct));
 
       return {
         latest_date,

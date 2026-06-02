@@ -68,7 +68,7 @@ const METRIC_LABELS: Record<keyof PulseMetricSnapshot, string> = {
 };
 
 export default function PulseTab({ startupId, channelFilterUuid }: Props) {
-  const [baselineDays, setBaselineDays] = useState<7 | 30>(7);
+  const [baselineDays, setBaselineDays] = useState<7 | 28>(7);
   const { data: pulse, isLoading } = usePulseSnapshot(startupId, channelFilterUuid, baselineDays);
 
   const sparkSeries = useMemo(() => {
@@ -124,7 +124,7 @@ export default function PulseTab({ startupId, channelFilterUuid }: Props) {
         <div className="flex items-center gap-2">
           <p className="text-[10px] text-muted-foreground">Baseline window</p>
           <div className="inline-flex rounded-md border border-border/50 bg-card overflow-hidden">
-            {([7, 30] as const).map((n) => (
+            {([7, 28] as const).map((n) => (
               <Button
                 key={n}
                 variant={baselineDays === n ? "default" : "ghost"}
@@ -208,12 +208,14 @@ export default function PulseTab({ startupId, channelFilterUuid }: Props) {
       )}
 
       {/* Empty-state for anomalies */}
-      {pulse.anomalies.length === 0 && !channelFilterUuid && (
+      {pulse.anomalies.length === 0 && (
         <Card className="border-border/40">
           <CardContent className="p-5 flex items-center gap-3">
             <Minus className="h-4 w-4 text-muted-foreground" />
             <p className="text-sm text-muted-foreground">
-              No channel-level anomalies — every channel is within ±50% of its {baselineDays}-day baseline.
+              {channelFilterUuid
+                ? `No anomalies for this channel — every tracked metric is within ±50% of its ${baselineDays}-day baseline.`
+                : `No channel-level anomalies — every channel is within ±50% of its ${baselineDays}-day baseline.`}
             </p>
           </CardContent>
         </Card>
