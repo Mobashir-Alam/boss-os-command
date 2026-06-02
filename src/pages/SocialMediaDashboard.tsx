@@ -6,9 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Youtube, Settings, RefreshCw, Loader2, Users, Eye, Video, ThumbsUp, MessageSquare,
   TrendingUp, ExternalLink, AlertTriangle, CheckCircle2, ShieldCheck, KeyRound, BarChart3,
+  Filter, ChevronDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -60,8 +62,22 @@ export default function SocialMediaDashboard() {
 
   const { data: credentials } = useYouTubeCredentials(startupId);
   const { data: channels = [], isLoading: chLoading } = useYouTubeChannels(startupId);
-  const { data: recentUploads = [] } = useRecentYouTubeUploads(startupId, 12);
-  const { data: topVideos = [] } = useTopYouTubeVideos(startupId, 10);
+
+  // Channel filter + paginated limits
+  const [channelFilter, setChannelFilter] = useState<string>("all"); // "all" or channel uuid
+  const [recentLimit, setRecentLimit] = useState(24);
+  const [topLimit, setTopLimit] = useState(24);
+  const filterUuid = channelFilter === "all" ? null : channelFilter;
+
+  // Reset limits when filter changes so a smaller list doesn't carry the
+  // expanded count across filters
+  useEffect(() => {
+    setRecentLimit(24);
+    setTopLimit(24);
+  }, [channelFilter]);
+
+  const { data: recentUploads = [] } = useRecentYouTubeUploads(startupId, recentLimit, filterUuid);
+  const { data: topVideos = [] } = useTopYouTubeVideos(startupId, topLimit, filterUuid);
   const triggerSync = useTriggerYouTubeSync();
   const { data: authorizedIds = [] } = useAuthorizedChannelIds(startupId);
   const startOAuth = useStartYouTubeOAuth();
@@ -292,19 +308,54 @@ export default function SocialMediaDashboard() {
         {/* Tabs */}
         {channels.length > 0 && (
           <Tabs defaultValue="recent" className="space-y-4">
-            <TabsList>
-              <TabsTrigger value="recent">Recent uploads</TabsTrigger>
-              <TabsTrigger value="top">Top performers</TabsTrigger>
-              <TabsTrigger value="channels">Channels</TabsTrigger>
-              {anyAuthorized && <TabsTrigger value="analytics">Analytics</TabsTrigger>}
-            </TabsList>
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <TabsList>
+                <TabsTrigger value="recent">Recent uploads</TabsTrigger>
+                <TabsTrigger value="top">Top performers</TabsTrigger>
+                <TabsTrigger value="channels">Channels</TabsTrigger>
+                {anyAuthorized && <TabsTrigger value="analytics">Analytics</TabsTrigger>}
+              </TabsList>
+
+              {/* Channel filter — applies to Recent uploads + Top performers */}
+              <div className="flex items-center gap-2">
+                <Filter className="h-3.5 w-3.5 text-muted-foreground" />
+                <Select value={channelFilter} onValueChange={setChannelFilter}>
+                  <SelectTrigger className="h-8 w-[200px] text-xs">
+                    <SelectValue placeholder="All channels" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">
+                      All channels ({channels.length})
+                    </SelectItem>
+                    {channels.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.title ?? c.channel_id}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
 
             <TabsContent value="recent">
-              <VideosGrid videos={recentUploads} loading={chLoading} emptyMessage="No uploads synced yet — click Sync videos." />
+              <VideosGrid
+                videos={recentUploads}
+                loading={chLoading}
+                emptyMessage="No uploads synced yet — click Sync videos."
+                canLoadMore={recentUploads.length >= recentLimit}
+                onLoadMore={() => setRecentLimit((n) => n + 24)}
+              />
             </TabsContent>
 
             <TabsContent value="top">
-              <VideosGrid videos={topVideos} loading={chLoading} emptyMessage="No video stats yet." showRank />
+              <VideosGrid
+                videos={topVideos}
+                loading={chLoading}
+                emptyMessage="No video stats yet."
+                showRank
+                canLoadMore={topVideos.length >= topLimit}
+                onLoadMore={() => setTopLimit((n) => n + 24)}
+              />
             </TabsContent>
 
             <TabsContent value="channels">
@@ -426,12 +477,14 @@ function Kpi({
 }
 
 function VideosGrid({
-  videos, loading, emptyMessage, showRank = false,
+  videos, loading, emptyMessage, showRank = false, canLoadMore = false, onLoadMore,
 }: {
   videos: YouTubeVideoWithChannel[];
   loading: boolean;
   emptyMessage: string;
   showRank?: boolean;
+  canLoadMore?: boolean;
+  onLoadMore?: () => void;
 }) {
   if (loading) return <Skeleton className="h-40 w-full" />;
   if (videos.length === 0) {
@@ -443,6 +496,7 @@ function VideosGrid({
     );
   }
   return (
+    <div className="space-y-4">
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
       {videos.map((v, idx) => (
         <a
@@ -497,6 +551,15 @@ function VideosGrid({
           </div>
         </a>
       ))}
+    </div>
+    {canLoadMore && onLoadMore && (
+      <div className="flex justify-center pt-2">
+        <Button variant="outline" size="sm" onClick={onLoadMore} className="gap-1.5">
+          <ChevronDown className="h-3.5 w-3.5" />
+          Load 24 more · showing {videos.length}
+        </Button>
+      </div>
+    )}
     </div>
   );
 }

@@ -152,22 +152,29 @@ export function useYouTubeVideosForChannel(channelUuid: string | undefined, limi
   });
 }
 
-// Recent uploads across all channels for this startup
-export function useRecentYouTubeUploads(startupId: string | undefined, limit = 20) {
+// Recent uploads across the startup. When channelUuid is passed, restrict
+// to that one channel (otherwise include all the startup's channels).
+export function useRecentYouTubeUploads(
+  startupId: string | undefined,
+  limit = 24,
+  channelUuid?: string | null
+) {
   return useQuery({
-    queryKey: ["youtube-recent-uploads", startupId, limit],
+    queryKey: ["youtube-recent-uploads", startupId, limit, channelUuid ?? "all"],
     enabled: !!startupId,
     queryFn: async (): Promise<YouTubeVideoWithChannel[]> => {
-      // Two-step: get channel IDs for this startup, then videos joined
+      // Resolve which channels we're querying
       const { data: channels } = await supabase
         .from("connector_data_youtube_channels")
         .select("id, title, channel_id, thumbnail_url")
         .eq("startup_id", startupId!);
-      const channelIds = (channels ?? []).map((c: any) => c.id);
+      const allChannels = channels ?? [];
+      const filtered = channelUuid
+        ? allChannels.filter((c: any) => c.id === channelUuid)
+        : allChannels;
+      const channelIds = filtered.map((c: any) => c.id);
       if (channelIds.length === 0) return [];
-      const channelMap = new Map(
-        (channels ?? []).map((c: any) => [c.id, c])
-      );
+      const channelMap = new Map(allChannels.map((c: any) => [c.id, c]));
 
       const { data: videos, error } = await supabase
         .from("connector_data_youtube_videos")
@@ -190,21 +197,27 @@ export function useRecentYouTubeUploads(startupId: string | undefined, limit = 2
   });
 }
 
-// Top videos by view count (current snapshot, all-time across this startup)
-export function useTopYouTubeVideos(startupId: string | undefined, limit = 10) {
+// Top videos by view count. channelUuid optional, same semantics.
+export function useTopYouTubeVideos(
+  startupId: string | undefined,
+  limit = 24,
+  channelUuid?: string | null
+) {
   return useQuery({
-    queryKey: ["youtube-top-videos", startupId, limit],
+    queryKey: ["youtube-top-videos", startupId, limit, channelUuid ?? "all"],
     enabled: !!startupId,
     queryFn: async (): Promise<YouTubeVideoWithChannel[]> => {
       const { data: channels } = await supabase
         .from("connector_data_youtube_channels")
         .select("id, title, channel_id, thumbnail_url")
         .eq("startup_id", startupId!);
-      const channelIds = (channels ?? []).map((c: any) => c.id);
+      const allChannels = channels ?? [];
+      const filtered = channelUuid
+        ? allChannels.filter((c: any) => c.id === channelUuid)
+        : allChannels;
+      const channelIds = filtered.map((c: any) => c.id);
       if (channelIds.length === 0) return [];
-      const channelMap = new Map(
-        (channels ?? []).map((c: any) => [c.id, c])
-      );
+      const channelMap = new Map(allChannels.map((c: any) => [c.id, c]));
 
       const { data: videos, error } = await supabase
         .from("connector_data_youtube_videos")
@@ -374,18 +387,21 @@ export interface VideoAnalyticsRow {
   cpm_usd: number | null;
 }
 
-// All authorized channels (has an OAuth token row)
+// All authorized channels (has an OAuth token row).
+// Reads via SECURITY DEFINER RPC because the underlying connector_youtube_oauth
+// table has RLS denying all client reads (protects the tokens). The RPC
+// only returns channel_ids — never the secrets.
 export function useAuthorizedChannelIds(startupId: string | undefined) {
   return useQuery({
     queryKey: ["youtube-authorized", startupId],
     enabled: !!startupId,
     queryFn: async (): Promise<string[]> => {
-      const { data, error } = await supabase
-        .from("connector_youtube_oauth")
-        .select("channel_id")
-        .eq("startup_id", startupId!);
+      const { data, error } = await supabase.rpc(
+        "get_authorized_youtube_channels",
+        { p_startup_id: startupId! }
+      );
       if (error) throw error;
-      return (data ?? []).map((r: any) => r.channel_id);
+      return ((data ?? []) as Array<{ channel_id: string }>).map((r) => r.channel_id);
     },
   });
 }
