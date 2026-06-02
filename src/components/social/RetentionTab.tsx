@@ -294,7 +294,7 @@ function CurveCard({
             Avg <span className="font-semibold tabular-nums text-foreground">{fmtPct(curve.avg_audience_watch_ratio, 1)}</span>
             <InfoTooltip title="Average watch ratio" size="xs">
               Mean of the watch-ratio curve across the whole video. Higher = more
-              minutes watched per view; >100% means viewers rewind on average.
+              minutes watched per view; &gt;100% means viewers rewind on average.
             </InfoTooltip>
           </span>
           {curve.avg_relative_performance != null && (
