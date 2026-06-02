@@ -5,7 +5,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
 import {
   Activity, AlertTriangle, ArrowUpRight, ArrowDownRight, Minus, X,
 } from "lucide-react";
@@ -37,9 +36,10 @@ function fmtDuration(seconds: number | null): string {
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
-type SortKey = "views" | "avg_retention" | "mid_retention" | "relative_perf";
+type SortKey = "newest" | "views" | "avg_retention" | "mid_retention" | "relative_perf";
 
 const SORT_LABEL: Record<SortKey, string> = {
+  newest: "Recently published",
   views: "Views (highest first)",
   avg_retention: "Avg retention (highest)",
   mid_retention: "Mid-video hold (highest)",
@@ -56,13 +56,18 @@ function retentionTone(avg: number, mean: number): "good" | "ok" | "bad" {
 
 export default function RetentionTab({ startupId, channelFilterUuid }: Props) {
   const { data: curves = [], isLoading } = useRetentionCurves(startupId, channelFilterUuid);
-  const [sortKey, setSortKey] = useState<SortKey>("views");
+  const [sortKey, setSortKey] = useState<SortKey>("newest");
   const [expanded, setExpanded] = useState<string | null>(null);
 
   const sorted = useMemo(() => {
     const arr = [...curves];
     arr.sort((a, b) => {
       switch (sortKey) {
+        case "newest": {
+          const at = a.published_at ? Date.parse(a.published_at) : 0;
+          const bt = b.published_at ? Date.parse(b.published_at) : 0;
+          return bt - at;
+        }
         case "views":          return b.view_count - a.view_count;
         case "avg_retention":  return b.avg_audience_watch_ratio - a.avg_audience_watch_ratio;
         case "mid_retention":  return (b.retention_at_50pct ?? 0) - (a.retention_at_50pct ?? 0);
@@ -182,6 +187,7 @@ function CurveCard({
 
   return (
     <button
+      type="button"
       onClick={onExpand}
       className={cn(
         "text-left rounded-xl border bg-card hover:bg-muted/10 transition overflow-hidden",
@@ -291,7 +297,9 @@ function DetailDialog({
         onClick={(e) => e.stopPropagation()}
       >
         <button
+          type="button"
           onClick={onClose}
+          aria-label="Close retention detail"
           className="absolute top-3 right-3 z-10 h-7 w-7 rounded-full bg-background/80 border border-border/40 flex items-center justify-center hover:bg-background"
         >
           <X className="h-3.5 w-3.5" />

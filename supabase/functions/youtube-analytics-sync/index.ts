@@ -55,10 +55,17 @@ interface SyncResult {
   errors: string[];
 }
 
-// How many of the channel's top videos (by recent views) get a retention curve
-// pulled each sync. Each retention query is 1 Analytics-API quota unit. Daily
-// quota is 10k by default, so even 50 here is safe per channel.
-const RETENTION_TOP_N = 25;
+// Cap on retention curves pulled per channel per sync. Each video is 1
+// Analytics-API quota unit. Default daily quota is 10k. With 4 channels
+// × 300 = 1200 units, we use ~12% of the daily allowance and have plenty
+// of headroom for the rest of the sync's calls. Adjustable: bump to 500
+// once we confirm function runtime stays well under the timeout.
+const RETENTION_TOP_N = 300;
+
+// How many retention queries we let YouTube handle concurrently. Sequential
+// would blow past edge function timeouts at this scale; the API tolerates
+// burst concurrency comfortably. 10 keeps us well below rate-limit risk.
+const RETENTION_CONCURRENCY = 10;
 
 async function refreshAccessTokenIfNeeded(
   admin: ReturnType<typeof createClient>,
@@ -555,28 +562,35 @@ async function syncVideoRetention(
   endDate: string,
   errors: string[]
 ): Promise<{ rows: number; videosQueried: number }> {
-  // Find which videos to query: top N by views in the window from our own DB
-  const { data: topVids } = await admin
-    .from("connector_data_youtube_video_analytics")
-    .select("video_uuid, views, connector_data_youtube_videos!inner(video_id)")
-    .eq("date", endDate)
-    .order("views", { ascending: false })
+  // Find which videos to query: most recently published N for this channel.
+  // We pull from the videos table directly (not analytics) so older videos
+  // without recent views still get retention coverage — important for
+  // channels with long-tail catalogs the user wants visibility into.
+  const { data: vids } = await admin
+    .from("connector_data_youtube_videos")
+    .select("id, video_id, published_at")
+    .eq("channel_uuid", channelUuid)
+    .order("published_at", { ascending: false, nullsFirst: false })
     .limit(RETENTION_TOP_N);
 
-  const items = (topVids ?? [])
-    .map((r: any) => ({
-      video_uuid: r.video_uuid as string,
-      video_id: r.connector_data_youtube_videos?.video_id as string | undefined,
+  const items = (vids ?? [])
+    .map((v: any) => ({
+      video_uuid: v.id as string,
+      video_id: v.video_id as string | undefined,
     }))
-    .filter((x) => x.video_id);
+    .filter((x) => x.video_id) as Array<{ video_uuid: string; video_id: string }>;
 
   if (items.length === 0) return { rows: 0, videosQueried: 0 };
 
   let totalUpserted = 0;
-  for (const item of items) {
-    let result;
+
+  // Process the items list in concurrent batches. Each task fetches one
+  // video's retention curve from YouTube and returns its upsert rows
+  // (or pushes an error). After each batch we flush rows in one upsert.
+  type Task = { video_uuid: string; video_id: string };
+  async function fetchOne(item: Task): Promise<any[]> {
     try {
-      result = await analyticsQuery(oauth.channel_id, accessToken, {
+      const result = await analyticsQuery(oauth.channel_id, accessToken, {
         startDate,
         endDate,
         dimensions: "elapsedVideoTimeRatio",
@@ -584,24 +598,30 @@ async function syncVideoRetention(
         filters: `video==${item.video_id}`,
         sort: "elapsedVideoTimeRatio",
       });
+      return result.rows.map((r) => {
+        const o = rowToObject(r, result.columnHeaders);
+        return {
+          video_uuid: item.video_uuid,
+          period_end_date: endDate,
+          period_days: 30,
+          elapsed_video_time_ratio: Number(o.elapsedVideoTimeRatio ?? 0),
+          audience_watch_ratio: Number(o.audienceWatchRatio ?? 0),
+          relative_retention_performance:
+            o.relativeRetentionPerformance != null ? Number(o.relativeRetentionPerformance) : null,
+          raw_payload: o,
+        };
+      });
     } catch (e: any) {
       // Retention often fails for shorts / very-low-watch videos — non-fatal
       errors.push(`retention ${item.video_id}: ${e.message.slice(0, 150)}`);
-      continue;
+      return [];
     }
-    const upserts = result.rows.map((r) => {
-      const o = rowToObject(r, result.columnHeaders);
-      return {
-        video_uuid: item.video_uuid,
-        period_end_date: endDate,
-        period_days: 30,
-        elapsed_video_time_ratio: Number(o.elapsedVideoTimeRatio ?? 0),
-        audience_watch_ratio: Number(o.audienceWatchRatio ?? 0),
-        relative_retention_performance:
-          o.relativeRetentionPerformance != null ? Number(o.relativeRetentionPerformance) : null,
-        raw_payload: o,
-      };
-    });
+  }
+
+  for (let i = 0; i < items.length; i += RETENTION_CONCURRENCY) {
+    const batch = items.slice(i, i + RETENTION_CONCURRENCY);
+    const results = await Promise.all(batch.map(fetchOne));
+    const upserts = results.flat();
     if (upserts.length === 0) continue;
     const { error } = await admin
       .from("connector_data_youtube_video_retention")
@@ -609,11 +629,12 @@ async function syncVideoRetention(
         onConflict: "video_uuid,period_end_date,elapsed_video_time_ratio",
       });
     if (error) {
-      errors.push(`upsert retention ${item.video_id}: ${error.message}`);
+      errors.push(`upsert retention batch starting ${batch[0].video_id}: ${error.message}`);
       continue;
     }
     totalUpserted += upserts.length;
   }
+
   return { rows: totalUpserted, videosQueried: items.length };
 }
 

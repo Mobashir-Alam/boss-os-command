@@ -892,6 +892,7 @@ export interface VideoRetentionCurve {
   video_title: string | null;
   thumbnail_url: string | null;
   duration_seconds: number | null;
+  published_at: string | null;
   channel_uuid: string;
   channel_title: string | null;
   channel_thumbnail: string | null;
@@ -929,11 +930,12 @@ export function useRetentionCurves(
       // 2. Videos in those channels
       const { data: videos } = await supabase
         .from("connector_data_youtube_videos")
-        .select("id, video_id, title, thumbnail_url, duration_seconds, channel_uuid, view_count")
+        .select("id, video_id, title, thumbnail_url, duration_seconds, published_at, channel_uuid, view_count")
         .in("channel_uuid", channelIds);
       const videoList = (videos ?? []) as Array<{
         id: string; video_id: string; title: string | null;
         thumbnail_url: string | null; duration_seconds: number | null;
+        published_at: string | null;
         channel_uuid: string; view_count: number;
       }>;
       const videoMap = new Map(videoList.map((v) => [v.id, v]));
@@ -999,6 +1001,7 @@ export function useRetentionCurves(
           video_title: v.title,
           thumbnail_url: v.thumbnail_url,
           duration_seconds: v.duration_seconds,
+          published_at: v.published_at,
           channel_uuid: v.channel_uuid,
           channel_title: channel?.title ?? null,
           channel_thumbnail: channel?.thumbnail_url ?? null,
