@@ -1265,6 +1265,284 @@ export function useContentLab(
   });
 }
 
+// ── Cohort: age-normalized catalog performance ───────────────────────────
+
+export type TrajectoryClass = "rising" | "steady" | "decaying" | "dead";
+
+export interface CohortAgeBucket {
+  label: string;
+  min_days: number;
+  max_days: number | null;
+  video_count: number;
+  recent_views: number;          // sum across videos in this bucket
+  lifetime_views: number;
+  share_recent_pct: number;      // % of total recent views from this bucket
+}
+
+export interface CohortChannelClassRow {
+  channel_uuid: string;
+  channel_title: string | null;
+  channel_thumbnail: string | null;
+  total: number;
+  rising: number;
+  steady: number;
+  decaying: number;
+  dead: number;
+}
+
+export interface CohortScatterPoint {
+  video_uuid: string;
+  video_id: string;
+  title: string | null;
+  thumbnail_url: string | null;
+  channel_uuid: string;
+  channel_title: string | null;
+  age_days: number;
+  lifetime_views: number;
+  recent_views: number;
+  trajectory: TrajectoryClass;
+}
+
+export interface CohortLongTailRow {
+  video_uuid: string;
+  video_id: string;
+  title: string | null;
+  thumbnail_url: string | null;
+  channel_title: string | null;
+  age_days: number;
+  lifetime_views: number;
+  recent_30d_views: number;
+  lifetime_vpd: number;
+  recent_vpd: number;
+  lift_ratio: number;            // recent_vpd / lifetime_vpd; >1 = catching fresh attention
+}
+
+export interface CohortData {
+  videos_in_scope: number;
+  videos_with_recent: number;
+  total_recent_views: number;
+  total_lifetime_views: number;
+  age_bucket_mix: CohortAgeBucket[];
+  trajectory_totals: Record<TrajectoryClass, number>;
+  by_channel: CohortChannelClassRow[];
+  scatter: CohortScatterPoint[];
+  long_tail_winners: CohortLongTailRow[];
+}
+
+const AGE_BUCKETS: Array<{ label: string; min: number; max: number | null }> = [
+  { label: "0–7 days",    min: 0,    max: 7    },
+  { label: "8–30 days",   min: 8,    max: 30   },
+  { label: "1–3 months",  min: 31,   max: 90   },
+  { label: "3–12 months", min: 91,   max: 365  },
+  { label: "1+ year",     min: 366,  max: null },
+];
+
+function classifyTrajectory(
+  lifetime_vpd: number,
+  recent_vpd: number,
+  age_days: number
+): TrajectoryClass {
+  // Avoid noise on brand-new videos: under 7 days old, just compare to itself
+  if (age_days < 7) {
+    return recent_vpd > 0 ? "rising" : "dead";
+  }
+  if (lifetime_vpd <= 0) return recent_vpd > 0 ? "rising" : "dead";
+  const ratio = recent_vpd / lifetime_vpd;
+  if (ratio >= 1.5) return "rising";
+  if (ratio >= 0.5) return "steady";
+  if (ratio >= 0.05) return "decaying";
+  return "dead";
+}
+
+export function useCohortAnalysis(
+  startupId: string | undefined,
+  channelUuid?: string | null
+) {
+  return useQuery({
+    queryKey: ["youtube-cohort", startupId, channelUuid ?? "all"],
+    enabled: !!startupId,
+    queryFn: async (): Promise<CohortData> => {
+      const empty: CohortData = {
+        videos_in_scope: 0,
+        videos_with_recent: 0,
+        total_recent_views: 0,
+        total_lifetime_views: 0,
+        age_bucket_mix: AGE_BUCKETS.map((b) => ({
+          label: b.label, min_days: b.min, max_days: b.max,
+          video_count: 0, recent_views: 0, lifetime_views: 0, share_recent_pct: 0,
+        })),
+        trajectory_totals: { rising: 0, steady: 0, decaying: 0, dead: 0 },
+        by_channel: [],
+        scatter: [],
+        long_tail_winners: [],
+      };
+
+      // 1. Channels in scope
+      const { data: channels } = await supabase
+        .from("connector_data_youtube_channels")
+        .select("id, title, thumbnail_url")
+        .eq("startup_id", startupId!);
+      const all = (channels ?? []) as Array<{
+        id: string; title: string | null; thumbnail_url: string | null;
+      }>;
+      const scoped = channelUuid ? all.filter((c) => c.id === channelUuid) : all;
+      if (scoped.length === 0) return empty;
+      const channelMap = new Map(all.map((c) => [c.id, c]));
+      const channelIds = scoped.map((c) => c.id);
+
+      // 2. Videos in scope
+      const { data: videos } = await supabase
+        .from("connector_data_youtube_videos")
+        .select("id, video_id, title, thumbnail_url, published_at, view_count, channel_uuid")
+        .in("channel_uuid", channelIds);
+      const vids = (videos ?? []) as Array<{
+        id: string; video_id: string; title: string | null;
+        thumbnail_url: string | null; published_at: string | null;
+        view_count: number; channel_uuid: string;
+      }>;
+      if (vids.length === 0) return empty;
+
+      // 3. Latest analytics row per video (gives recent-30d views)
+      const videoIds = vids.map((v) => v.id);
+      const { data: analytics } = await supabase
+        .from("connector_data_youtube_video_analytics")
+        .select("video_uuid, views, date")
+        .in("video_uuid", videoIds);
+      const latestRecentByVideo = new Map<string, number>();
+      const latestDateByVideo = new Map<string, string>();
+      for (const a of analytics ?? []) {
+        const vid = (a as any).video_uuid as string;
+        const date = (a as any).date as string;
+        const cur = latestDateByVideo.get(vid);
+        if (!cur || date > cur) {
+          latestDateByVideo.set(vid, date);
+          latestRecentByVideo.set(vid, Number((a as any).views ?? 0));
+        }
+      }
+
+      const today = Date.now();
+      const trajectoryTotals: Record<TrajectoryClass, number> = {
+        rising: 0, steady: 0, decaying: 0, dead: 0,
+      };
+      const byChannel = new Map<string, CohortChannelClassRow>();
+      for (const c of scoped) {
+        byChannel.set(c.id, {
+          channel_uuid: c.id,
+          channel_title: c.title,
+          channel_thumbnail: c.thumbnail_url,
+          total: 0, rising: 0, steady: 0, decaying: 0, dead: 0,
+        });
+      }
+      const scatter: CohortScatterPoint[] = [];
+      const longTail: CohortLongTailRow[] = [];
+
+      // Age-bucket accumulators
+      const bucketAccum = AGE_BUCKETS.map((b) => ({
+        ...b, video_count: 0, recent_views: 0, lifetime_views: 0,
+      }));
+
+      let totalRecent = 0;
+      let totalLifetime = 0;
+      let withRecent = 0;
+
+      for (const v of vids) {
+        if (!v.published_at) continue;
+        const ageDays = Math.max(
+          0,
+          (today - new Date(v.published_at).getTime()) / 864e5
+        );
+        const recent = latestRecentByVideo.get(v.id) ?? 0;
+        if (recent > 0) withRecent++;
+        const lifetime = Number(v.view_count ?? 0);
+        const lifetime_vpd = ageDays > 0 ? lifetime / ageDays : 0;
+        const recent_vpd = recent / 30;
+        const traj = classifyTrajectory(lifetime_vpd, recent_vpd, ageDays);
+
+        totalRecent += recent;
+        totalLifetime += lifetime;
+
+        trajectoryTotals[traj]++;
+        const row = byChannel.get(v.channel_uuid);
+        if (row) {
+          row.total++;
+          row[traj]++;
+        }
+
+        // Bucket fit
+        for (const b of bucketAccum) {
+          if (ageDays >= b.min && (b.max == null || ageDays <= b.max)) {
+            b.video_count++;
+            b.recent_views += recent;
+            b.lifetime_views += lifetime;
+            break;
+          }
+        }
+
+        // Scatter (cap at 800 points to keep recharts responsive)
+        if (scatter.length < 800 && ageDays > 0 && lifetime > 0) {
+          const ch = channelMap.get(v.channel_uuid);
+          scatter.push({
+            video_uuid: v.id,
+            video_id: v.video_id,
+            title: v.title,
+            thumbnail_url: v.thumbnail_url,
+            channel_uuid: v.channel_uuid,
+            channel_title: ch?.title ?? null,
+            age_days: Math.round(ageDays),
+            lifetime_views: lifetime,
+            recent_views: recent,
+            trajectory: traj,
+          });
+        }
+
+        // Long-tail consideration: only meaningful for videos > 30 days old
+        // with non-zero recent views and a reasonable lifetime baseline
+        if (ageDays > 30 && recent > 100 && lifetime_vpd > 0) {
+          const ch = channelMap.get(v.channel_uuid);
+          longTail.push({
+            video_uuid: v.id,
+            video_id: v.video_id,
+            title: v.title,
+            thumbnail_url: v.thumbnail_url,
+            channel_title: ch?.title ?? null,
+            age_days: Math.round(ageDays),
+            lifetime_views: lifetime,
+            recent_30d_views: recent,
+            lifetime_vpd,
+            recent_vpd,
+            lift_ratio: recent_vpd / lifetime_vpd,
+          });
+        }
+      }
+
+      // Finalize bucket mix with share %
+      const age_bucket_mix: CohortAgeBucket[] = bucketAccum.map((b) => ({
+        label: b.label,
+        min_days: b.min,
+        max_days: b.max,
+        video_count: b.video_count,
+        recent_views: b.recent_views,
+        lifetime_views: b.lifetime_views,
+        share_recent_pct: totalRecent > 0 ? (b.recent_views / totalRecent) * 100 : 0,
+      }));
+
+      longTail.sort((a, b) => b.lift_ratio - a.lift_ratio);
+
+      return {
+        videos_in_scope: vids.length,
+        videos_with_recent: withRecent,
+        total_recent_views: totalRecent,
+        total_lifetime_views: totalLifetime,
+        age_bucket_mix,
+        trajectory_totals: trajectoryTotals,
+        by_channel: Array.from(byChannel.values()).sort((a, b) => b.total - a.total),
+        scatter,
+        long_tail_winners: longTail.slice(0, 25),
+      };
+    },
+  });
+}
+
 // Top videos by revenue or watch time across the startup
 export function useTopVideosByMetric(
   startupId: string | undefined,
