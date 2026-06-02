@@ -475,12 +475,18 @@ function pctDelta(current: number, baseline: number): number {
 
 export function usePulseSnapshot(
   startupId: string | undefined,
-  channelUuid?: string | null
+  channelUuid?: string | null,
+  baselineDays: number = 7
 ) {
   return useQuery({
-    queryKey: ["youtube-pulse", startupId, channelUuid ?? "all"],
+    queryKey: ["youtube-pulse", startupId, channelUuid ?? "all", baselineDays],
     enabled: !!startupId,
     queryFn: async (): Promise<PulseSnapshot> => {
+      // Fetch enough days to cover (1 current + baselineDays baseline) with
+      // a small buffer so the latest-day detection is robust even if YouTube
+      // hasn't reported the last calendar day yet.
+      const fetchWindow = baselineDays + 7;
+
       // 1. Channels in scope
       const { data: channels } = await supabase
         .from("connector_data_youtube_channels")
@@ -505,8 +511,8 @@ export function usePulseSnapshot(
       };
       if (ids.length === 0) return empty;
 
-      // 2. Last 14 days of channel analytics for those channels
-      const since = new Date(Date.now() - 14 * 864e5).toISOString().slice(0, 10);
+      // 2. Last fetchWindow days of channel analytics for those channels
+      const since = new Date(Date.now() - fetchWindow * 864e5).toISOString().slice(0, 10);
       const { data: rows, error } = await supabase
         .from("connector_data_youtube_channel_analytics")
         .select("*")
@@ -536,8 +542,8 @@ export function usePulseSnapshot(
       const latest_date = sortedDates[sortedDates.length - 1];
       const current = byDate.get(latest_date)!;
 
-      // 4. Baseline = avg of the 7 days immediately before latest_date
-      const baselineDates = sortedDates.slice(-8, -1); // up to 7 days before latest
+      // 4. Baseline = avg of the N days immediately before latest_date
+      const baselineDates = sortedDates.slice(-(baselineDays + 1), -1);
       const baseline = emptyMetrics();
       if (baselineDates.length > 0) {
         for (const d of baselineDates) {
@@ -601,7 +607,7 @@ export function usePulseSnapshot(
           const dates = Array.from(dateMap.keys()).sort();
           if (dates.length < 2) continue;
           const last = dates[dates.length - 1];
-          const baseDates = dates.slice(-8, -1);
+          const baseDates = dates.slice(-(baselineDays + 1), -1);
           if (baseDates.length === 0) continue;
           const cur = dateMap.get(last)!;
           const base = emptyMetrics();

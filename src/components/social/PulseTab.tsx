@@ -1,6 +1,7 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Eye, Clock, DollarSign, UserPlus, ThumbsUp, MessageSquare,
@@ -67,7 +68,8 @@ const METRIC_LABELS: Record<keyof PulseMetricSnapshot, string> = {
 };
 
 export default function PulseTab({ startupId, channelFilterUuid }: Props) {
-  const { data: pulse, isLoading } = usePulseSnapshot(startupId, channelFilterUuid);
+  const [baselineDays, setBaselineDays] = useState<7 | 30>(7);
+  const { data: pulse, isLoading } = usePulseSnapshot(startupId, channelFilterUuid, baselineDays);
 
   const sparkSeries = useMemo(() => {
     if (!pulse) return {} as Record<keyof PulseMetricSnapshot, Array<{ v: number }>>;
@@ -119,9 +121,22 @@ export default function PulseTab({ startupId, channelFilterUuid }: Props) {
           </p>
           <p className="text-sm font-semibold">{dateLabel}</p>
         </div>
-        <p className="text-[10px] text-muted-foreground">
-          Compared to the 7-day average before this date
-        </p>
+        <div className="flex items-center gap-2">
+          <p className="text-[10px] text-muted-foreground">Baseline window</p>
+          <div className="inline-flex rounded-md border border-border/50 bg-card overflow-hidden">
+            {([7, 30] as const).map((n) => (
+              <Button
+                key={n}
+                variant={baselineDays === n ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setBaselineDays(n)}
+                className="h-7 px-3 rounded-none text-xs"
+              >
+                {n}d
+              </Button>
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* KPI grid */}
@@ -182,7 +197,11 @@ export default function PulseTab({ startupId, channelFilterUuid }: Props) {
           </h3>
           <div className="space-y-2">
             {pulse.anomalies.map((a, idx) => (
-              <AnomalyRow key={`${a.channel_uuid}-${a.metric}-${idx}`} anomaly={a} />
+              <AnomalyRow
+                key={`${a.channel_uuid}-${a.metric}-${idx}`}
+                anomaly={a}
+                baselineDays={baselineDays}
+              />
             ))}
           </div>
         </div>
@@ -194,7 +213,7 @@ export default function PulseTab({ startupId, channelFilterUuid }: Props) {
           <CardContent className="p-5 flex items-center gap-3">
             <Minus className="h-4 w-4 text-muted-foreground" />
             <p className="text-sm text-muted-foreground">
-              No channel-level anomalies — every channel is within ±50% of its 7-day baseline.
+              No channel-level anomalies — every channel is within ±50% of its {baselineDays}-day baseline.
             </p>
           </CardContent>
         </Card>
@@ -217,7 +236,7 @@ function DeltaChip({ pct, tone }: { pct: number; tone: "good" | "bad" | "flat" }
   );
 }
 
-function AnomalyRow({ anomaly }: { anomaly: PulseAnomaly }) {
+function AnomalyRow({ anomaly, baselineDays }: { anomaly: PulseAnomaly; baselineDays: number }) {
   const isUp = anomaly.delta_pct > 0;
   const Icon = isUp ? Flame : TrendingDown;
   const tone = isUp ? "text-amber-600 border-amber-500/30 bg-amber-500/10"
@@ -246,7 +265,7 @@ function AnomalyRow({ anomaly }: { anomaly: PulseAnomaly }) {
             <span className={cn("font-semibold tabular-nums", isUp ? "text-amber-600" : "text-red-600")}>
               {isUp ? "spiked" : "dropped"} {Math.abs(anomaly.delta_pct).toFixed(0)}%
             </span>{" "}
-            <span className="text-muted-foreground">vs 7-day baseline</span>
+            <span className="text-muted-foreground">vs {baselineDays}-day baseline</span>
           </p>
           <p className="text-[11px] text-muted-foreground mt-0.5 tabular-nums">
             {fmt(anomaly.current)} today · {fmt(anomaly.baseline)} avg
