@@ -690,6 +690,200 @@ export type Database = {
           },
         ]
       }
+      connector_data_youtube_demographics: {
+        Row: {
+          age_group: string
+          channel_uuid: string
+          created_at: string
+          gender: string
+          id: string
+          period_days: number
+          period_end_date: string
+          raw_payload: Json
+          updated_at: string
+          viewer_percentage: number
+        }
+        Insert: {
+          age_group: string
+          channel_uuid: string
+          created_at?: string
+          gender: string
+          id?: string
+          period_days?: number
+          period_end_date: string
+          raw_payload?: Json
+          updated_at?: string
+          viewer_percentage: number
+        }
+        Update: {
+          age_group?: string
+          channel_uuid?: string
+          created_at?: string
+          gender?: string
+          id?: string
+          period_days?: number
+          period_end_date?: string
+          raw_payload?: Json
+          updated_at?: string
+          viewer_percentage?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "connector_data_youtube_demographics_channel_uuid_fkey"
+            columns: ["channel_uuid"]
+            isOneToOne: false
+            referencedRelation: "connector_data_youtube_channels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      connector_data_youtube_device_types: {
+        Row: {
+          channel_uuid: string
+          created_at: string
+          device_type: string
+          estimated_minutes_watched: number
+          id: string
+          period_days: number
+          period_end_date: string
+          raw_payload: Json
+          updated_at: string
+          views: number
+        }
+        Insert: {
+          channel_uuid: string
+          created_at?: string
+          device_type: string
+          estimated_minutes_watched?: number
+          id?: string
+          period_days?: number
+          period_end_date: string
+          raw_payload?: Json
+          updated_at?: string
+          views?: number
+        }
+        Update: {
+          channel_uuid?: string
+          created_at?: string
+          device_type?: string
+          estimated_minutes_watched?: number
+          id?: string
+          period_days?: number
+          period_end_date?: string
+          raw_payload?: Json
+          updated_at?: string
+          views?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "connector_data_youtube_device_types_channel_uuid_fkey"
+            columns: ["channel_uuid"]
+            isOneToOne: false
+            referencedRelation: "connector_data_youtube_channels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      connector_data_youtube_geography: {
+        Row: {
+          average_view_duration_sec: number | null
+          channel_uuid: string
+          country_code: string
+          created_at: string
+          estimated_minutes_watched: number
+          estimated_revenue_usd: number | null
+          id: string
+          period_days: number
+          period_end_date: string
+          raw_payload: Json
+          updated_at: string
+          views: number
+        }
+        Insert: {
+          average_view_duration_sec?: number | null
+          channel_uuid: string
+          country_code: string
+          created_at?: string
+          estimated_minutes_watched?: number
+          estimated_revenue_usd?: number | null
+          id?: string
+          period_days?: number
+          period_end_date: string
+          raw_payload?: Json
+          updated_at?: string
+          views?: number
+        }
+        Update: {
+          average_view_duration_sec?: number | null
+          channel_uuid?: string
+          country_code?: string
+          created_at?: string
+          estimated_minutes_watched?: number
+          estimated_revenue_usd?: number | null
+          id?: string
+          period_days?: number
+          period_end_date?: string
+          raw_payload?: Json
+          updated_at?: string
+          views?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "connector_data_youtube_geography_channel_uuid_fkey"
+            columns: ["channel_uuid"]
+            isOneToOne: false
+            referencedRelation: "connector_data_youtube_channels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      connector_data_youtube_traffic_sources: {
+        Row: {
+          channel_uuid: string
+          created_at: string
+          estimated_minutes_watched: number
+          id: string
+          period_days: number
+          period_end_date: string
+          raw_payload: Json
+          source_type: string
+          updated_at: string
+          views: number
+        }
+        Insert: {
+          channel_uuid: string
+          created_at?: string
+          estimated_minutes_watched?: number
+          id?: string
+          period_days?: number
+          period_end_date: string
+          raw_payload?: Json
+          source_type: string
+          updated_at?: string
+          views?: number
+        }
+        Update: {
+          channel_uuid?: string
+          created_at?: string
+          estimated_minutes_watched?: number
+          id?: string
+          period_days?: number
+          period_end_date?: string
+          raw_payload?: Json
+          source_type?: string
+          updated_at?: string
+          views?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "connector_data_youtube_traffic_sources_channel_uuid_fkey"
+            columns: ["channel_uuid"]
+            isOneToOne: false
+            referencedRelation: "connector_data_youtube_channels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       connector_data_youtube_video_analytics: {
         Row: {
           average_view_duration_sec: number | null
@@ -751,6 +945,53 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "connector_data_youtube_video_analytics_video_uuid_fkey"
+            columns: ["video_uuid"]
+            isOneToOne: false
+            referencedRelation: "connector_data_youtube_videos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      connector_data_youtube_video_retention: {
+        Row: {
+          audience_watch_ratio: number
+          created_at: string
+          elapsed_video_time_ratio: number
+          id: string
+          period_days: number
+          period_end_date: string
+          raw_payload: Json
+          relative_retention_performance: number | null
+          updated_at: string
+          video_uuid: string
+        }
+        Insert: {
+          audience_watch_ratio: number
+          created_at?: string
+          elapsed_video_time_ratio: number
+          id?: string
+          period_days?: number
+          period_end_date: string
+          raw_payload?: Json
+          relative_retention_performance?: number | null
+          updated_at?: string
+          video_uuid: string
+        }
+        Update: {
+          audience_watch_ratio?: number
+          created_at?: string
+          elapsed_video_time_ratio?: number
+          id?: string
+          period_days?: number
+          period_end_date?: string
+          raw_payload?: Json
+          relative_retention_performance?: number | null
+          updated_at?: string
+          video_uuid?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "connector_data_youtube_video_retention_video_uuid_fkey"
             columns: ["video_uuid"]
             isOneToOne: false
             referencedRelation: "connector_data_youtube_videos"
@@ -3228,6 +3469,12 @@ export type Database = {
       enqueue_email: {
         Args: { payload: Json; queue_name: string }
         Returns: number
+      }
+      get_authorized_youtube_channels: {
+        Args: { p_startup_id: string }
+        Returns: {
+          channel_id: string
+        }[]
       }
       has_role: {
         Args: {
