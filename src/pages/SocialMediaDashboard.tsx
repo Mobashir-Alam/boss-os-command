@@ -161,12 +161,44 @@ export default function SocialMediaDashboard() {
       { startupId },
       {
         onSuccess: (data: any) => {
-          const channels = data.results?.length ?? 0;
-          const rows = data.results?.reduce(
-            (acc: number, r: any) => acc + r.channel_rows_upserted + r.video_rows_upserted,
-            0
-          ) ?? 0;
-          toast.success(`Analytics synced — ${rows} rows across ${channels} channel(s)`);
+          const results = (data.results ?? []) as Array<{
+            channel_title?: string | null;
+            channel_rows_upserted: number;
+            video_rows_upserted: number;
+            demographics_rows_upserted?: number;
+            geography_rows_upserted?: number;
+            traffic_rows_upserted?: number;
+            device_rows_upserted?: number;
+            retention_rows_upserted?: number;
+            errors: string[];
+          }>;
+          const sum = (k: keyof typeof results[number]) =>
+            results.reduce((acc, r) => acc + (Number(r[k] ?? 0) || 0), 0);
+          const channelRows = sum("channel_rows_upserted");
+          const videoRows = sum("video_rows_upserted");
+          const demoRows = sum("demographics_rows_upserted");
+          const geoRows = sum("geography_rows_upserted");
+          const trafRows = sum("traffic_rows_upserted");
+          const devRows = sum("device_rows_upserted");
+          const retRows = sum("retention_rows_upserted");
+          const failedCount = results.filter((r) => r.errors.length > 0).length;
+
+          const description =
+            `${channelRows} channel-day · ${videoRows} video · ${demoRows} demographics · ` +
+            `${geoRows} geo · ${trafRows} traffic · ${devRows} device · ${retRows} retention rows`;
+
+          if (failedCount === 0) {
+            toast.success(`Analytics synced across ${results.length} channel(s)`, {
+              description,
+              duration: 10000,
+            });
+          } else {
+            toast.warning(
+              `Synced with ${failedCount} channel(s) reporting errors`,
+              { description, duration: 15000 }
+            );
+            console.warn("YouTube analytics sync per-channel results:", results);
+          }
         },
         onError: (e: any) => toast.error(e?.message ?? "Analytics sync failed"),
       }

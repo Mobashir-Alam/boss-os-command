@@ -45,9 +45,20 @@ interface SyncResult {
   channel_title?: string | null;
   channel_rows_upserted: number;
   video_rows_upserted: number;
+  demographics_rows_upserted: number;
+  geography_rows_upserted: number;
+  traffic_rows_upserted: number;
+  device_rows_upserted: number;
+  retention_rows_upserted: number;
+  retention_videos_queried: number;
   has_monetary_scope: boolean;
   errors: string[];
 }
+
+// How many of the channel's top videos (by recent views) get a retention curve
+// pulled each sync. Each retention query is 1 Analytics-API quota unit. Daily
+// quota is 10k by default, so even 50 here is safe per channel.
+const RETENTION_TOP_N = 25;
 
 async function refreshAccessTokenIfNeeded(
   admin: ReturnType<typeof createClient>,
@@ -342,6 +353,291 @@ async function syncVideoAnalytics(
   return upserts.length;
 }
 
+// ─── Tier 2 dimension syncs ─────────────────────────────────────
+// All four are channel-level snapshots aggregated for the window,
+// keyed by period_end_date. Re-sync same-day overwrites; next-day adds.
+
+async function syncDemographics(
+  admin: ReturnType<typeof createClient>,
+  channelUuid: string,
+  oauth: OAuthRow,
+  accessToken: string,
+  startDate: string,
+  endDate: string,
+  errors: string[]
+): Promise<number> {
+  let result;
+  try {
+    result = await analyticsQuery(oauth.channel_id, accessToken, {
+      startDate,
+      endDate,
+      dimensions: "ageGroup,gender",
+      metrics: "viewerPercentage",
+      sort: "gender,ageGroup",
+    });
+  } catch (e: any) {
+    errors.push(`demographics ${oauth.channel_id}: ${e.message}`);
+    return 0;
+  }
+  const upserts = result.rows.map((r) => {
+    const o = rowToObject(r, result.columnHeaders);
+    return {
+      channel_uuid: channelUuid,
+      period_end_date: endDate,
+      period_days: 30,
+      age_group: String(o.ageGroup ?? "unknown"),
+      gender: String(o.gender ?? "unknown"),
+      viewer_percentage: Number(o.viewerPercentage ?? 0),
+      raw_payload: o,
+    };
+  });
+  if (upserts.length === 0) return 0;
+  const { error } = await admin
+    .from("connector_data_youtube_demographics")
+    .upsert(upserts as any, { onConflict: "channel_uuid,period_end_date,age_group,gender" });
+  if (error) {
+    errors.push(`upsert demographics: ${error.message}`);
+    return 0;
+  }
+  return upserts.length;
+}
+
+async function syncGeography(
+  admin: ReturnType<typeof createClient>,
+  channelUuid: string,
+  oauth: OAuthRow,
+  accessToken: string,
+  startDate: string,
+  endDate: string,
+  hasMonetary: boolean,
+  errors: string[]
+): Promise<number> {
+  let primary;
+  try {
+    primary = await analyticsQuery(oauth.channel_id, accessToken, {
+      startDate,
+      endDate,
+      dimensions: "country",
+      metrics: "views,estimatedMinutesWatched,averageViewDuration",
+      sort: "-views",
+      maxResults: "50",
+    });
+  } catch (e: any) {
+    errors.push(`geography ${oauth.channel_id}: ${e.message}`);
+    return 0;
+  }
+
+  // Monetary by country — separate query so failure is non-fatal
+  const revenueByCountry = new Map<string, number>();
+  if (hasMonetary) {
+    try {
+      const mon = await analyticsQuery(oauth.channel_id, accessToken, {
+        startDate,
+        endDate,
+        dimensions: "country",
+        metrics: "estimatedRevenue",
+        sort: "-estimatedRevenue",
+        maxResults: "50",
+        currency: "USD",
+      });
+      mon.rows.forEach((r) => {
+        const o = rowToObject(r, mon.columnHeaders);
+        if (o.country) revenueByCountry.set(o.country, Number(o.estimatedRevenue ?? 0));
+      });
+    } catch (e: any) {
+      errors.push(`geography monetary: ${e.message}`);
+    }
+  }
+
+  const upserts = primary.rows.map((r) => {
+    const o = rowToObject(r, primary.columnHeaders);
+    return {
+      channel_uuid: channelUuid,
+      period_end_date: endDate,
+      period_days: 30,
+      country_code: String(o.country ?? "ZZ"),
+      views: Number(o.views ?? 0),
+      estimated_minutes_watched: Number(o.estimatedMinutesWatched ?? 0),
+      average_view_duration_sec:
+        o.averageViewDuration != null ? Math.round(Number(o.averageViewDuration)) : null,
+      estimated_revenue_usd: revenueByCountry.has(o.country) ? revenueByCountry.get(o.country) : null,
+      raw_payload: o,
+    };
+  });
+  if (upserts.length === 0) return 0;
+  const { error } = await admin
+    .from("connector_data_youtube_geography")
+    .upsert(upserts as any, { onConflict: "channel_uuid,period_end_date,country_code" });
+  if (error) {
+    errors.push(`upsert geography: ${error.message}`);
+    return 0;
+  }
+  return upserts.length;
+}
+
+async function syncTrafficSources(
+  admin: ReturnType<typeof createClient>,
+  channelUuid: string,
+  oauth: OAuthRow,
+  accessToken: string,
+  startDate: string,
+  endDate: string,
+  errors: string[]
+): Promise<number> {
+  let result;
+  try {
+    result = await analyticsQuery(oauth.channel_id, accessToken, {
+      startDate,
+      endDate,
+      dimensions: "insightTrafficSourceType",
+      metrics: "views,estimatedMinutesWatched",
+      sort: "-views",
+    });
+  } catch (e: any) {
+    errors.push(`traffic sources ${oauth.channel_id}: ${e.message}`);
+    return 0;
+  }
+  const upserts = result.rows.map((r) => {
+    const o = rowToObject(r, result.columnHeaders);
+    return {
+      channel_uuid: channelUuid,
+      period_end_date: endDate,
+      period_days: 30,
+      source_type: String(o.insightTrafficSourceType ?? "UNKNOWN"),
+      views: Number(o.views ?? 0),
+      estimated_minutes_watched: Number(o.estimatedMinutesWatched ?? 0),
+      raw_payload: o,
+    };
+  });
+  if (upserts.length === 0) return 0;
+  const { error } = await admin
+    .from("connector_data_youtube_traffic_sources")
+    .upsert(upserts as any, { onConflict: "channel_uuid,period_end_date,source_type" });
+  if (error) {
+    errors.push(`upsert traffic sources: ${error.message}`);
+    return 0;
+  }
+  return upserts.length;
+}
+
+async function syncDeviceTypes(
+  admin: ReturnType<typeof createClient>,
+  channelUuid: string,
+  oauth: OAuthRow,
+  accessToken: string,
+  startDate: string,
+  endDate: string,
+  errors: string[]
+): Promise<number> {
+  let result;
+  try {
+    result = await analyticsQuery(oauth.channel_id, accessToken, {
+      startDate,
+      endDate,
+      dimensions: "deviceType",
+      metrics: "views,estimatedMinutesWatched",
+      sort: "-views",
+    });
+  } catch (e: any) {
+    errors.push(`device types ${oauth.channel_id}: ${e.message}`);
+    return 0;
+  }
+  const upserts = result.rows.map((r) => {
+    const o = rowToObject(r, result.columnHeaders);
+    return {
+      channel_uuid: channelUuid,
+      period_end_date: endDate,
+      period_days: 30,
+      device_type: String(o.deviceType ?? "UNKNOWN_PLATFORM"),
+      views: Number(o.views ?? 0),
+      estimated_minutes_watched: Number(o.estimatedMinutesWatched ?? 0),
+      raw_payload: o,
+    };
+  });
+  if (upserts.length === 0) return 0;
+  const { error } = await admin
+    .from("connector_data_youtube_device_types")
+    .upsert(upserts as any, { onConflict: "channel_uuid,period_end_date,device_type" });
+  if (error) {
+    errors.push(`upsert device types: ${error.message}`);
+    return 0;
+  }
+  return upserts.length;
+}
+
+// Per-video retention is one API call per video, so we cap at the top
+// RETENTION_TOP_N videos by view count in the window.
+async function syncVideoRetention(
+  admin: ReturnType<typeof createClient>,
+  channelUuid: string,
+  oauth: OAuthRow,
+  accessToken: string,
+  startDate: string,
+  endDate: string,
+  errors: string[]
+): Promise<{ rows: number; videosQueried: number }> {
+  // Find which videos to query: top N by views in the window from our own DB
+  const { data: topVids } = await admin
+    .from("connector_data_youtube_video_analytics")
+    .select("video_uuid, views, connector_data_youtube_videos!inner(video_id)")
+    .eq("date", endDate)
+    .order("views", { ascending: false })
+    .limit(RETENTION_TOP_N);
+
+  const items = (topVids ?? [])
+    .map((r: any) => ({
+      video_uuid: r.video_uuid as string,
+      video_id: r.connector_data_youtube_videos?.video_id as string | undefined,
+    }))
+    .filter((x) => x.video_id);
+
+  if (items.length === 0) return { rows: 0, videosQueried: 0 };
+
+  let totalUpserted = 0;
+  for (const item of items) {
+    let result;
+    try {
+      result = await analyticsQuery(oauth.channel_id, accessToken, {
+        startDate,
+        endDate,
+        dimensions: "elapsedVideoTimeRatio",
+        metrics: "audienceWatchRatio,relativeRetentionPerformance",
+        filters: `video==${item.video_id}`,
+        sort: "elapsedVideoTimeRatio",
+      });
+    } catch (e: any) {
+      // Retention often fails for shorts / very-low-watch videos — non-fatal
+      errors.push(`retention ${item.video_id}: ${e.message.slice(0, 150)}`);
+      continue;
+    }
+    const upserts = result.rows.map((r) => {
+      const o = rowToObject(r, result.columnHeaders);
+      return {
+        video_uuid: item.video_uuid,
+        period_end_date: endDate,
+        period_days: 30,
+        elapsed_video_time_ratio: Number(o.elapsedVideoTimeRatio ?? 0),
+        audience_watch_ratio: Number(o.audienceWatchRatio ?? 0),
+        relative_retention_performance:
+          o.relativeRetentionPerformance != null ? Number(o.relativeRetentionPerformance) : null,
+        raw_payload: o,
+      };
+    });
+    if (upserts.length === 0) continue;
+    const { error } = await admin
+      .from("connector_data_youtube_video_retention")
+      .upsert(upserts as any, {
+        onConflict: "video_uuid,period_end_date,elapsed_video_time_ratio",
+      });
+    if (error) {
+      errors.push(`upsert retention ${item.video_id}: ${error.message}`);
+      continue;
+    }
+    totalUpserted += upserts.length;
+  }
+  return { rows: totalUpserted, videosQueried: items.length };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -393,6 +689,12 @@ Deno.serve(async (req) => {
         channel_id: oauth.channel_id,
         channel_rows_upserted: 0,
         video_rows_upserted: 0,
+        demographics_rows_upserted: 0,
+        geography_rows_upserted: 0,
+        traffic_rows_upserted: 0,
+        device_rows_upserted: 0,
+        retention_rows_upserted: 0,
+        retention_videos_queried: 0,
         has_monetary_scope: oauth.scopes.some((s) => s.includes("yt-analytics-monetary")),
         errors: [],
       };
@@ -450,6 +752,51 @@ Deno.serve(async (req) => {
         );
       } catch (e: any) {
         result.errors.push(`video analytics: ${e.message}`);
+      }
+
+      // Tier 2 dimension snapshots — each non-fatal so one failure doesn't
+      // kill the rest of the channel's sync
+      try {
+        result.demographics_rows_upserted = await syncDemographics(
+          admin, channelUuid, oauth, accessToken, startDate, endDate, result.errors
+        );
+      } catch (e: any) {
+        result.errors.push(`demographics: ${e.message}`);
+      }
+
+      try {
+        result.geography_rows_upserted = await syncGeography(
+          admin, channelUuid, oauth, accessToken, startDate, endDate,
+          result.has_monetary_scope, result.errors
+        );
+      } catch (e: any) {
+        result.errors.push(`geography: ${e.message}`);
+      }
+
+      try {
+        result.traffic_rows_upserted = await syncTrafficSources(
+          admin, channelUuid, oauth, accessToken, startDate, endDate, result.errors
+        );
+      } catch (e: any) {
+        result.errors.push(`traffic sources: ${e.message}`);
+      }
+
+      try {
+        result.device_rows_upserted = await syncDeviceTypes(
+          admin, channelUuid, oauth, accessToken, startDate, endDate, result.errors
+        );
+      } catch (e: any) {
+        result.errors.push(`device types: ${e.message}`);
+      }
+
+      try {
+        const ret = await syncVideoRetention(
+          admin, channelUuid, oauth, accessToken, startDate, endDate, result.errors
+        );
+        result.retention_rows_upserted = ret.rows;
+        result.retention_videos_queried = ret.videosQueried;
+      } catch (e: any) {
+        result.errors.push(`retention: ${e.message}`);
       }
 
       results.push(result);
