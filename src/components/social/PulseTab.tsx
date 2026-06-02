@@ -10,7 +10,12 @@ import {
 import { cn } from "@/lib/utils";
 import { LineChart, Line, ResponsiveContainer, YAxis } from "recharts";
 import { format, parseISO } from "date-fns";
-import { usePulseSnapshot, type PulseMetricSnapshot, type PulseAnomaly } from "@/hooks/useYouTube";
+import {
+  usePulseSnapshot,
+  type PulseMetricSnapshot,
+  type PulseAnomaly,
+  type PulseChannelRow,
+} from "@/hooks/useYouTube";
 
 interface Props {
   startupId: string;
@@ -189,6 +194,20 @@ export default function PulseTab({ startupId, channelFilterUuid }: Props) {
         })}
       </div>
 
+      {/* Per-channel breakdown — only when looking at all channels */}
+      {!channelFilterUuid && pulse.per_channel.length > 1 && (
+        <div>
+          <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">
+            Per-channel breakdown
+          </h3>
+          <div className="space-y-2">
+            {pulse.per_channel.map((c) => (
+              <ChannelBreakdownRow key={c.channel_uuid} row={c} />
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Anomalies */}
       {pulse.anomalies.length > 0 && (
         <div>
@@ -235,6 +254,57 @@ function DeltaChip({ pct, tone }: { pct: number; tone: "good" | "bad" | "flat" }
       <Icon className="h-2.5 w-2.5" />
       {Math.abs(pct) < 1 ? "0%" : `${pct > 0 ? "+" : ""}${pct.toFixed(0)}%`}
     </Badge>
+  );
+}
+
+function ChannelBreakdownRow({ row }: { row: PulseChannelRow }) {
+  return (
+    <Card className="border-border/40">
+      <CardContent className="p-3.5">
+        <div className="grid grid-cols-12 items-center gap-3">
+          {/* Channel identity — 3 cols on lg, full width on sm */}
+          <div className="col-span-12 lg:col-span-3 flex items-center gap-2.5 min-w-0">
+            {row.channel_thumbnail ? (
+              <img
+                src={row.channel_thumbnail}
+                alt=""
+                referrerPolicy="no-referrer"
+                className="h-9 w-9 rounded-full shrink-0"
+              />
+            ) : (
+              <div className="h-9 w-9 rounded-full bg-muted shrink-0" />
+            )}
+            <p className="text-sm font-semibold truncate">
+              {row.channel_title ?? "Unknown channel"}
+            </p>
+          </div>
+
+          {/* 6 metric cells */}
+          <div className="col-span-12 lg:col-span-9 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+            {METRIC_DEFS.map((def) => {
+              const cur = (row.current as any)[def.key] as number;
+              const pct = (row.delta_pct as any)[def.key] as number;
+              const tone = deltaTone(pct);
+              const goodOrBad =
+                tone === "flat" ? "flat" : (tone === "up") === def.positiveIsGood ? "good" : "bad";
+              const Icon = def.icon;
+              return (
+                <div key={def.key} className="min-w-0">
+                  <div className="flex items-center gap-1 text-muted-foreground">
+                    <Icon className="h-2.5 w-2.5" />
+                    <span className="text-[9px] uppercase tracking-wider truncate">{def.label}</span>
+                  </div>
+                  <p className="text-sm font-semibold tabular-nums leading-tight mt-0.5">
+                    {def.format(cur)}
+                  </p>
+                  <DeltaChip pct={pct} tone={goodOrBad} />
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 

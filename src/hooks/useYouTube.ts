@@ -452,6 +452,15 @@ export interface PulseAnomaly {
   delta_pct: number; // signed; positive = above baseline
 }
 
+export interface PulseChannelRow {
+  channel_uuid: string;
+  channel_title: string | null;
+  channel_thumbnail: string | null;
+  current: PulseMetricSnapshot;          // that channel's latest-day metrics
+  baseline: PulseMetricSnapshot;         // that channel's N-day baseline
+  delta_pct: PulseMetricSnapshot;        // signed % delta per metric
+}
+
 export interface PulseSnapshot {
   latest_date: string | null;            // most recent day with data
   current: PulseMetricSnapshot;          // sums across channels on latest_date
@@ -459,6 +468,7 @@ export interface PulseSnapshot {
   delta_pct: PulseMetricSnapshot;        // signed % change; 0 if baseline is 0
   trend: PulseTrendPoint[];              // last 14 days, oldest → newest
   anomalies: PulseAnomaly[];             // top per-channel outliers
+  per_channel: PulseChannelRow[];        // one row per channel in scope, sorted by views desc
 }
 
 function emptyMetrics(): PulseMetricSnapshot {
@@ -508,6 +518,7 @@ export function usePulseSnapshot(
         delta_pct: emptyMetrics(),
         trend: [],
         anomalies: [],
+        per_channel: [],
       };
       if (ids.length === 0) return empty;
 
@@ -581,12 +592,13 @@ export function usePulseSnapshot(
 
       const trend: PulseTrendPoint[] = sortedDates.map((d) => ({ date: d, ...byDate.get(d)! }));
 
-      // 5. Per-channel anomalies. Runs in both modes:
-      //    - All channels: surfaces top movers across every channel
-      //    - Single channel: surfaces which metrics moved for that one channel
-      // Either way: for each (channel, metric), compare its own latest day to
-      // its own N-day baseline and flag |delta| ≥ 50%.
+      // 5. Per-channel breakdown + anomaly detection. Both run in every mode:
+      //    - All channels: per_channel powers the breakdown rows, anomalies
+      //      surface top movers across the whole startup.
+      //    - Single channel: per_channel has one entry, anomalies surface
+      //      which of that channel's metrics moved sharply.
       const anomalies: PulseAnomaly[] = [];
+      const per_channel: PulseChannelRow[] = [];
       const byChannelDate = new Map<string, Map<string, PulseMetricSnapshot>>();
       for (const r of analytics) {
         if (!byChannelDate.has(r.channel_uuid)) byChannelDate.set(r.channel_uuid, new Map());
@@ -605,6 +617,10 @@ export function usePulseSnapshot(
       const focusMetrics: Array<keyof PulseMetricSnapshot> = [
         "views", "estimated_revenue_usd", "estimated_minutes_watched", "subscribers_gained",
       ];
+      const allMetrics: Array<keyof PulseMetricSnapshot> = [
+        "views", "estimated_minutes_watched", "estimated_revenue_usd",
+        "subscribers_gained", "likes", "comments",
+      ];
       for (const [cid, dateMap] of byChannelDate.entries()) {
         const dates = Array.from(dateMap.keys()).sort();
         if (dates.length < 2) continue;
@@ -612,18 +628,52 @@ export function usePulseSnapshot(
         const baseDates = dates.slice(-(baselineDays + 1), -1);
         if (baseDates.length === 0) continue;
         const cur = dateMap.get(last)!;
+        // Full baseline avg for all metrics — used by the breakdown rows
         const base = emptyMetrics();
         for (const d of baseDates) {
           const m = dateMap.get(d)!;
           base.views += m.views;
-          base.estimated_revenue_usd += m.estimated_revenue_usd;
           base.estimated_minutes_watched += m.estimated_minutes_watched;
+          base.estimated_revenue_usd += m.estimated_revenue_usd;
           base.subscribers_gained += m.subscribers_gained;
+          base.subscribers_lost += m.subscribers_lost;
+          base.likes += m.likes;
+          base.comments += m.comments;
+          base.shares += m.shares;
         }
-        for (const m of focusMetrics) {
-          (base as any)[m] = (base as any)[m] / baseDates.length;
-        }
+        const n = baseDates.length;
+        base.views /= n;
+        base.estimated_minutes_watched /= n;
+        base.estimated_revenue_usd /= n;
+        base.subscribers_gained /= n;
+        base.subscribers_lost /= n;
+        base.likes /= n;
+        base.comments /= n;
+        base.shares /= n;
+
         const channel = channelMap.get(cid);
+
+        // Record the per-channel snapshot for the breakdown rows
+        const channelDelta: PulseMetricSnapshot = {
+          views: pctDelta(cur.views, base.views),
+          estimated_minutes_watched: pctDelta(cur.estimated_minutes_watched, base.estimated_minutes_watched),
+          estimated_revenue_usd: pctDelta(cur.estimated_revenue_usd, base.estimated_revenue_usd),
+          subscribers_gained: pctDelta(cur.subscribers_gained, base.subscribers_gained),
+          subscribers_lost: pctDelta(cur.subscribers_lost, base.subscribers_lost),
+          likes: pctDelta(cur.likes, base.likes),
+          comments: pctDelta(cur.comments, base.comments),
+          shares: pctDelta(cur.shares, base.shares),
+        };
+        per_channel.push({
+          channel_uuid: cid,
+          channel_title: channel?.title ?? null,
+          channel_thumbnail: channel?.thumbnail_url ?? null,
+          current: cur,
+          baseline: base,
+          delta_pct: channelDelta,
+        });
+
+        // Anomaly check on focus metrics only
         for (const m of focusMetrics) {
           const cv = (cur as any)[m] as number;
           const bv = (base as any)[m] as number;
@@ -644,6 +694,7 @@ export function usePulseSnapshot(
         }
       }
       anomalies.sort((a, b) => Math.abs(b.delta_pct) - Math.abs(a.delta_pct));
+      per_channel.sort((a, b) => b.current.views - a.current.views);
 
       return {
         latest_date,
@@ -652,6 +703,7 @@ export function usePulseSnapshot(
         delta_pct,
         trend,
         anomalies: anomalies.slice(0, 5),
+        per_channel,
       };
     },
   });
