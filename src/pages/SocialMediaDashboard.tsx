@@ -37,6 +37,7 @@ import AudienceTab from "@/components/social/AudienceTab";
 import RetentionTab from "@/components/social/RetentionTab";
 import ContentLabTab from "@/components/social/ContentLabTab";
 import CohortTab from "@/components/social/CohortTab";
+import KaiTab from "@/components/social/KaiTab";
 
 function fmtNum(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
@@ -352,6 +353,9 @@ export default function SocialMediaDashboard() {
                 {anyAuthorized && <TabsTrigger value="retention">Retention</TabsTrigger>}
                 <TabsTrigger value="cohort">Cohort</TabsTrigger>
                 <TabsTrigger value="content-lab">Content lab</TabsTrigger>
+                <TabsTrigger value="kai" className="gap-1">
+                  <span className="text-amber-500">✦</span> Ask KAI
+                </TabsTrigger>
                 <TabsTrigger value="recent">Recent uploads</TabsTrigger>
                 <TabsTrigger value="top">Top performers</TabsTrigger>
                 <TabsTrigger value="channels">Channels</TabsTrigger>
@@ -403,6 +407,10 @@ export default function SocialMediaDashboard() {
 
             <TabsContent value="content-lab">
               <ContentLabTab startupId={startupId} channelFilterUuid={filterUuid} />
+            </TabsContent>
+
+            <TabsContent value="kai">
+              <KaiTab startupId={startupId} channelFilterUuid={filterUuid} />
             </TabsContent>
 
             <TabsContent value="recent">

@@ -1647,6 +1647,43 @@ export function useTriggerYouTubeAnalyticsSync() {
   });
 }
 
+// ── KAI: ask natural-language questions over the YouTube snapshot ─────────
+
+export interface KaiAskResult {
+  answer: string;
+  snapshot_summary: {
+    channels_in_scope: number;
+    window_days: number;
+    total_videos: number;
+    recent_views: number;
+  };
+}
+
+export function useAskYouTubeKai() {
+  return useMutation({
+    mutationFn: async ({
+      startupId, channelUuid, question, windowDays,
+    }: {
+      startupId: string;
+      channelUuid?: string | null;
+      question: string;
+      windowDays?: number;
+    }): Promise<KaiAskResult> => {
+      const { data, error } = await supabase.functions.invoke("youtube-kai-ask", {
+        body: {
+          startup_id: startupId,
+          channel_uuid: channelUuid ?? null,
+          question,
+          window_days: windowDays ?? 30,
+        },
+      });
+      if (error) throw await extractFnError(error);
+      if ((data as any)?.error) throw new Error((data as any).error);
+      return data as KaiAskResult;
+    },
+  });
+}
+
 // ── Tier 1: Credentials ───────────────────────────────────────────────────
 
 export function useSaveYouTubeApiKey() {

@@ -54,3 +54,9 @@ verify_jwt = false
 [functions.youtube-analytics-sync]
 # Reads OAuth tokens server-side from connector_youtube_oauth.
 verify_jwt = false
+
+[functions.youtube-kai-ask]
+# Aggregates YouTube data server-side via service role and calls the
+# Lovable AI gateway. No user-supplied secrets. Dashboard access is
+# already RLS-gated upstream (founder + social media lead only).
+verify_jwt = false
