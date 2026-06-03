@@ -125,7 +125,7 @@ async function buildSnapshot(
   const baseline = sumKpis(baselineRows);
   const pctDelta = (cur: number, base: number) =>
     base === 0 ? (cur === 0 ? 0 : 100) : Number((((cur - base) / base) * 100).toFixed(1));
-  const delta_pct = {
+  const kpis_delta_pct = {
     views: pctDelta(recent.views, baseline.views),
     watch_minutes: pctDelta(recent.watch_minutes, baseline.watch_minutes),
     revenue_usd: pctDelta(recent.revenue_usd, baseline.revenue_usd),
