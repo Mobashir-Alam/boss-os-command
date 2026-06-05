@@ -127,10 +127,10 @@ export default function AudienceTab({ startupId, channelFilterUuid }: Props) {
   // Pivot demographics for the stacked bar
   const demoPivot = useMemo(() => {
     if (!aud) return [];
-    const byAge = new Map<string, Record<string, number>>();
+    const byAge = new Map<string, Record<string, number> & { age: string }>();
     for (const r of aud.demographics) {
       const row = byAge.get(r.age_group) ?? { age: AGE_LABEL[r.age_group] ?? r.age_group };
-      row[r.gender] = (row[r.gender] ?? 0) + r.viewer_percentage;
+      row[r.gender] = ((row[r.gender] as number | undefined) ?? 0) + r.viewer_percentage;
       byAge.set(r.age_group, row);
     }
     // Ensure all age buckets are present in canonical order
