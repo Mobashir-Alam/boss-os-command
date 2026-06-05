@@ -37,7 +37,7 @@ CREATE POLICY "slack_workspace_select" ON public.connector_slack_workspace
 
 DROP POLICY IF EXISTS "slack_workspace_write" ON public.connector_slack_workspace;
 CREATE POLICY "slack_workspace_write" ON public.connector_slack_workspace
-  FOR ALL USING (public.is_social_media_lead(auth.uid()) OR public.is_founder(auth.uid()));
+  FOR ALL USING (public.is_social_media_lead());
 
 -- ─────────────────────────────────────────────────────────────
 -- 2. Channel roster
@@ -68,7 +68,7 @@ CREATE POLICY "slack_channels_select" ON public.connector_data_slack_channels
 
 DROP POLICY IF EXISTS "slack_channels_write" ON public.connector_data_slack_channels;
 CREATE POLICY "slack_channels_write" ON public.connector_data_slack_channels
-  FOR ALL USING (public.is_social_media_lead(auth.uid()) OR public.is_founder(auth.uid()));
+  FOR ALL USING (public.is_social_media_lead());
 
 -- ─────────────────────────────────────────────────────────────
 -- 3. Daily channel stats
@@ -100,7 +100,7 @@ CREATE POLICY "slack_channel_stats_select" ON public.connector_data_slack_channe
 
 DROP POLICY IF EXISTS "slack_channel_stats_write" ON public.connector_data_slack_channel_stats;
 CREATE POLICY "slack_channel_stats_write" ON public.connector_data_slack_channel_stats
-  FOR ALL USING (public.is_social_media_lead(auth.uid()) OR public.is_founder(auth.uid()));
+  FOR ALL USING (public.is_social_media_lead());
 
 -- ─────────────────────────────────────────────────────────────
 -- 4. User roster
@@ -130,7 +130,7 @@ CREATE POLICY "slack_users_select" ON public.connector_data_slack_users
 
 DROP POLICY IF EXISTS "slack_users_write" ON public.connector_data_slack_users;
 CREATE POLICY "slack_users_write" ON public.connector_data_slack_users
-  FOR ALL USING (public.is_social_media_lead(auth.uid()) OR public.is_founder(auth.uid()));
+  FOR ALL USING (public.is_social_media_lead());
 
 -- ─────────────────────────────────────────────────────────────
 -- 5. Daily user stats
@@ -159,4 +159,4 @@ CREATE POLICY "slack_user_stats_select" ON public.connector_data_slack_user_stat
 
 DROP POLICY IF EXISTS "slack_user_stats_write" ON public.connector_data_slack_user_stats;
 CREATE POLICY "slack_user_stats_write" ON public.connector_data_slack_user_stats
-  FOR ALL USING (public.is_social_media_lead(auth.uid()) OR public.is_founder(auth.uid()));
+  FOR ALL USING (public.is_social_media_lead());

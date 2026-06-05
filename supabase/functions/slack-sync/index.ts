@@ -363,7 +363,7 @@ Deno.serve(async (req) => {
     // 1. Workspace info
     const teamData = await slackGet("team.info", token);
     const team = teamData.team as Record<string, unknown>;
-    await admin.from("connector_slack_workspace").upsert(
+    const { error: wsErr } = await admin.from("connector_slack_workspace").upsert(
       {
         startup_id,
         workspace_id: team.id as string,
@@ -375,6 +375,9 @@ Deno.serve(async (req) => {
       },
       { onConflict: "startup_id" }
     );
+    // If the workspace table write fails, the schema isn't deployed — fail loud
+    // rather than returning a misleading "complete" with zero rows.
+    if (wsErr) throw new Error(`DB write failed (is the migration applied?): ${wsErr.message}`);
 
     // 2. User roster
     const rawUsers = await fetchAllPages<SlackUser>(
