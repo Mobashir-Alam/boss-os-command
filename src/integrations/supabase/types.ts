@@ -539,6 +539,200 @@ export type Database = {
           },
         ]
       }
+      connector_data_slack_channel_stats: {
+        Row: {
+          active_users: number
+          channel_id: string
+          channel_name: string | null
+          files_shared: number
+          id: string
+          message_count: number
+          peak_hour: number | null
+          reactions_total: number
+          replies_total: number
+          startup_id: string
+          stat_date: string
+          synced_at: string
+        }
+        Insert: {
+          active_users?: number
+          channel_id: string
+          channel_name?: string | null
+          files_shared?: number
+          id?: string
+          message_count?: number
+          peak_hour?: number | null
+          reactions_total?: number
+          replies_total?: number
+          startup_id: string
+          stat_date: string
+          synced_at?: string
+        }
+        Update: {
+          active_users?: number
+          channel_id?: string
+          channel_name?: string | null
+          files_shared?: number
+          id?: string
+          message_count?: number
+          peak_hour?: number | null
+          reactions_total?: number
+          replies_total?: number
+          startup_id?: string
+          stat_date?: string
+          synced_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "connector_data_slack_channel_stats_startup_id_fkey"
+            columns: ["startup_id"]
+            isOneToOne: false
+            referencedRelation: "startups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      connector_data_slack_channels: {
+        Row: {
+          channel_id: string
+          channel_name: string | null
+          created_at_source: string | null
+          id: string
+          is_archived: boolean
+          is_private: boolean
+          member_count: number | null
+          purpose: string | null
+          startup_id: string
+          synced_at: string
+          topic: string | null
+        }
+        Insert: {
+          channel_id: string
+          channel_name?: string | null
+          created_at_source?: string | null
+          id?: string
+          is_archived?: boolean
+          is_private?: boolean
+          member_count?: number | null
+          purpose?: string | null
+          startup_id: string
+          synced_at?: string
+          topic?: string | null
+        }
+        Update: {
+          channel_id?: string
+          channel_name?: string | null
+          created_at_source?: string | null
+          id?: string
+          is_archived?: boolean
+          is_private?: boolean
+          member_count?: number | null
+          purpose?: string | null
+          startup_id?: string
+          synced_at?: string
+          topic?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "connector_data_slack_channels_startup_id_fkey"
+            columns: ["startup_id"]
+            isOneToOne: false
+            referencedRelation: "startups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      connector_data_slack_user_stats: {
+        Row: {
+          display_name: string | null
+          id: string
+          messages_sent: number
+          reactions_given: number
+          replies_sent: number
+          startup_id: string
+          stat_date: string
+          synced_at: string
+          user_id_source: string
+        }
+        Insert: {
+          display_name?: string | null
+          id?: string
+          messages_sent?: number
+          reactions_given?: number
+          replies_sent?: number
+          startup_id: string
+          stat_date: string
+          synced_at?: string
+          user_id_source: string
+        }
+        Update: {
+          display_name?: string | null
+          id?: string
+          messages_sent?: number
+          reactions_given?: number
+          replies_sent?: number
+          startup_id?: string
+          stat_date?: string
+          synced_at?: string
+          user_id_source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "connector_data_slack_user_stats_startup_id_fkey"
+            columns: ["startup_id"]
+            isOneToOne: false
+            referencedRelation: "startups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      connector_data_slack_users: {
+        Row: {
+          avatar_url: string | null
+          display_name: string | null
+          id: string
+          is_admin: boolean
+          is_bot: boolean
+          real_name: string | null
+          startup_id: string
+          synced_at: string
+          title: string | null
+          user_id_source: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          display_name?: string | null
+          id?: string
+          is_admin?: boolean
+          is_bot?: boolean
+          real_name?: string | null
+          startup_id: string
+          synced_at?: string
+          title?: string | null
+          user_id_source: string
+        }
+        Update: {
+          avatar_url?: string | null
+          display_name?: string | null
+          id?: string
+          is_admin?: boolean
+          is_bot?: boolean
+          real_name?: string | null
+          startup_id?: string
+          synced_at?: string
+          title?: string | null
+          user_id_source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "connector_data_slack_users_startup_id_fkey"
+            columns: ["startup_id"]
+            isOneToOne: false
+            referencedRelation: "startups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       connector_data_youtube_channel_analytics: {
         Row: {
           average_view_duration_sec: number | null
@@ -1107,6 +1301,47 @@ export type Database = {
             columns: ["channel_uuid"]
             isOneToOne: false
             referencedRelation: "connector_data_youtube_channels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      connector_slack_workspace: {
+        Row: {
+          id: string
+          member_count_total: number | null
+          startup_id: string
+          synced_at: string
+          team_icon_url: string | null
+          workspace_domain: string | null
+          workspace_id: string
+          workspace_name: string | null
+        }
+        Insert: {
+          id?: string
+          member_count_total?: number | null
+          startup_id: string
+          synced_at?: string
+          team_icon_url?: string | null
+          workspace_domain?: string | null
+          workspace_id: string
+          workspace_name?: string | null
+        }
+        Update: {
+          id?: string
+          member_count_total?: number | null
+          startup_id?: string
+          synced_at?: string
+          team_icon_url?: string | null
+          workspace_domain?: string | null
+          workspace_id?: string
+          workspace_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "connector_slack_workspace_startup_id_fkey"
+            columns: ["startup_id"]
+            isOneToOne: true
+            referencedRelation: "startups"
             referencedColumns: ["id"]
           },
         ]
