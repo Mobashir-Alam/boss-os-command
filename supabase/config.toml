@@ -60,3 +60,13 @@ verify_jwt = false
 # Lovable AI gateway. No user-supplied secrets. Dashboard access is
 # already RLS-gated upstream (founder + social media lead only).
 verify_jwt = false
+
+[functions.slack-sync]
+# Reads SLACK_BOT_TOKEN from secrets, fetches workspace/channel/user data
+# from the Slack Web API, and upserts into analytics tables.
+verify_jwt = false
+
+[functions.slack-kai-ask]
+# Aggregates Slack analytics via service role and calls the Lovable AI
+# gateway. Same access pattern as youtube-kai-ask.
+verify_jwt = false

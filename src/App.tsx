@@ -36,6 +36,7 @@ import InboxPage from "./pages/Inbox.tsx";
 import Verify2FA from "./pages/Verify2FA.tsx";
 import HRDashboard from "./pages/HRDashboard.tsx";
 import SocialMediaDashboard from "./pages/SocialMediaDashboard.tsx";
+import SlackDashboard from "./pages/SlackDashboard.tsx";
 import CommandPalette from "./components/CommandPalette";
 
 const queryClient = new QueryClient({});
@@ -85,6 +86,10 @@ const App = () => (
               <Route
                 path="/team/social-media"
                 element={<AuthGuard><SocialMediaGuard><SocialMediaDashboard /></SocialMediaGuard></AuthGuard>}
+              />
+              <Route
+                path="/team/slack"
+                element={<AuthGuard><SocialMediaGuard><SlackDashboard /></SocialMediaGuard></AuthGuard>}
               />
               <Route
                 path="/department/tech"
