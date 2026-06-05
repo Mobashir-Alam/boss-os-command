@@ -70,8 +70,13 @@ export default function SlackDashboard() {
       const result = await triggerSync(startupId);
       if (result.ok) {
         toast.success(
-          `Sync complete — ${result.channels_synced} channels · ${result.users_synced} users · ${result.channel_stat_rows} channel-day rows · ${result.user_stat_rows} user-day rows`
+          `Sync complete — ${result.channels_synced} channels · ${result.users_synced} users · ${result.channel_stat_rows} channel-day rows · ${result.user_stat_rows} user-day rows · ${result.top_msg_rows} top messages`
         );
+        if (result.skipped?.length) {
+          toast.warning(
+            `${result.skipped.length} channel(s) skipped: ${result.skipped.slice(0, 3).join("; ")}${result.skipped.length > 3 ? "…" : ""}`
+          );
+        }
         // Invalidate all slack queries
         await qc.invalidateQueries({ queryKey: ["slack-workspace"] });
         await qc.invalidateQueries({ queryKey: ["slack-pulse"] });

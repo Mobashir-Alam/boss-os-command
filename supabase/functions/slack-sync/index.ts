@@ -158,8 +158,9 @@ async function syncChannel(
   const channelStats = new Map<string, DayChannelStat>();
   // key: date:userId → user daily stats
   const userStats = new Map<string, DayUserStat>();
-  // top messages by reactions
-  const topMessages: { msg: SlackMessage; total_reactions: number }[] = [];
+  // top messages by combined engagement (reactions + replies), so the tab
+  // stays useful even in channels where the team rarely reacts.
+  const topMessages: { msg: SlackMessage; score: number }[] = [];
 
   const oldest = oldestTs();
   let cursor = "";
@@ -237,9 +238,10 @@ async function syncChannel(
         }
       }
 
-      // track top messages
-      if (totalRx > 0) {
-        topMessages.push({ msg, total_reactions: totalRx });
+      // track top messages by combined engagement score
+      const score = totalRx + (msg.reply_count ?? 0);
+      if (score > 0) {
+        topMessages.push({ msg, score });
       }
     }
 
@@ -304,7 +306,7 @@ async function syncChannel(
 
   // — upsert top messages —
   const top = topMessages
-    .sort((a, b) => b.total_reactions - a.total_reactions)
+    .sort((a, b) => b.score - a.score)
     .slice(0, TOP_MESSAGES_PER_CHANNEL);
 
   let top_msg_rows = 0;
