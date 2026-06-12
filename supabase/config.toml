@@ -70,3 +70,8 @@ verify_jwt = false
 # Aggregates Slack analytics via service role and calls the Lovable AI
 # gateway. Same access pattern as youtube-kai-ask.
 verify_jwt = false
+
+[functions.slack-presence]
+# Reads the synced roster and calls Slack users.getPresence for live
+# online/away status. Token read from secrets server-side.
+verify_jwt = false

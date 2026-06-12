@@ -1,4 +1,4 @@
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
 // ─── Raw row types ────────────────────────────────────────────
@@ -508,6 +508,8 @@ export function useTriggerSlackSync() {
         channel_stat_rows: number;
         user_stat_rows: number;
         top_msg_rows: number;
+        attendance_rows: number;
+        attendance_enabled: boolean;
         skipped: string[];
       };
     },
@@ -532,6 +534,276 @@ export function useAskSlackKai() {
       if (error) throw error;
       if (!data?.ok) throw new Error(data?.error ?? "Unknown error");
       return data.answer as string;
+    },
+  });
+}
+
+// ─── Accountability: config ──────────────────────────────────
+
+export interface SlackMonitoringConfig {
+  attendance_channel_id: string | null;
+  attendance_channel_name: string | null;
+  updates_channel_suffix: string;
+  timezone: string;
+  day_boundary_hour: number;
+  is_enabled: boolean;
+}
+
+export function useSlackConfig(startupId?: string) {
+  return useQuery({
+    queryKey: ["slack-config", startupId],
+    enabled: !!startupId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("slack_monitoring_config")
+        .select("attendance_channel_id,attendance_channel_name,updates_channel_suffix,timezone,day_boundary_hour,is_enabled")
+        .eq("startup_id", startupId!)
+        .maybeSingle();
+      if (error) throw error;
+      return data as SlackMonitoringConfig | null;
+    },
+  });
+}
+
+export function useSaveSlackConfig() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      startupId,
+      config,
+    }: {
+      startupId: string;
+      config: SlackMonitoringConfig;
+    }) => {
+      const { error } = await supabase
+        .from("slack_monitoring_config")
+        .upsert(
+          { startup_id: startupId, ...config, updated_at: new Date().toISOString() },
+          { onConflict: "startup_id" }
+        );
+      if (error) throw error;
+    },
+    onSuccess: (_d, vars) => {
+      qc.invalidateQueries({ queryKey: ["slack-config", vars.startupId] });
+    },
+  });
+}
+
+// ─── Accountability: daily attendance ────────────────────────
+
+export interface AttendanceRow {
+  user_id_source: string;
+  display_name: string | null;
+  work_date: string;
+  checked_in: boolean;
+  check_in_time: string | null;
+  posted_update: boolean;
+  update_time: string | null;
+  was_active: boolean;
+  first_activity: string | null;
+  last_activity: string | null;
+  message_count: number;
+}
+
+export type AttendanceStatus = "checked_in" | "active_no_checkin" | "absent";
+
+export interface TodayPerson {
+  user_id: string;
+  name: string;
+  avatar_url: string | null;
+  status: AttendanceStatus;
+  check_in_time: string | null;
+  posted_update: boolean;
+  message_count: number;
+  first_activity: string | null;
+  last_activity: string | null;
+}
+
+export interface TodayBoard {
+  work_date: string | null;
+  people: TodayPerson[];
+  checked_in: TodayPerson[];
+  active_no_checkin: TodayPerson[];
+  absent: TodayPerson[];
+  no_update: TodayPerson[];
+}
+
+// Latest available work-day board. Joins the attendance rows for the most
+// recent work_date with the full roster, so people with zero activity show
+// as absent (they have no attendance row at all).
+export function useTodayBoard(startupId?: string) {
+  return useQuery({
+    queryKey: ["slack-today-board", startupId],
+    enabled: !!startupId,
+    queryFn: async (): Promise<TodayBoard> => {
+      const nAgo = (n: number) =>
+        new Date(Date.now() - n * 864e5).toISOString().slice(0, 10);
+
+      const [{ data: rows }, { data: roster }] = await Promise.all([
+        supabase
+          .from("slack_daily_attendance")
+          .select("user_id_source,display_name,work_date,checked_in,check_in_time,posted_update,update_time,was_active,first_activity,last_activity,message_count")
+          .eq("startup_id", startupId!)
+          .gte("work_date", nAgo(3))
+          .order("work_date", { ascending: false }),
+        supabase
+          .from("connector_data_slack_users")
+          .select("user_id_source,display_name,avatar_url")
+          .eq("startup_id", startupId!)
+          .eq("is_bot", false),
+      ]);
+
+      const allRows = (rows ?? []) as AttendanceRow[];
+      if (allRows.length === 0) {
+        return { work_date: null, people: [], checked_in: [], active_no_checkin: [], absent: [], no_update: [] };
+      }
+      const latest = allRows[0].work_date;
+      const todayRows = allRows.filter((r) => r.work_date === latest);
+      const rowByUser = new Map(todayRows.map((r) => [r.user_id_source, r]));
+
+      const avatarMap = new Map<string, { name: string | null; avatar: string | null }>();
+      for (const u of roster ?? []) {
+        avatarMap.set(u.user_id_source, { name: u.display_name, avatar: u.avatar_url });
+      }
+
+      const people: TodayPerson[] = (roster ?? []).map((u) => {
+        const r = rowByUser.get(u.user_id_source);
+        const status: AttendanceStatus = r
+          ? r.checked_in
+            ? "checked_in"
+            : "active_no_checkin"
+          : "absent";
+        return {
+          user_id: u.user_id_source,
+          name: r?.display_name ?? u.display_name ?? u.user_id_source,
+          avatar_url: u.avatar_url,
+          status,
+          check_in_time: r?.check_in_time ?? null,
+          posted_update: r?.posted_update ?? false,
+          message_count: r?.message_count ?? 0,
+          first_activity: r?.first_activity ?? null,
+          last_activity: r?.last_activity ?? null,
+        };
+      });
+
+      return {
+        work_date: latest,
+        people,
+        checked_in: people.filter((p) => p.status === "checked_in"),
+        active_no_checkin: people.filter((p) => p.status === "active_no_checkin"),
+        absent: people.filter((p) => p.status === "absent"),
+        no_update: people.filter((p) => p.status !== "absent" && !p.posted_update),
+      };
+    },
+  });
+}
+
+// ─── Accountability: monthly sheet ───────────────────────────
+
+export interface MonthlyPersonRow {
+  user_id: string;
+  name: string;
+  avatar_url: string | null;
+  byDate: Record<string, { status: AttendanceStatus; posted_update: boolean; check_in_time: string | null }>;
+  present_days: number;
+  active_no_checkin_days: number;
+  absent_days: number;
+  update_days: number;
+}
+
+export interface MonthlySheet {
+  dates: string[]; // YYYY-MM-DD across the month, ascending
+  rows: MonthlyPersonRow[];
+  month: string; // "2026-06"
+}
+
+export function useMonthlySheet(startupId?: string, month?: string) {
+  return useQuery({
+    queryKey: ["slack-monthly-sheet", startupId, month],
+    enabled: !!startupId && !!month,
+    queryFn: async (): Promise<MonthlySheet> => {
+      const [y, m] = month!.split("-").map(Number);
+      const start = `${month}-01`;
+      const lastDay = new Date(y, m, 0).getDate(); // day 0 of next month = last day
+      const end = `${month}-${String(lastDay).padStart(2, "0")}`;
+
+      const [{ data: rows }, { data: roster }] = await Promise.all([
+        supabase
+          .from("slack_daily_attendance")
+          .select("user_id_source,display_name,work_date,checked_in,posted_update,was_active,check_in_time")
+          .eq("startup_id", startupId!)
+          .gte("work_date", start)
+          .lte("work_date", end),
+        supabase
+          .from("connector_data_slack_users")
+          .select("user_id_source,display_name,avatar_url")
+          .eq("startup_id", startupId!)
+          .eq("is_bot", false),
+      ]);
+
+      const dates: string[] = [];
+      for (let d = 1; d <= lastDay; d++) {
+        dates.push(`${month}-${String(d).padStart(2, "0")}`);
+      }
+
+      const rowMap = new Map<string, AttendanceRow>();
+      for (const r of (rows ?? []) as AttendanceRow[]) {
+        rowMap.set(`${r.user_id_source}:${r.work_date}`, r);
+      }
+
+      const sheetRows: MonthlyPersonRow[] = (roster ?? []).map((u) => {
+        const byDate: MonthlyPersonRow["byDate"] = {};
+        let present = 0, activeNo = 0, absent = 0, updates = 0;
+        for (const date of dates) {
+          const r = rowMap.get(`${u.user_id_source}:${date}`);
+          if (!r) continue; // no data for that day → leave blank (weekend/off)
+          const status: AttendanceStatus = r.checked_in
+            ? "checked_in"
+            : r.was_active
+            ? "active_no_checkin"
+            : "absent";
+          byDate[date] = { status, posted_update: r.posted_update, check_in_time: r.check_in_time };
+          if (status === "checked_in") present++;
+          else if (status === "active_no_checkin") activeNo++;
+          else absent++;
+          if (r.posted_update) updates++;
+        }
+        return {
+          user_id: u.user_id_source,
+          name: u.display_name ?? u.user_id_source,
+          avatar_url: u.avatar_url,
+          byDate,
+          present_days: present,
+          active_no_checkin_days: activeNo,
+          absent_days: absent,
+          update_days: updates,
+        };
+      });
+
+      // Sort: most-present first, then by name
+      sheetRows.sort((a, b) => b.present_days - a.present_days || a.name.localeCompare(b.name));
+
+      return { dates, rows: sheetRows, month: month! };
+    },
+  });
+}
+
+// ─── Accountability: live presence ───────────────────────────
+
+export function useSlackPresence() {
+  return useMutation({
+    mutationFn: async (startupId: string) => {
+      const { data, error } = await supabase.functions.invoke("slack-presence", {
+        body: { startup_id: startupId },
+      });
+      if (error) throw error;
+      if (!data?.ok) throw new Error(data?.error ?? "Presence check failed");
+      return data as {
+        ok: boolean;
+        presence: Record<string, string>;
+        active_count: number;
+        checked_at: string;
+      };
     },
   });
 }

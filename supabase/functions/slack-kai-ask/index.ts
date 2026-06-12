@@ -157,6 +157,58 @@ async function buildSnapshot(
     .order("reaction_count", { ascending: false })
     .limit(5);
 
+  // Attendance — last 14 work-days, per person
+  const { data: attRows } = await admin
+    .from("slack_daily_attendance")
+    .select("user_id_source,display_name,work_date,checked_in,posted_update,was_active,message_count")
+    .eq("startup_id", startup_id)
+    .gte("work_date", period_start);
+
+  let attendance_summary: Record<string, unknown> | null = null;
+  if (attRows && attRows.length > 0) {
+    const workDates = Array.from(new Set(attRows.map((r) => r.work_date))).sort();
+    const latestDate = workDates[workDates.length - 1];
+    const perUser = new Map<string, { name: string; present: number; updates: number; active_no_checkin: number; days: number }>();
+    for (const r of attRows) {
+      const u = perUser.get(r.user_id_source) ?? { name: r.display_name ?? r.user_id_source, present: 0, updates: 0, active_no_checkin: 0, days: 0 };
+      u.days++;
+      if (r.checked_in) u.present++;
+      if (r.posted_update) u.updates++;
+      if (r.was_active && !r.checked_in) u.active_no_checkin++;
+      perUser.set(r.user_id_source, u);
+    }
+    const people = Array.from(perUser.values());
+    // Today's exceptions
+    const todayRows = attRows.filter((r) => r.work_date === latestDate);
+    const checkedInToday = todayRows.filter((r) => r.checked_in).length;
+    const activeNoCheckinToday = todayRows
+      .filter((r) => r.was_active && !r.checked_in)
+      .map((r) => r.display_name ?? r.user_id_source);
+    const noUpdateToday = todayRows
+      .filter((r) => r.was_active && !r.posted_update)
+      .map((r) => r.display_name ?? r.user_id_source);
+
+    attendance_summary = {
+      latest_work_date: latestDate,
+      work_days_in_window: workDates.length,
+      today: {
+        checked_in: checkedInToday,
+        active_but_no_checkin: activeNoCheckinToday,
+        active_but_no_update: noUpdateToday,
+      },
+      lowest_checkin_rate: people
+        .filter((p) => p.days >= 3)
+        .map((p) => ({ name: p.name, checkin_rate_pct: Math.round((p.present / p.days) * 100), days_seen: p.days }))
+        .sort((a, b) => a.checkin_rate_pct - b.checkin_rate_pct)
+        .slice(0, 8),
+      lowest_update_rate: people
+        .filter((p) => p.days >= 3)
+        .map((p) => ({ name: p.name, update_rate_pct: Math.round((p.updates / p.days) * 100), days_seen: p.days }))
+        .sort((a, b) => a.update_rate_pct - b.update_rate_pct)
+        .slice(0, 8),
+    };
+  }
+
   return {
     workspace: {
       name: ws?.workspace_name ?? "Unknown",
@@ -183,6 +235,7 @@ async function buildSnapshot(
         date: m.message_date,
       })) ?? [],
     },
+    attendance: attendance_summary,
   };
 }
 
@@ -209,13 +262,16 @@ Deno.serve(async (req) => {
 
     const snapshot = await buildSnapshot(admin, startup_id);
 
-    const systemPrompt = `You are KAI, a senior communications and team analytics analyst. You have access to a JSON snapshot of the workspace's Slack activity for the last 14 days vs the prior 14-day baseline.
+    const systemPrompt = `You are KAI, a senior team operations and accountability analyst. You have a JSON snapshot of the workspace's Slack activity for the last 14 days vs the prior 14-day baseline, plus an attendance section (who checked in, who posted work updates, who was active but never checked in).
 
 Rules:
 - Only cite numbers that appear in the snapshot. Never invent data.
-- Surface non-obvious patterns: channel concentration risk, lurker ratios, reply vs message imbalances.
-- Flag risks with specifics (e.g. "reactions dropped 40% vs baseline").
-- Ground topic/communication suggestions in data signals you see.
+- For accountability questions ("who isn't showing up", "who skips updates"), use the attendance section: check-in rates, update rates, and today's active_but_no_checkin / active_but_no_update lists.
+- "active_but_no_checkin" means the person was clearly working in Slack but never posted in the attendance channel — flag these as the real accountability gap, not as absences.
+- There is NO "late" concept — shifts are dynamic. Never judge someone as late based on check-in time.
+- If attendance is null, say attendance monitoring isn't configured yet rather than guessing.
+- Surface non-obvious patterns: channel concentration, lurker ratios, reply vs message imbalances.
+- Flag risks with specifics (e.g. "Omar checked in only 4 of 12 days").
 - Be concise but insightful — avoid padding.
 - Format with markdown headers and bullets for readability.
 

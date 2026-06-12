@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Navbar from "@/components/Navbar";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  Slack, RefreshCw, Loader2, CheckCircle2, AlertTriangle, MessageSquare,
+  RefreshCw, Loader2, CheckCircle2, AlertTriangle, MessageSquare,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
@@ -19,6 +19,10 @@ import {
   useSlackTiming,
   useSlackEngagement,
   useTriggerSlackSync,
+  useSlackConfig,
+  useTodayBoard,
+  useMonthlySheet,
+  useSlackPresence,
 } from "@/hooks/useSlack";
 import { useQueryClient } from "@tanstack/react-query";
 import SlackPulseTab from "@/components/slack/SlackPulseTab";
@@ -27,27 +31,42 @@ import SlackPeopleTab from "@/components/slack/SlackPeopleTab";
 import SlackTimingTab from "@/components/slack/SlackTimingTab";
 import SlackEngagementTab from "@/components/slack/SlackEngagementTab";
 import SlackKaiTab from "@/components/slack/SlackKaiTab";
+import SlackTodayTab from "@/components/slack/SlackTodayTab";
+import SlackMonthlyTab from "@/components/slack/SlackMonthlyTab";
+import SlackSetupDialog from "@/components/slack/SlackSetupDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 
 export default function SlackDashboard() {
-  const { profile } = useAuth();
   const { dbStartups } = useStartups();
   const nasheedio = dbStartups.find((s) => s.slug === "nasheedio");
   const startupId = nasheedio?.id;
   const qc = useQueryClient();
 
   const [baselineDays, setBaselineDays] = useState<7 | 28>(7);
+  const [setupOpen, setSetupOpen] = useState(false);
+  const [presenceMap, setPresenceMap] = useState<Record<string, string> | null>(null);
+  const currentMonth = useMemo(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  }, []);
+  const [sheetMonth, setSheetMonth] = useState(currentMonth);
 
   // Data hooks
   const { data: workspace, isLoading: wsLoading } = useSlackWorkspace(startupId);
+  const { data: config } = useSlackConfig(startupId);
   const { data: pulse, isLoading: pulseLoading } = useSlackPulse(startupId, baselineDays);
   const { data: channelRows, isLoading: channelsLoading } = useSlackChannelBreakdown(startupId);
   const { data: peopleData, isLoading: peopleLoading } = useSlackPeople(startupId);
   const { data: timingData, isLoading: timingLoading } = useSlackTiming(startupId);
   const { data: engagementData, isLoading: engagementLoading } = useSlackEngagement(startupId);
+  const { data: todayBoard, isLoading: todayLoading } = useTodayBoard(startupId);
+  const { data: monthlySheet, isLoading: monthlyLoading } = useMonthlySheet(startupId, sheetMonth);
 
-  // Raw channels for metadata (private/purpose)
+  const { mutateAsync: triggerSync, isPending: syncing } = useTriggerSlackSync();
+  const { mutateAsync: checkPresence, isPending: presenceLoading } = useSlackPresence();
+
+  // Raw channels for metadata + setup pickers
   const { data: rawChannels } = useQuery({
     queryKey: ["slack-raw-channels", startupId],
     enabled: !!startupId,
@@ -61,7 +80,8 @@ export default function SlackDashboard() {
     },
   });
 
-  const { mutateAsync: triggerSync, isPending: syncing } = useTriggerSlackSync();
+  const configured = !!config?.attendance_channel_id;
+  const tz = config?.timezone ?? "Asia/Kolkata";
 
   async function handleSync() {
     if (!startupId) return;
@@ -70,21 +90,28 @@ export default function SlackDashboard() {
       const result = await triggerSync(startupId);
       if (result.ok) {
         toast.success(
-          `Sync complete — ${result.channels_synced} channels · ${result.users_synced} users · ${result.channel_stat_rows} channel-day rows · ${result.user_stat_rows} user-day rows · ${result.top_msg_rows} top messages`
+          `Sync complete — ${result.channels_synced} channels · ${result.user_stat_rows} user-day rows · ${result.top_msg_rows} top messages` +
+            (result.attendance_enabled ? ` · ${result.attendance_rows} attendance rows` : "")
         );
+        if (!result.attendance_enabled) {
+          toast.info("Attendance not computed — set up monitoring (Today tab → Setup) then sync again.");
+        }
         if (result.skipped?.length) {
           toast.warning(
             `${result.skipped.length} channel(s) skipped: ${result.skipped.slice(0, 3).join("; ")}${result.skipped.length > 3 ? "…" : ""}`
           );
         }
-        // Invalidate all slack queries
-        await qc.invalidateQueries({ queryKey: ["slack-workspace"] });
-        await qc.invalidateQueries({ queryKey: ["slack-pulse"] });
-        await qc.invalidateQueries({ queryKey: ["slack-channel-breakdown"] });
-        await qc.invalidateQueries({ queryKey: ["slack-people"] });
-        await qc.invalidateQueries({ queryKey: ["slack-timing"] });
-        await qc.invalidateQueries({ queryKey: ["slack-engagement"] });
-        await qc.invalidateQueries({ queryKey: ["slack-raw-channels"] });
+        await Promise.all([
+          qc.invalidateQueries({ queryKey: ["slack-workspace"] }),
+          qc.invalidateQueries({ queryKey: ["slack-pulse"] }),
+          qc.invalidateQueries({ queryKey: ["slack-channel-breakdown"] }),
+          qc.invalidateQueries({ queryKey: ["slack-people"] }),
+          qc.invalidateQueries({ queryKey: ["slack-timing"] }),
+          qc.invalidateQueries({ queryKey: ["slack-engagement"] }),
+          qc.invalidateQueries({ queryKey: ["slack-raw-channels"] }),
+          qc.invalidateQueries({ queryKey: ["slack-today-board"] }),
+          qc.invalidateQueries({ queryKey: ["slack-monthly-sheet"] }),
+        ]);
       } else {
         toast.error("Sync failed — check edge function logs");
       }
@@ -93,8 +120,18 @@ export default function SlackDashboard() {
     }
   }
 
+  async function handleCheckPresence() {
+    if (!startupId) return;
+    try {
+      const res = await checkPresence(startupId);
+      setPresenceMap(res.presence);
+      toast.success(`${res.active_count} online right now`);
+    } catch (err) {
+      toast.error(`Presence check failed: ${(err as Error).message}`);
+    }
+  }
+
   const isConnected = !!workspace;
-  const defaultTab = isConnected ? "pulse" : "pulse";
 
   return (
     <div className="min-h-screen bg-background">
@@ -108,7 +145,7 @@ export default function SlackDashboard() {
               <MessageSquare className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-bold">Slack Analytics</h1>
+              <h1 className="text-xl font-bold">Slack — Team Ops</h1>
               <div className="flex items-center gap-2 mt-0.5">
                 {wsLoading ? (
                   <Skeleton className="h-4 w-32" />
@@ -145,11 +182,7 @@ export default function SlackDashboard() {
             className="gap-2 shrink-0"
             variant={isConnected ? "outline" : "default"}
           >
-            {syncing ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <RefreshCw className="w-4 h-4" />
-            )}
+            {syncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
             {syncing ? "Syncing…" : isConnected ? "Sync Slack" : "Load Slack data"}
           </Button>
         </div>
@@ -172,8 +205,11 @@ export default function SlackDashboard() {
         )}
 
         {/* Tabs */}
-        <Tabs defaultValue={defaultTab}>
+        <Tabs defaultValue="today">
           <TabsList className="flex-wrap h-auto gap-1">
+            <TabsTrigger value="today">Today</TabsTrigger>
+            <TabsTrigger value="monthly">Monthly Sheet</TabsTrigger>
+            <span className="w-px bg-border mx-1 self-stretch" />
             <TabsTrigger value="pulse">Pulse</TabsTrigger>
             <TabsTrigger value="channels">Channels</TabsTrigger>
             <TabsTrigger value="people">People</TabsTrigger>
@@ -183,6 +219,29 @@ export default function SlackDashboard() {
           </TabsList>
 
           <div className="mt-6">
+            <TabsContent value="today">
+              <SlackTodayTab
+                board={todayBoard}
+                isLoading={todayLoading}
+                configured={configured}
+                tz={tz}
+                presence={presenceMap}
+                onCheckPresence={handleCheckPresence}
+                presenceLoading={presenceLoading}
+                onOpenSetup={() => setSetupOpen(true)}
+              />
+            </TabsContent>
+
+            <TabsContent value="monthly">
+              <SlackMonthlyTab
+                sheet={monthlySheet}
+                isLoading={monthlyLoading}
+                month={sheetMonth}
+                onMonthChange={setSheetMonth}
+                configured={configured}
+              />
+            </TabsContent>
+
             <TabsContent value="pulse">
               <SlackPulseTab
                 snapshot={pulse}
@@ -224,6 +283,16 @@ export default function SlackDashboard() {
           </div>
         </Tabs>
       </div>
+
+      {/* Setup dialog */}
+      {startupId && (
+        <SlackSetupDialog
+          open={setupOpen}
+          onOpenChange={setSetupOpen}
+          startupId={startupId}
+          channels={rawChannels ?? undefined}
+        />
+      )}
     </div>
   );
 }

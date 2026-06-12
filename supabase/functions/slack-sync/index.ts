@@ -62,6 +62,58 @@ function tsToHour(ts: string): number {
   return new Date(parseFloat(ts) * 1000).getUTCHours();
 }
 
+// Local wall-clock parts (year/month/day/hour) for an IANA timezone.
+function localParts(ms: number, timeZone: string): { y: number; m: number; d: number; h: number } {
+  const dtf = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    hour12: false,
+  });
+  const parts = dtf.formatToParts(new Date(ms));
+  const get = (t: string) => parts.find((p) => p.type === t)?.value ?? "0";
+  return {
+    y: parseInt(get("year"), 10),
+    m: parseInt(get("month"), 10),
+    d: parseInt(get("day"), 10),
+    // "24" can appear at midnight in some impls — normalize to 0
+    h: parseInt(get("hour"), 10) % 24,
+  };
+}
+
+// The local "work-day" a timestamp belongs to, after shifting by a boundary
+// hour so night shifts don't split at midnight. With boundary=6, any activity
+// before 6am local rolls into the previous calendar day's work-day.
+function localWorkDate(tsSeconds: number, timeZone: string, boundaryHour: number): string {
+  const ms = tsSeconds * 1000;
+  const { y, m, d, h } = localParts(ms, timeZone);
+  // Build a UTC date from the local Y-M-D, then subtract a day if before boundary.
+  let base = Date.UTC(y, m - 1, d);
+  if (h < boundaryHour) base -= 86400000;
+  return new Date(base).toISOString().slice(0, 10);
+}
+
+interface MonitoringConfig {
+  attendance_channel_id: string | null;
+  updates_channel_suffix: string;
+  timezone: string;
+  day_boundary_hour: number;
+  is_enabled: boolean;
+}
+
+interface AttendanceAcc {
+  user_id: string;
+  display_name: string;
+  work_date: string;
+  check_in_ms: number | null;   // earliest msg in attendance channel
+  update_ms: number | null;     // earliest msg in a *-work-update channel
+  first_ms: number;             // earliest activity anywhere
+  last_ms: number;              // latest activity anywhere
+  message_count: number;
+}
+
 function oldestTs(): string {
   return String((Date.now() / 1000 - HISTORY_DAYS * 86400).toFixed(6));
 }
@@ -152,8 +204,17 @@ async function syncChannel(
   channel: SlackChannel,
   startupId: string,
   userMap: Map<string, string>,
-  admin: ReturnType<typeof createClient>
+  admin: ReturnType<typeof createClient>,
+  config: MonitoringConfig | null,
+  attendance: Map<string, AttendanceAcc>
 ): Promise<{ channel_stat_rows: number; user_stat_rows: number; top_msg_rows: number }> {
+  // Role of this channel for attendance purposes
+  const isAttendanceChannel =
+    !!config?.attendance_channel_id && channel.id === config.attendance_channel_id;
+  const isUpdatesChannel =
+    !!config &&
+    !!channel.name &&
+    channel.name.endsWith(config.updates_channel_suffix);
   // key: date → channel daily stats
   const channelStats = new Map<string, DayChannelStat>();
   // key: date:userId → user daily stats
@@ -205,6 +266,37 @@ async function syncChannel(
 
       const totalRx = msg.reactions?.reduce((s, r) => s + r.count, 0) ?? 0;
       cs.reactions_total += totalRx;
+
+      // — attendance accumulation (across all channels, local work-day) —
+      if (config?.is_enabled) {
+        const tsSec = parseFloat(msg.ts);
+        const msgMs = tsSec * 1000;
+        const workDate = localWorkDate(tsSec, config.timezone, config.day_boundary_hour);
+        const aKey = `${workDate}:${msg.user}`;
+        let acc = attendance.get(aKey);
+        if (!acc) {
+          acc = {
+            user_id: msg.user,
+            display_name: userMap.get(msg.user) ?? msg.user,
+            work_date: workDate,
+            check_in_ms: null,
+            update_ms: null,
+            first_ms: msgMs,
+            last_ms: msgMs,
+            message_count: 0,
+          };
+          attendance.set(aKey, acc);
+        }
+        acc.message_count++;
+        if (msgMs < acc.first_ms) acc.first_ms = msgMs;
+        if (msgMs > acc.last_ms) acc.last_ms = msgMs;
+        if (isAttendanceChannel && (acc.check_in_ms === null || msgMs < acc.check_in_ms)) {
+          acc.check_in_ms = msgMs;
+        }
+        if (isUpdatesChannel && (acc.update_ms === null || msgMs < acc.update_ms)) {
+          acc.update_ms = msgMs;
+        }
+      }
 
       // — user day stat —
       const uKey = `${date}:${msg.user}`;
@@ -362,6 +454,15 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
+    // 0. Monitoring config (drives attendance computation). Absent = analytics only.
+    const { data: cfgRow } = await admin
+      .from("slack_monitoring_config")
+      .select("attendance_channel_id,updates_channel_suffix,timezone,day_boundary_hour,is_enabled")
+      .eq("startup_id", startup_id)
+      .maybeSingle();
+    const config = (cfgRow as MonitoringConfig | null) ?? null;
+    const attendance = new Map<string, AttendanceAcc>();
+
     // 1. Workspace info
     const teamData = await slackGet("team.info", token);
     const team = teamData.team as Record<string, unknown>;
@@ -463,13 +564,46 @@ Deno.serve(async (req) => {
           channel,
           startup_id,
           userMap,
-          admin
+          admin,
+          config,
+          attendance
         );
         total_channel_stat_rows += result.channel_stat_rows;
         total_user_stat_rows += result.user_stat_rows;
         total_top_msg_rows += result.top_msg_rows;
       } catch (err) {
         skipped.push(`${channel.name}: ${(err as Error).message}`);
+      }
+    }
+
+    // 5. Write attendance rows (only if monitoring is configured + enabled)
+    let attendance_rows = 0;
+    if (config?.is_enabled && attendance.size > 0) {
+      const rows = Array.from(attendance.values()).map((a) => ({
+        startup_id,
+        user_id_source: a.user_id,
+        display_name: a.display_name,
+        work_date: a.work_date,
+        checked_in: a.check_in_ms !== null,
+        check_in_time: a.check_in_ms !== null ? new Date(a.check_in_ms).toISOString() : null,
+        posted_update: a.update_ms !== null,
+        update_time: a.update_ms !== null ? new Date(a.update_ms).toISOString() : null,
+        was_active: true,
+        first_activity: new Date(a.first_ms).toISOString(),
+        last_activity: new Date(a.last_ms).toISOString(),
+        message_count: a.message_count,
+      }));
+      // Chunked upsert to stay well under payload limits on busy workspaces.
+      for (let i = 0; i < rows.length; i += 500) {
+        const chunk = rows.slice(i, i + 500);
+        const { error, count } = await admin
+          .from("slack_daily_attendance")
+          .upsert(chunk, {
+            onConflict: "startup_id,user_id_source,work_date",
+            count: "exact",
+          });
+        if (error) throw error;
+        attendance_rows += count ?? chunk.length;
       }
     }
 
@@ -482,6 +616,8 @@ Deno.serve(async (req) => {
         channel_stat_rows: total_channel_stat_rows,
         user_stat_rows: total_user_stat_rows,
         top_msg_rows: total_top_msg_rows,
+        attendance_rows,
+        attendance_enabled: !!config?.is_enabled,
         skipped,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
