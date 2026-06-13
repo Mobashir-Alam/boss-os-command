@@ -134,21 +134,6 @@ export default function SlackPeopleTab({ data, isLoading, startupId, config, tz 
         </Card>
       </div>
 
-      {/* Top contributors */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm flex items-center gap-1">
-            Top contributors
-            <InfoTooltip size="xs">Ranked by messages sent in the last 14 days.</InfoTooltip>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {data.leaderboard.map((c, i) => (
-            <ContributorRow key={c.user_id} rank={i + 1} contributor={c} maxMessages={maxMessages} />
-          ))}
-        </CardContent>
-      </Card>
-
       {/* Full roster — click anyone to open their profile */}
       <Card>
         <CardHeader className="pb-2">
@@ -191,6 +176,21 @@ export default function SlackPeopleTab({ data, isLoading, startupId, config, tz 
               <div className="px-4 py-8 text-center text-sm text-muted-foreground">No one matches "{search}".</div>
             )}
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Top contributors */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm flex items-center gap-1">
+            Top contributors
+            <InfoTooltip size="xs">Ranked by messages sent in the last 14 days.</InfoTooltip>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {data.leaderboard.map((c, i) => (
+            <ContributorRow key={c.user_id} rank={i + 1} contributor={c} maxMessages={maxMessages} />
+          ))}
         </CardContent>
       </Card>
 
