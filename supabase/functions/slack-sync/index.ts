@@ -22,7 +22,7 @@ const corsHeaders = {
 };
 
 const SLACK_API = "https://slack.com/api";
-const HISTORY_DAYS = 30;
+const HISTORY_DAYS = 60;
 const MAX_CHANNELS = 60;
 const TOP_MESSAGES_PER_CHANNEL = 5;
 
