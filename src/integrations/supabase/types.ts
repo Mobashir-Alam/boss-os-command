@@ -3127,6 +3127,7 @@ export type Database = {
           is_enabled: boolean
           startup_id: string
           timezone: string
+          update_backfill_cap_days: number
           updated_at: string
           updates_channel_suffix: string
         }
@@ -3139,6 +3140,7 @@ export type Database = {
           is_enabled?: boolean
           startup_id: string
           timezone?: string
+          update_backfill_cap_days?: number
           updated_at?: string
           updates_channel_suffix?: string
         }
@@ -3151,6 +3153,7 @@ export type Database = {
           is_enabled?: boolean
           startup_id?: string
           timezone?: string
+          update_backfill_cap_days?: number
           updated_at?: string
           updates_channel_suffix?: string
         }
