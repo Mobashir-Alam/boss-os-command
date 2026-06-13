@@ -642,6 +642,74 @@ export type Database = {
           },
         ]
       }
+      connector_data_slack_messages: {
+        Row: {
+          channel_id: string
+          channel_name: string | null
+          created_at: string
+          display_name: string | null
+          id: string
+          is_thread_reply: boolean
+          message_date: string | null
+          message_ts: string
+          raw_payload: Json | null
+          reaction_count: number
+          reply_count: number
+          startup_id: string
+          synced_at: string
+          text: string | null
+          thread_ts: string | null
+          updated_at: string
+          user_id_source: string | null
+        }
+        Insert: {
+          channel_id: string
+          channel_name?: string | null
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          is_thread_reply?: boolean
+          message_date?: string | null
+          message_ts: string
+          raw_payload?: Json | null
+          reaction_count?: number
+          reply_count?: number
+          startup_id: string
+          synced_at?: string
+          text?: string | null
+          thread_ts?: string | null
+          updated_at?: string
+          user_id_source?: string | null
+        }
+        Update: {
+          channel_id?: string
+          channel_name?: string | null
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          is_thread_reply?: boolean
+          message_date?: string | null
+          message_ts?: string
+          raw_payload?: Json | null
+          reaction_count?: number
+          reply_count?: number
+          startup_id?: string
+          synced_at?: string
+          text?: string | null
+          thread_ts?: string | null
+          updated_at?: string
+          user_id_source?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "connector_data_slack_messages_startup_id_fkey"
+            columns: ["startup_id"]
+            isOneToOne: false
+            referencedRelation: "startups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       connector_data_slack_user_stats: {
         Row: {
           display_name: string | null
