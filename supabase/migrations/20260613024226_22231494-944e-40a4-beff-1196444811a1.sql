@@ -1,0 +1,1 @@
+ALTER TABLE public.slack_monitoring_config ADD COLUMN IF NOT EXISTS update_backfill_cap_days integer NOT NULL DEFAULT 3;
