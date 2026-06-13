@@ -60,8 +60,9 @@ export default function SlackDashboard() {
   const { data: peopleData, isLoading: peopleLoading } = useSlackPeople(startupId);
   const { data: timingData, isLoading: timingLoading } = useSlackTiming(startupId);
   const { data: engagementData, isLoading: engagementLoading } = useSlackEngagement(startupId);
-  const { data: todayBoard, isLoading: todayLoading } = useTodayBoard(startupId);
-  const { data: monthlySheet, isLoading: monthlyLoading } = useMonthlySheet(startupId, sheetMonth);
+  const backfillCap = config?.update_backfill_cap_days ?? 3;
+  const { data: todayBoard, isLoading: todayLoading } = useTodayBoard(startupId, backfillCap);
+  const { data: monthlySheet, isLoading: monthlyLoading } = useMonthlySheet(startupId, sheetMonth, backfillCap);
 
   const { mutateAsync: triggerSync, isPending: syncing } = useTriggerSlackSync();
   const { mutateAsync: checkPresence, isPending: presenceLoading } = useSlackPresence();

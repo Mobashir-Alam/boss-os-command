@@ -27,6 +27,7 @@ const DEFAULT_CONFIG: SlackMonitoringConfig = {
   updates_channel_suffix: "work-update",
   timezone: "Asia/Kolkata",
   day_boundary_hour: 6,
+  update_backfill_cap_days: 3,
   is_enabled: true,
 };
 
@@ -170,6 +171,26 @@ export default function SlackSetupDialog({ open, onOpenChange, startupId, channe
                 </SelectContent>
               </Select>
             </div>
+          </div>
+
+          {/* Update backfill cap */}
+          <div className="space-y-1.5">
+            <Label className="flex items-center gap-1">
+              Batch-update grace
+              <InfoTooltip size="xs">When someone posts one update covering several missed days, the prior gap days (up to this many) are credited as "caught up" instead of missed. 0 = strict: only the day posted counts.</InfoTooltip>
+            </Label>
+            <Select
+              value={String(form.update_backfill_cap_days)}
+              onValueChange={(v) => setForm((f) => ({ ...f, update_backfill_cap_days: parseInt(v, 10) }))}
+            >
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="0">Strict (no backfill)</SelectItem>
+                {[1, 2, 3, 4, 5, 7].map((d) => (
+                  <SelectItem key={d} value={String(d)}>{d} day{d === 1 ? "" : "s"}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
 

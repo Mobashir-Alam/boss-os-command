@@ -66,9 +66,13 @@ function PersonRow({ person, presence, tz }: { person: TodayPerson; presence?: s
         <div className="flex items-center gap-1 justify-end mt-0.5">
           {person.posted_update ? (
             <Badge variant="outline" className="text-green-700 border-green-300 bg-green-50 text-[10px] py-0 px-1">update ✓</Badge>
-          ) : person.status !== "absent" ? (
+          ) : person.status === "absent" ? null : person.days_since_update !== null ? (
+            <Badge variant="outline" className="text-muted-foreground text-[10px] py-0 px-1">
+              update {person.days_since_update}d ago
+            </Badge>
+          ) : (
             <Badge variant="outline" className="text-amber-700 border-amber-300 bg-amber-50 text-[10px] py-0 px-1">no update</Badge>
-          ) : null}
+          )}
         </div>
       </div>
     </div>

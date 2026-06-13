@@ -40,18 +40,20 @@ function dowShort(date: string): string {
 }
 
 function toCsv(sheet: MonthlySheet): string {
-  const header = ["Name", ...sheet.dates.map(dayNum), "Present", "NoCheckin", "Absent", "Updates"];
+  const header = ["Name", ...sheet.dates.map(dayNum), "Present", "NoCheckin", "Absent", "Updates", "Covered"];
   const lines = [header.join(",")];
   for (const row of sheet.rows) {
     const cells = sheet.dates.map((d) => {
       const c = row.byDate[d];
       if (!c) return "";
-      return c.status === "checked_in" ? "P" : c.status === "active_no_checkin" ? "A-NC" : "ABS";
+      const base = c.status === "checked_in" ? "P" : c.status === "active_no_checkin" ? "A-NC" : "ABS";
+      const upd = c.update_state === "posted" ? "+U" : c.update_state === "catchup" ? "~U" : "";
+      return base + upd;
     });
     lines.push([
       `"${row.name.replace(/"/g, '""')}"`,
       ...cells,
-      row.present_days, row.active_no_checkin_days, row.absent_days, row.update_days,
+      row.present_days, row.active_no_checkin_days, row.absent_days, row.update_days, row.covered_days,
     ].join(","));
   }
   return lines.join("\n");
@@ -113,19 +115,31 @@ export default function SlackMonthlyTab({ sheet, isLoading, month, onMonthChange
       </div>
 
       {/* Legend */}
-      <div className="flex items-center gap-4 text-xs flex-wrap">
-        {(Object.keys(CELL) as AttendanceStatus[]).map((s) => (
-          <div key={s} className="flex items-center gap-1.5">
-            <span className={cn("w-3 h-3 rounded", CELL[s])} />
-            {CELL_LABEL[s]}
+      <div className="space-y-2">
+        <div className="flex items-center gap-4 text-xs flex-wrap">
+          <span className="text-muted-foreground font-medium">Fill = attendance:</span>
+          {(Object.keys(CELL) as AttendanceStatus[]).map((s) => (
+            <div key={s} className="flex items-center gap-1.5">
+              <span className={cn("w-3 h-3 rounded", CELL[s])} />
+              {CELL_LABEL[s]}
+            </div>
+          ))}
+          <div className="flex items-center gap-1.5">
+            <span className="w-3 h-3 rounded bg-muted" /> No data / off
           </div>
-        ))}
-        <div className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded bg-muted" /> No data / off
         </div>
-        <div className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded border-2 border-orange-400" /> No update
-          <InfoTooltip size="xs">A dot/ring marks days the person was present but didn't post a work update.</InfoTooltip>
+        <div className="flex items-center gap-4 text-xs flex-wrap">
+          <span className="text-muted-foreground font-medium">Ring = work update:</span>
+          <div className="flex items-center gap-1.5">
+            <span className="w-3 h-3 rounded bg-muted ring-2 ring-emerald-600" /> Reported
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-3 h-3 rounded bg-muted ring-2 ring-amber-500" /> Caught up
+            <InfoTooltip size="xs">A later batched update covered this day within the grace window.</InfoTooltip>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-3 h-3 rounded bg-muted ring-2 ring-red-500" /> Not reported
+          </div>
         </div>
       </div>
 
@@ -148,9 +162,10 @@ export default function SlackMonthlyTab({ sheet, isLoading, month, onMonthChange
                       <div>{dayNum(d)}</div>
                     </th>
                   ))}
-                  <th className="px-2 py-2 text-center font-medium border-l" title="Present days">P</th>
+                  <th className="px-2 py-2 text-center font-medium border-l" title="Present days (checked in)">P</th>
                   <th className="px-2 py-2 text-center font-medium" title="Absent days">Ab</th>
-                  <th className="px-2 py-2 text-center font-medium" title="Update days">Up</th>
+                  <th className="px-2 py-2 text-center font-medium" title="Days an update was actually posted">Up</th>
+                  <th className="px-2 py-2 text-center font-medium" title="Days covered by an update incl. catch-up backfill">Cov</th>
                 </tr>
               </thead>
               <tbody>
@@ -159,15 +174,32 @@ export default function SlackMonthlyTab({ sheet, isLoading, month, onMonthChange
                     <td className="sticky left-0 bg-background px-3 py-1.5 font-medium truncate max-w-[140px] z-10">{row.name}</td>
                     {sheet.dates.map((d) => {
                       const c = row.byDate[d];
+                      const ring =
+                        c && c.status !== "absent"
+                          ? c.update_state === "posted"
+                            ? "ring-2 ring-emerald-600"
+                            : c.update_state === "catchup"
+                            ? "ring-2 ring-amber-500"
+                            : "ring-2 ring-red-500"
+                          : "";
+                      const updLabel = !c
+                        ? ""
+                        : c.update_state === "posted"
+                        ? " · update ✓"
+                        : c.update_state === "catchup"
+                        ? " · caught up"
+                        : c.status !== "absent"
+                        ? " · no update"
+                        : "";
                       return (
                         <td key={d} className="p-0.5 text-center">
                           <div
                             className={cn(
                               "w-4 h-4 mx-auto rounded",
                               c ? CELL[c.status] : "bg-muted",
-                              c && !c.posted_update && c.status !== "absent" && "ring-2 ring-orange-400"
+                              ring
                             )}
-                            title={c ? `${d}: ${CELL_LABEL[c.status]}${c.posted_update ? " · update ✓" : " · no update"}` : `${d}: no data`}
+                            title={c ? `${d}: ${CELL_LABEL[c.status]}${updLabel}` : `${d}: no data`}
                           />
                         </td>
                       );
@@ -175,6 +207,7 @@ export default function SlackMonthlyTab({ sheet, isLoading, month, onMonthChange
                     <td className="px-2 py-1.5 text-center font-semibold border-l text-green-600">{row.present_days}</td>
                     <td className="px-2 py-1.5 text-center text-red-500">{row.absent_days}</td>
                     <td className="px-2 py-1.5 text-center text-indigo-600">{row.update_days}</td>
+                    <td className="px-2 py-1.5 text-center text-amber-600">{row.covered_days}</td>
                   </tr>
                 ))}
               </tbody>

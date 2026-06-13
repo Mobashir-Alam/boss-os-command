@@ -546,6 +546,7 @@ export interface SlackMonitoringConfig {
   updates_channel_suffix: string;
   timezone: string;
   day_boundary_hour: number;
+  update_backfill_cap_days: number;
   is_enabled: boolean;
 }
 
@@ -556,7 +557,7 @@ export function useSlackConfig(startupId?: string) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("slack_monitoring_config")
-        .select("attendance_channel_id,attendance_channel_name,updates_channel_suffix,timezone,day_boundary_hour,is_enabled")
+        .select("attendance_channel_id,attendance_channel_name,updates_channel_suffix,timezone,day_boundary_hour,update_backfill_cap_days,is_enabled")
         .eq("startup_id", startupId!)
         .maybeSingle();
       if (error) throw error;
@@ -617,6 +618,14 @@ export interface TodayPerson {
   message_count: number;
   first_activity: string | null;
   last_activity: string | null;
+  days_since_update: number | null; // null = no update in lookback window
+}
+
+// Whole days between two YYYY-MM-DD strings (b - a).
+function dateDiffDays(a: string, b: string): number {
+  const [ay, am, ad] = a.split("-").map(Number);
+  const [by, bm, bd] = b.split("-").map(Number);
+  return Math.round((Date.UTC(by, bm - 1, bd) - Date.UTC(ay, am - 1, ad)) / 86400000);
 }
 
 export interface TodayBoard {
@@ -630,12 +639,15 @@ export interface TodayBoard {
 
 // Latest available work-day board. Joins the attendance rows for the most
 // recent work_date with the full roster, so people with zero activity show
-// as absent (they have no attendance row at all).
-export function useTodayBoard(startupId?: string) {
+// as absent (they have no attendance row at all). `backfillCap` controls how
+// stale a person's last update can be before they're flagged: a normal batch
+// cadence within the cap won't trigger a "no update" nag.
+export function useTodayBoard(startupId?: string, backfillCap = 3) {
   return useQuery({
-    queryKey: ["slack-today-board", startupId],
+    queryKey: ["slack-today-board", startupId, backfillCap],
     enabled: !!startupId,
     queryFn: async (): Promise<TodayBoard> => {
+      const lookback = Math.max(backfillCap + 3, 5);
       const nAgo = (n: number) =>
         new Date(Date.now() - n * 864e5).toISOString().slice(0, 10);
 
@@ -644,7 +656,7 @@ export function useTodayBoard(startupId?: string) {
           .from("slack_daily_attendance")
           .select("user_id_source,display_name,work_date,checked_in,check_in_time,posted_update,update_time,was_active,first_activity,last_activity,message_count")
           .eq("startup_id", startupId!)
-          .gte("work_date", nAgo(3))
+          .gte("work_date", nAgo(lookback))
           .order("work_date", { ascending: false }),
         supabase
           .from("connector_data_slack_users")
@@ -661,9 +673,12 @@ export function useTodayBoard(startupId?: string) {
       const todayRows = allRows.filter((r) => r.work_date === latest);
       const rowByUser = new Map(todayRows.map((r) => [r.user_id_source, r]));
 
-      const avatarMap = new Map<string, { name: string | null; avatar: string | null }>();
-      for (const u of roster ?? []) {
-        avatarMap.set(u.user_id_source, { name: u.display_name, avatar: u.avatar_url });
+      // Most recent update date per user across the lookback window.
+      const lastUpdateByUser = new Map<string, string>();
+      for (const r of allRows) {
+        if (!r.posted_update) continue;
+        const prev = lastUpdateByUser.get(r.user_id_source);
+        if (!prev || r.work_date > prev) lastUpdateByUser.set(r.user_id_source, r.work_date);
       }
 
       const people: TodayPerson[] = (roster ?? []).map((u) => {
@@ -673,6 +688,8 @@ export function useTodayBoard(startupId?: string) {
             ? "checked_in"
             : "active_no_checkin"
           : "absent";
+        const lastUpdate = lastUpdateByUser.get(u.user_id_source);
+        const days_since_update = lastUpdate ? dateDiffDays(lastUpdate, latest) : null;
         return {
           user_id: u.user_id_source,
           name: r?.display_name ?? u.display_name ?? u.user_id_source,
@@ -683,6 +700,7 @@ export function useTodayBoard(startupId?: string) {
           message_count: r?.message_count ?? 0,
           first_activity: r?.first_activity ?? null,
           last_activity: r?.last_activity ?? null,
+          days_since_update,
         };
       });
 
@@ -692,7 +710,11 @@ export function useTodayBoard(startupId?: string) {
         checked_in: people.filter((p) => p.status === "checked_in"),
         active_no_checkin: people.filter((p) => p.status === "active_no_checkin"),
         absent: people.filter((p) => p.status === "absent"),
-        no_update: people.filter((p) => p.status !== "absent" && !p.posted_update),
+        // Flag only once a present person exceeds the batch cap (or never
+        // updated in the window) — keeps normal catch-up cadence quiet.
+        no_update: people.filter(
+          (p) => p.status !== "absent" && (p.days_since_update === null || p.days_since_update > backfillCap)
+        ),
       };
     },
   });
@@ -700,15 +722,18 @@ export function useTodayBoard(startupId?: string) {
 
 // ─── Accountability: monthly sheet ───────────────────────────
 
+export type UpdateState = "posted" | "catchup" | "missing";
+
 export interface MonthlyPersonRow {
   user_id: string;
   name: string;
   avatar_url: string | null;
-  byDate: Record<string, { status: AttendanceStatus; posted_update: boolean; check_in_time: string | null }>;
+  byDate: Record<string, { status: AttendanceStatus; posted_update: boolean; update_state: UpdateState; check_in_time: string | null }>;
   present_days: number;
   active_no_checkin_days: number;
   absent_days: number;
-  update_days: number;
+  update_days: number;      // literal: days an update was actually posted
+  covered_days: number;     // posted + catch-up days
 }
 
 export interface MonthlySheet {
@@ -717,15 +742,21 @@ export interface MonthlySheet {
   month: string; // "2026-06"
 }
 
-export function useMonthlySheet(startupId?: string, month?: string) {
+export function useMonthlySheet(startupId?: string, month?: string, backfillCap = 3) {
   return useQuery({
-    queryKey: ["slack-monthly-sheet", startupId, month],
+    queryKey: ["slack-monthly-sheet", startupId, month, backfillCap],
     enabled: !!startupId && !!month,
     queryFn: async (): Promise<MonthlySheet> => {
       const [y, m] = month!.split("-").map(Number);
       const start = `${month}-01`;
       const lastDay = new Date(y, m, 0).getDate(); // day 0 of next month = last day
       const end = `${month}-${String(lastDay).padStart(2, "0")}`;
+      // Extend the fetch a few days past month-end so a catch-up update posted
+      // in early next month can still backfill the final days of this month.
+      const [ey, em, ed] = end.split("-").map(Number);
+      const endExt = new Date(Date.UTC(ey, em - 1, ed) + backfillCap * 86400000)
+        .toISOString()
+        .slice(0, 10);
 
       const [{ data: rows }, { data: roster }] = await Promise.all([
         supabase
@@ -733,7 +764,7 @@ export function useMonthlySheet(startupId?: string, month?: string) {
           .select("user_id_source,display_name,work_date,checked_in,posted_update,was_active,check_in_time")
           .eq("startup_id", startupId!)
           .gte("work_date", start)
-          .lte("work_date", end),
+          .lte("work_date", endExt),
         supabase
           .from("connector_data_slack_users")
           .select("user_id_source,display_name,avatar_url")
@@ -746,14 +777,25 @@ export function useMonthlySheet(startupId?: string, month?: string) {
         dates.push(`${month}-${String(d).padStart(2, "0")}`);
       }
 
+      const allRows = (rows ?? []) as AttendanceRow[];
       const rowMap = new Map<string, AttendanceRow>();
-      for (const r of (rows ?? []) as AttendanceRow[]) {
+      // Per-user sorted list of dates an update was actually posted (incl. the
+      // few days past month-end), used to backfill earlier gap days.
+      const updateDatesByUser = new Map<string, string[]>();
+      for (const r of allRows) {
         rowMap.set(`${r.user_id_source}:${r.work_date}`, r);
+        if (r.posted_update) {
+          const arr = updateDatesByUser.get(r.user_id_source) ?? [];
+          arr.push(r.work_date);
+          updateDatesByUser.set(r.user_id_source, arr);
+        }
       }
+      for (const arr of updateDatesByUser.values()) arr.sort();
 
       const sheetRows: MonthlyPersonRow[] = (roster ?? []).map((u) => {
         const byDate: MonthlyPersonRow["byDate"] = {};
-        let present = 0, activeNo = 0, absent = 0, updates = 0;
+        const updateDates = updateDatesByUser.get(u.user_id_source) ?? [];
+        let present = 0, activeNo = 0, absent = 0, updates = 0, covered = 0;
         for (const date of dates) {
           const r = rowMap.get(`${u.user_id_source}:${date}`);
           if (!r) continue; // no data for that day → leave blank (weekend/off)
@@ -762,11 +804,28 @@ export function useMonthlySheet(startupId?: string, month?: string) {
             : r.was_active
             ? "active_no_checkin"
             : "absent";
-          byDate[date] = { status, posted_update: r.posted_update, check_in_time: r.check_in_time };
+
+          // Update state: posted same-day, else credited as catch-up if a later
+          // update lands within the cap, else missing. cap 0 = strict.
+          let update_state: UpdateState;
+          if (r.posted_update) {
+            update_state = "posted";
+            updates++;
+            covered++;
+          } else if (
+            backfillCap > 0 &&
+            updateDates.some((ud) => ud > date && dateDiffDays(date, ud) <= backfillCap)
+          ) {
+            update_state = "catchup";
+            covered++;
+          } else {
+            update_state = "missing";
+          }
+
+          byDate[date] = { status, posted_update: r.posted_update, update_state, check_in_time: r.check_in_time };
           if (status === "checked_in") present++;
           else if (status === "active_no_checkin") activeNo++;
           else absent++;
-          if (r.posted_update) updates++;
         }
         return {
           user_id: u.user_id_source,
@@ -777,6 +836,7 @@ export function useMonthlySheet(startupId?: string, month?: string) {
           active_no_checkin_days: activeNo,
           absent_days: absent,
           update_days: updates,
+          covered_days: covered,
         };
       });
 
