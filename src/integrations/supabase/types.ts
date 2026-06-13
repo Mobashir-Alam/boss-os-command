@@ -648,10 +648,12 @@ export type Database = {
           channel_name: string | null
           created_at: string
           display_name: string | null
+          has_files: boolean
           id: string
           is_thread_reply: boolean
           message_date: string | null
           message_ts: string
+          posted_at: string | null
           raw_payload: Json | null
           reaction_count: number
           reply_count: number
@@ -667,10 +669,12 @@ export type Database = {
           channel_name?: string | null
           created_at?: string
           display_name?: string | null
+          has_files?: boolean
           id?: string
           is_thread_reply?: boolean
           message_date?: string | null
           message_ts: string
+          posted_at?: string | null
           raw_payload?: Json | null
           reaction_count?: number
           reply_count?: number
@@ -686,10 +690,12 @@ export type Database = {
           channel_name?: string | null
           created_at?: string
           display_name?: string | null
+          has_files?: boolean
           id?: string
           is_thread_reply?: boolean
           message_date?: string | null
           message_ts?: string
+          posted_at?: string | null
           raw_payload?: Json | null
           reaction_count?: number
           reply_count?: number
