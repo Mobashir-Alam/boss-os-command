@@ -1,3 +1,4 @@
+import { useState, useMemo } from "react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
@@ -6,6 +7,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Heart, CornerDownRight, Paperclip, Hash, MessageSquare } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { usePersonProfile, type PersonMessage, type SlackMonitoringConfig } from "@/hooks/useSlack";
 
 function Avatar({ name, url, size = 44 }: { name: string; url: string | null; size?: number }) {
@@ -67,6 +69,57 @@ function MessageList({ messages, tz, emptyLabel }: { messages: PersonMessage[]; 
         ))}
       </div>
     </ScrollArea>
+  );
+}
+
+function FilterChip({ active, onClick, label }: { active: boolean; onClick: () => void; label: string }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "shrink-0 text-xs px-2.5 py-1 rounded-full border whitespace-nowrap transition-colors",
+        active ? "bg-indigo-600 text-white border-indigo-600" : "bg-background hover:bg-muted"
+      )}
+    >
+      {label}
+    </button>
+  );
+}
+
+// "All messages" tab — every channel the person posted in, with a per-channel
+// filter so it's obvious the data spans the whole workspace, not just the
+// attendance/work-update channels.
+function AllMessagesTab({ messages, tz }: { messages: PersonMessage[]; tz: string }) {
+  const [channel, setChannel] = useState<string>("all");
+
+  const channels = useMemo(() => {
+    const m = new Map<string, { id: string; name: string; count: number }>();
+    for (const msg of messages) {
+      const prev = m.get(msg.channel_id) ?? { id: msg.channel_id, name: msg.channel_name ?? msg.channel_id, count: 0 };
+      prev.count++;
+      m.set(msg.channel_id, prev);
+    }
+    return Array.from(m.values()).sort((a, b) => b.count - a.count);
+  }, [messages]);
+
+  const filtered = channel === "all" ? messages : messages.filter((m) => m.channel_id === channel);
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
+        <FilterChip active={channel === "all"} onClick={() => setChannel("all")} label={`All channels (${messages.length})`} />
+        {channels.map((c) => (
+          <FilterChip
+            key={c.id}
+            active={channel === c.id}
+            onClick={() => setChannel(c.id)}
+            label={`#${c.name} (${c.count})`}
+          />
+        ))}
+      </div>
+      <MessageList messages={filtered} tz={tz} emptyLabel="No messages in this channel." />
+    </div>
   );
 }
 
@@ -145,7 +198,7 @@ export default function SlackPersonDialog({ startupId, userId, config, tz, open,
                   <MessageList messages={profile.work_updates} tz={tz} emptyLabel="No work-update posts in the synced window." />
                 </TabsContent>
                 <TabsContent value="all">
-                  <MessageList messages={profile.all} tz={tz} emptyLabel="No messages stored yet — run a sync." />
+                  <AllMessagesTab messages={profile.all} tz={tz} />
                 </TabsContent>
               </div>
             </Tabs>
