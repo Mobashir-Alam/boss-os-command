@@ -3058,6 +3058,112 @@ export type Database = {
         }
         Relationships: []
       }
+      slack_daily_attendance: {
+        Row: {
+          check_in_time: string | null
+          checked_in: boolean
+          display_name: string | null
+          first_activity: string | null
+          id: string
+          last_activity: string | null
+          message_count: number
+          posted_update: boolean
+          startup_id: string
+          synced_at: string
+          update_time: string | null
+          user_id_source: string
+          was_active: boolean
+          work_date: string
+        }
+        Insert: {
+          check_in_time?: string | null
+          checked_in?: boolean
+          display_name?: string | null
+          first_activity?: string | null
+          id?: string
+          last_activity?: string | null
+          message_count?: number
+          posted_update?: boolean
+          startup_id: string
+          synced_at?: string
+          update_time?: string | null
+          user_id_source: string
+          was_active?: boolean
+          work_date: string
+        }
+        Update: {
+          check_in_time?: string | null
+          checked_in?: boolean
+          display_name?: string | null
+          first_activity?: string | null
+          id?: string
+          last_activity?: string | null
+          message_count?: number
+          posted_update?: boolean
+          startup_id?: string
+          synced_at?: string
+          update_time?: string | null
+          user_id_source?: string
+          was_active?: boolean
+          work_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "slack_daily_attendance_startup_id_fkey"
+            columns: ["startup_id"]
+            isOneToOne: false
+            referencedRelation: "startups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      slack_monitoring_config: {
+        Row: {
+          attendance_channel_id: string | null
+          attendance_channel_name: string | null
+          created_at: string
+          day_boundary_hour: number
+          id: string
+          is_enabled: boolean
+          startup_id: string
+          timezone: string
+          updated_at: string
+          updates_channel_suffix: string
+        }
+        Insert: {
+          attendance_channel_id?: string | null
+          attendance_channel_name?: string | null
+          created_at?: string
+          day_boundary_hour?: number
+          id?: string
+          is_enabled?: boolean
+          startup_id: string
+          timezone?: string
+          updated_at?: string
+          updates_channel_suffix?: string
+        }
+        Update: {
+          attendance_channel_id?: string | null
+          attendance_channel_name?: string | null
+          created_at?: string
+          day_boundary_hour?: number
+          id?: string
+          is_enabled?: boolean
+          startup_id?: string
+          timezone?: string
+          updated_at?: string
+          updates_channel_suffix?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "slack_monitoring_config_startup_id_fkey"
+            columns: ["startup_id"]
+            isOneToOne: true
+            referencedRelation: "startups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       special_rights: {
         Row: {
           conditions: string | null
