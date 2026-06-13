@@ -145,6 +145,23 @@ interface AttendanceMsg {
   text: string;
 }
 
+// A row for the full per-person message archive (connector_data_slack_messages).
+interface MessageRow {
+  startup_id: string;
+  user_id_source: string;
+  display_name: string;
+  channel_id: string;
+  channel_name: string | null;
+  message_ts: string;
+  posted_at: string;
+  message_date: string;
+  text: string;
+  thread_ts: string | null;
+  reaction_count: number;
+  reply_count: number;
+  has_files: boolean;
+}
+
 function oldestTs(): string {
   return String((Date.now() / 1000 - HISTORY_DAYS * 86400).toFixed(6));
 }
@@ -238,7 +255,8 @@ async function syncChannel(
   admin: ReturnType<typeof createClient>,
   config: MonitoringConfig | null,
   attendance: Map<string, AttendanceAcc>,
-  attendanceMessages: AttendanceMsg[]
+  attendanceMessages: AttendanceMsg[],
+  messageArchive: MessageRow[]
 ): Promise<{ channel_stat_rows: number; user_stat_rows: number; top_msg_rows: number }> {
   // Role of this channel for attendance purposes
   const isAttendanceChannel =
@@ -298,6 +316,23 @@ async function syncChannel(
 
       const totalRx = msg.reactions?.reduce((s, r) => s + r.count, 0) ?? 0;
       cs.reactions_total += totalRx;
+
+      // — full message archive (every message, for the per-person profile) —
+      messageArchive.push({
+        startup_id: startupId,
+        user_id_source: msg.user,
+        display_name: userMap.get(msg.user) ?? msg.user,
+        channel_id: channel.id,
+        channel_name: channel.name,
+        message_ts: msg.ts,
+        posted_at: new Date(parseFloat(msg.ts) * 1000).toISOString(),
+        message_date: date,
+        text: (msg.text ?? "").slice(0, 4000),
+        thread_ts: msg.thread_ts ?? null,
+        reaction_count: totalRx,
+        reply_count: msg.reply_count ?? 0,
+        has_files: !!msg.files?.length,
+      });
 
       // — attendance accumulation (across all channels, local work-day) —
       if (config?.is_enabled) {
@@ -611,6 +646,7 @@ Deno.serve(async (req) => {
     const config = (cfgRow as MonitoringConfig | null) ?? null;
     const attendance = new Map<string, AttendanceAcc>();
     const attendanceMessages: AttendanceMsg[] = [];
+    const messageArchive: MessageRow[] = [];
 
     // 1. Workspace info
     const teamData = await slackGet("team.info", token);
@@ -716,13 +752,28 @@ Deno.serve(async (req) => {
           admin,
           config,
           attendance,
-          attendanceMessages
+          attendanceMessages,
+          messageArchive
         );
         total_channel_stat_rows += result.channel_stat_rows;
         total_user_stat_rows += result.user_stat_rows;
         total_top_msg_rows += result.top_msg_rows;
       } catch (err) {
         skipped.push(`${channel.name}: ${(err as Error).message}`);
+      }
+    }
+
+    // 4a. Persist the full message archive (powers the per-person profile).
+    //     Chunked once at the end — the heaviest write the sync does.
+    let message_rows = 0;
+    if (messageArchive.length > 0) {
+      for (let i = 0; i < messageArchive.length; i += 1000) {
+        const chunk = messageArchive.slice(i, i + 1000);
+        const { error, count } = await admin
+          .from("connector_data_slack_messages")
+          .upsert(chunk, { onConflict: "startup_id,channel_id,message_ts", count: "exact" });
+        if (error) throw error;
+        message_rows += count ?? chunk.length;
       }
     }
 
@@ -841,6 +892,7 @@ Deno.serve(async (req) => {
         channel_stat_rows: total_channel_stat_rows,
         user_stat_rows: total_user_stat_rows,
         top_msg_rows: total_top_msg_rows,
+        message_rows,
         attendance_rows,
         attendance_enabled: !!config?.is_enabled,
         self_report_rows,

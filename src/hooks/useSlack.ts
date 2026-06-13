@@ -379,6 +379,20 @@ export function useSlackPeople(startupId?: string) {
         .sort((a, b) => b.messages - a.messages)
         .slice(0, 15);
 
+      // Full roster: every non-bot member, including zero-activity lurkers, so
+      // any person can be opened in the profile popup.
+      const roster: SlackContributor[] = (users ?? []).map((u) => {
+        const agg = userAgg.get(u.user_id_source);
+        return {
+          user_id: u.user_id_source,
+          name: u.display_name ?? u.user_id_source,
+          avatar_url: u.avatar_url ?? null,
+          messages: agg?.messages ?? 0,
+          reactions: agg?.reactions ?? 0,
+          replies: agg?.replies ?? 0,
+        };
+      }).sort((a, b) => b.messages - a.messages || a.name.localeCompare(b.name));
+
       const totalMembers = ws?.member_count_total ?? (users?.length ?? 0);
       const activePosters = new Set(
         (stats ?? []).filter((r) => r.messages_sent > 0).map((r) => r.user_id_source)
@@ -387,7 +401,107 @@ export function useSlackPeople(startupId?: string) {
         ? Math.round(((totalMembers - activePosters) / totalMembers) * 100)
         : 0;
 
-      return { leaderboard, lurker_pct, total_members: totalMembers, active_posters: activePosters };
+      return { leaderboard, roster, lurker_pct, total_members: totalMembers, active_posters: activePosters };
+    },
+  });
+}
+
+// ─── Per-person profile (popup) ──────────────────────────────
+
+export interface PersonMessage {
+  channel_id: string;
+  channel_name: string | null;
+  message_ts: string;
+  posted_at: string | null;
+  text: string | null;
+  reaction_count: number;
+  reply_count: number;
+  has_files: boolean;
+  category: "attendance" | "work_update" | "other";
+}
+
+export interface PersonProfile {
+  user_id: string;
+  name: string;
+  title: string | null;
+  avatar_url: string | null;
+  stats: {
+    total_messages: number;
+    checkin_days: number;
+    work_days_seen: number;
+    update_days: number;
+  };
+  attendance: PersonMessage[];
+  work_updates: PersonMessage[];
+  other: PersonMessage[];
+  all: PersonMessage[];
+}
+
+export function usePersonProfile(
+  startupId: string | undefined,
+  userId: string | null,
+  config: SlackMonitoringConfig | null | undefined
+) {
+  return useQuery({
+    queryKey: ["slack-person-profile", startupId, userId],
+    enabled: !!startupId && !!userId,
+    queryFn: async (): Promise<PersonProfile> => {
+      const nAgo = (n: number) =>
+        new Date(Date.now() - n * 864e5).toISOString().slice(0, 10);
+
+      const [{ data: msgs }, { data: att }, { data: roster }] = await Promise.all([
+        supabase
+          .from("connector_data_slack_messages")
+          .select("channel_id,channel_name,message_ts,posted_at,text,reaction_count,reply_count,has_files")
+          .eq("startup_id", startupId!)
+          .eq("user_id_source", userId!)
+          .order("posted_at", { ascending: false })
+          .limit(1000),
+        supabase
+          .from("slack_daily_attendance")
+          .select("work_date,checked_in,posted_update,was_active")
+          .eq("startup_id", startupId!)
+          .eq("user_id_source", userId!)
+          .gte("work_date", nAgo(60)),
+        supabase
+          .from("connector_data_slack_users")
+          .select("user_id_source,display_name,real_name,title,avatar_url")
+          .eq("startup_id", startupId!)
+          .eq("user_id_source", userId!)
+          .maybeSingle(),
+      ]);
+
+      const suffix = config?.updates_channel_suffix ?? "work-update";
+      const attChannelId = config?.attendance_channel_id ?? null;
+
+      const categorize = (m: { channel_id: string; channel_name: string | null }): PersonMessage["category"] => {
+        if (attChannelId && m.channel_id === attChannelId) return "attendance";
+        if (m.channel_name?.endsWith(suffix)) return "work_update";
+        return "other";
+      };
+
+      const all: PersonMessage[] = (msgs ?? []).map((m) => ({
+        ...m,
+        category: categorize(m),
+      }));
+
+      const attRows = att ?? [];
+      return {
+        user_id: userId!,
+        name: roster?.display_name ?? roster?.real_name ?? userId!,
+        title: roster?.title ?? null,
+        avatar_url: roster?.avatar_url ?? null,
+        stats: {
+          total_messages: all.length,
+          checkin_days: attRows.filter((r) => r.checked_in).length,
+          work_days_seen: attRows.length,
+          update_days: attRows.filter((r) => r.posted_update).length,
+        },
+        attendance: all.filter((m) => m.category === "attendance"),
+        work_updates: all.filter((m) => m.category === "work_update"),
+        other: all.filter((m) => m.category === "other"),
+        all,
+      };
     },
   });
 }
@@ -508,6 +622,7 @@ export function useTriggerSlackSync() {
         channel_stat_rows: number;
         user_stat_rows: number;
         top_msg_rows: number;
+        message_rows: number;
         attendance_rows: number;
         attendance_enabled: boolean;
         self_report_rows: number;

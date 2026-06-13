@@ -88,7 +88,7 @@ export default function SlackDashboard() {
       console.log("[slack-sync] result:", result);
       if (result.ok) {
         toast.success(
-          `Sync complete — ${result.channels_synced} channels · ${result.user_stat_rows} user-day rows · ${result.top_msg_rows} top messages` +
+          `Sync complete — ${result.channels_synced} channels · ${result.user_stat_rows} user-day rows · ${result.message_rows} messages archived` +
             (result.attendance_enabled ? ` · ${result.attendance_rows} attendance rows` : "")
         );
         if (result.attendance_enabled && result.self_report_status === "ok" && result.self_report_rows > 0) {
@@ -253,7 +253,17 @@ export default function SlackDashboard() {
             </TabsContent>
 
             <TabsContent value="people">
-              <SlackPeopleTab data={peopleData} isLoading={peopleLoading} />
+              {startupId ? (
+                <SlackPeopleTab
+                  data={peopleData}
+                  isLoading={peopleLoading}
+                  startupId={startupId}
+                  config={config}
+                  tz={tz}
+                />
+              ) : (
+                <div className="text-center py-16 text-muted-foreground text-sm">Startup not found.</div>
+              )}
             </TabsContent>
 
             <TabsContent value="timing">
