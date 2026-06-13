@@ -3060,6 +3060,9 @@ export type Database = {
       }
       slack_daily_attendance: {
         Row: {
+          check_in_claim_at: string | null
+          check_in_claim_text: string | null
+          check_in_source: string | null
           check_in_time: string | null
           checked_in: boolean
           display_name: string | null
@@ -3076,6 +3079,9 @@ export type Database = {
           work_date: string
         }
         Insert: {
+          check_in_claim_at?: string | null
+          check_in_claim_text?: string | null
+          check_in_source?: string | null
           check_in_time?: string | null
           checked_in?: boolean
           display_name?: string | null
@@ -3092,6 +3098,9 @@ export type Database = {
           work_date: string
         }
         Update: {
+          check_in_claim_at?: string | null
+          check_in_claim_text?: string | null
+          check_in_source?: string | null
           check_in_time?: string | null
           checked_in?: boolean
           display_name?: string | null
