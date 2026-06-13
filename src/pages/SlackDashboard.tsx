@@ -13,7 +13,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useStartups } from "@/hooks/useStartups";
 import {
   useSlackWorkspace,
-  useSlackPulse,
   useSlackChannelBreakdown,
   useSlackPeople,
   useSlackTiming,
@@ -25,7 +24,6 @@ import {
   useSlackPresence,
 } from "@/hooks/useSlack";
 import { useQueryClient } from "@tanstack/react-query";
-import SlackPulseTab from "@/components/slack/SlackPulseTab";
 import SlackChannelsTab from "@/components/slack/SlackChannelsTab";
 import SlackPeopleTab from "@/components/slack/SlackPeopleTab";
 import SlackTimingTab from "@/components/slack/SlackTimingTab";
@@ -43,7 +41,6 @@ export default function SlackDashboard() {
   const startupId = nasheedio?.id;
   const qc = useQueryClient();
 
-  const [baselineDays, setBaselineDays] = useState<7 | 28>(7);
   const [setupOpen, setSetupOpen] = useState(false);
   const [presenceMap, setPresenceMap] = useState<Record<string, string> | null>(null);
   const currentMonth = useMemo(() => {
@@ -55,7 +52,6 @@ export default function SlackDashboard() {
   // Data hooks
   const { data: workspace, isLoading: wsLoading } = useSlackWorkspace(startupId);
   const { data: config } = useSlackConfig(startupId);
-  const { data: pulse, isLoading: pulseLoading } = useSlackPulse(startupId, baselineDays);
   const { data: channelRows, isLoading: channelsLoading } = useSlackChannelBreakdown(startupId);
   const { data: peopleData, isLoading: peopleLoading } = useSlackPeople(startupId);
   const { data: timingData, isLoading: timingLoading } = useSlackTiming(startupId);
@@ -217,7 +213,6 @@ export default function SlackDashboard() {
             <TabsTrigger value="today">Today</TabsTrigger>
             <TabsTrigger value="monthly">Monthly Sheet</TabsTrigger>
             <span className="w-px bg-border mx-1 self-stretch" />
-            <TabsTrigger value="pulse">Pulse</TabsTrigger>
             <TabsTrigger value="channels">Channels</TabsTrigger>
             <TabsTrigger value="people">People</TabsTrigger>
             <TabsTrigger value="timing">Timing</TabsTrigger>
@@ -246,15 +241,6 @@ export default function SlackDashboard() {
                 month={sheetMonth}
                 onMonthChange={setSheetMonth}
                 configured={configured}
-              />
-            </TabsContent>
-
-            <TabsContent value="pulse">
-              <SlackPulseTab
-                snapshot={pulse}
-                isLoading={pulseLoading}
-                baselineDays={baselineDays}
-                onBaselineChange={setBaselineDays}
               />
             </TabsContent>
 
