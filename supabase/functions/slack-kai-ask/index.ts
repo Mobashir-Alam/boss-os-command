@@ -160,7 +160,7 @@ async function buildSnapshot(
   // Attendance — last 14 work-days, per person
   const { data: attRows } = await admin
     .from("slack_daily_attendance")
-    .select("user_id_source,display_name,work_date,checked_in,posted_update,was_active,message_count")
+    .select("user_id_source,display_name,work_date,checked_in,check_in_source,posted_update,was_active,message_count")
     .eq("startup_id", startup_id)
     .gte("work_date", period_start);
 
@@ -168,13 +168,14 @@ async function buildSnapshot(
   if (attRows && attRows.length > 0) {
     const workDates = Array.from(new Set(attRows.map((r) => r.work_date))).sort();
     const latestDate = workDates[workDates.length - 1];
-    const perUser = new Map<string, { name: string; present: number; updates: number; active_no_checkin: number; days: number }>();
+    const perUser = new Map<string, { name: string; present: number; updates: number; active_no_checkin: number; self_reported: number; days: number }>();
     for (const r of attRows) {
-      const u = perUser.get(r.user_id_source) ?? { name: r.display_name ?? r.user_id_source, present: 0, updates: 0, active_no_checkin: 0, days: 0 };
+      const u = perUser.get(r.user_id_source) ?? { name: r.display_name ?? r.user_id_source, present: 0, updates: 0, active_no_checkin: 0, self_reported: 0, days: 0 };
       u.days++;
       if (r.checked_in) u.present++;
       if (r.posted_update) u.updates++;
       if (r.was_active && !r.checked_in) u.active_no_checkin++;
+      if (r.check_in_source === "self_reported") u.self_reported++;
       perUser.set(r.user_id_source, u);
     }
     const people = Array.from(perUser.values());
@@ -196,6 +197,11 @@ async function buildSnapshot(
         active_but_no_checkin: activeNoCheckinToday,
         active_but_no_update: noUpdateToday,
       },
+      most_self_reported: people
+        .filter((p) => p.self_reported > 0)
+        .map((p) => ({ name: p.name, self_reported_days: p.self_reported, days_seen: p.days }))
+        .sort((a, b) => b.self_reported_days - a.self_reported_days)
+        .slice(0, 8),
       lowest_checkin_rate: people
         .filter((p) => p.days >= 3)
         .map((p) => ({ name: p.name, checkin_rate_pct: Math.round((p.present / p.days) * 100), days_seen: p.days }))
@@ -268,6 +274,7 @@ Rules:
 - Only cite numbers that appear in the snapshot. Never invent data.
 - For accountability questions ("who isn't showing up", "who skips updates"), use the attendance section: check-in rates, update rates, and today's active_but_no_checkin / active_but_no_update lists.
 - "active_but_no_checkin" means the person was clearly working in Slack but never posted in the attendance channel — flag these as the real accountability gap, not as absences.
+- "most_self_reported" lists people whose attendance was filled from a later bulk message rather than a live same-day check-in. High self-reported counts mean someone consistently backfills instead of checking in on time — worth noting.
 - There is NO "late" concept — shifts are dynamic. Never judge someone as late based on check-in time.
 - If attendance is null, say attendance monitoring isn't configured yet rather than guessing.
 - Surface non-obvious patterns: channel concentration, lurker ratios, reply vs message imbalances.
@@ -284,7 +291,7 @@ ${JSON.stringify(snapshot, null, 2)}
     if (!apiKey) throw new Error("LOVABLE_API_KEY not set");
 
     const aiRes = await fetch(
-      "https://api.lovable.app/ai/v1/chat/completions",
+      "https://ai.gateway.lovable.dev/v1/chat/completions",
       {
         method: "POST",
         headers: {
@@ -292,13 +299,11 @@ ${JSON.stringify(snapshot, null, 2)}
           Authorization: `Bearer ${apiKey}`,
         },
         body: JSON.stringify({
-          model: "google/gemini-flash-1.5",
+          model: "google/gemini-3-flash-preview",
           messages: [
             { role: "system", content: systemPrompt },
             { role: "user", content: question },
           ],
-          max_tokens: 1024,
-          temperature: 0.3,
         }),
       }
     );

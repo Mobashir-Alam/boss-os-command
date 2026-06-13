@@ -510,6 +510,8 @@ export function useTriggerSlackSync() {
         top_msg_rows: number;
         attendance_rows: number;
         attendance_enabled: boolean;
+        self_report_rows: number;
+        self_report_status: string;
         skipped: string[];
       };
     },
@@ -598,6 +600,8 @@ export interface AttendanceRow {
   work_date: string;
   checked_in: boolean;
   check_in_time: string | null;
+  check_in_source: "live" | "self_reported" | null;
+  check_in_claim_text: string | null;
   posted_update: boolean;
   update_time: string | null;
   was_active: boolean;
@@ -605,6 +609,8 @@ export interface AttendanceRow {
   last_activity: string | null;
   message_count: number;
 }
+
+export type CheckInSource = "live" | "self_reported" | null;
 
 export type AttendanceStatus = "checked_in" | "active_no_checkin" | "absent";
 
@@ -614,6 +620,8 @@ export interface TodayPerson {
   avatar_url: string | null;
   status: AttendanceStatus;
   check_in_time: string | null;
+  check_in_source: CheckInSource;
+  check_in_claim_text: string | null;
   posted_update: boolean;
   message_count: number;
   first_activity: string | null;
@@ -654,7 +662,7 @@ export function useTodayBoard(startupId?: string, backfillCap = 3) {
       const [{ data: rows }, { data: roster }] = await Promise.all([
         supabase
           .from("slack_daily_attendance")
-          .select("user_id_source,display_name,work_date,checked_in,check_in_time,posted_update,update_time,was_active,first_activity,last_activity,message_count")
+          .select("user_id_source,display_name,work_date,checked_in,check_in_time,check_in_source,check_in_claim_text,posted_update,update_time,was_active,first_activity,last_activity,message_count")
           .eq("startup_id", startupId!)
           .gte("work_date", nAgo(lookback))
           .order("work_date", { ascending: false }),
@@ -696,6 +704,8 @@ export function useTodayBoard(startupId?: string, backfillCap = 3) {
           avatar_url: u.avatar_url,
           status,
           check_in_time: r?.check_in_time ?? null,
+          check_in_source: r?.check_in_source ?? null,
+          check_in_claim_text: r?.check_in_claim_text ?? null,
           posted_update: r?.posted_update ?? false,
           message_count: r?.message_count ?? 0,
           first_activity: r?.first_activity ?? null,
@@ -728,7 +738,7 @@ export interface MonthlyPersonRow {
   user_id: string;
   name: string;
   avatar_url: string | null;
-  byDate: Record<string, { status: AttendanceStatus; posted_update: boolean; update_state: UpdateState; check_in_time: string | null }>;
+  byDate: Record<string, { status: AttendanceStatus; posted_update: boolean; update_state: UpdateState; check_in_time: string | null; check_in_source: CheckInSource; check_in_claim_text: string | null }>;
   present_days: number;
   active_no_checkin_days: number;
   absent_days: number;
@@ -761,7 +771,7 @@ export function useMonthlySheet(startupId?: string, month?: string, backfillCap 
       const [{ data: rows }, { data: roster }] = await Promise.all([
         supabase
           .from("slack_daily_attendance")
-          .select("user_id_source,display_name,work_date,checked_in,posted_update,was_active,check_in_time")
+          .select("user_id_source,display_name,work_date,checked_in,posted_update,was_active,check_in_time,check_in_source,check_in_claim_text")
           .eq("startup_id", startupId!)
           .gte("work_date", start)
           .lte("work_date", endExt),
@@ -822,7 +832,14 @@ export function useMonthlySheet(startupId?: string, month?: string, backfillCap 
             update_state = "missing";
           }
 
-          byDate[date] = { status, posted_update: r.posted_update, update_state, check_in_time: r.check_in_time };
+          byDate[date] = {
+            status,
+            posted_update: r.posted_update,
+            update_state,
+            check_in_time: r.check_in_time,
+            check_in_source: r.check_in_source ?? null,
+            check_in_claim_text: r.check_in_claim_text ?? null,
+          };
           if (status === "checked_in") present++;
           else if (status === "active_no_checkin") activeNo++;
           else absent++;

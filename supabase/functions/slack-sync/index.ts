@@ -95,6 +95,24 @@ function localWorkDate(tsSeconds: number, timeZone: string, boundaryHour: number
   return new Date(base).toISOString().slice(0, 10);
 }
 
+// Offset (ms) of an IANA timezone from UTC at a given instant.
+function tzOffsetMs(atMs: number, timeZone: string): number {
+  const { y, m, d, h } = localParts(atMs, timeZone);
+  const min = Number(
+    new Intl.DateTimeFormat("en-US", { timeZone, minute: "2-digit" }).format(new Date(atMs))
+  );
+  const asUtc = Date.UTC(y, m - 1, d, h, isNaN(min) ? 0 : min);
+  return asUtc - atMs;
+}
+
+// Convert a local wall-clock date+time in a timezone to a UTC epoch (ms).
+function localToUtcMs(date: string, time: string, timeZone: string): number {
+  const [y, mo, d] = date.split("-").map(Number);
+  const [h, mi] = time.split(":").map(Number);
+  const guess = Date.UTC(y, mo - 1, d, h || 0, mi || 0);
+  return guess - tzOffsetMs(guess, timeZone);
+}
+
 interface MonitoringConfig {
   attendance_channel_id: string | null;
   updates_channel_suffix: string;
@@ -107,11 +125,24 @@ interface AttendanceAcc {
   user_id: string;
   display_name: string;
   work_date: string;
-  check_in_ms: number | null;   // earliest msg in attendance channel
+  check_in_ms: number | null;   // earliest msg in attendance channel (live)
   update_ms: number | null;     // earliest msg in a *-work-update channel
-  first_ms: number;             // earliest activity anywhere
-  last_ms: number;              // latest activity anywhere
+  first_ms: number | null;      // earliest activity anywhere
+  last_ms: number | null;       // latest activity anywhere
   message_count: number;
+  // Self-reported (bulk) attendance — filled by the AI parse pass.
+  self_reported: boolean;
+  claim_start_ms: number | null;
+  claim_text: string | null;
+  claim_at_ms: number | null;
+}
+
+// One raw attendance-channel message, kept for the AI parse pass.
+interface AttendanceMsg {
+  user: string;
+  display_name: string;
+  ts: number;       // seconds
+  text: string;
 }
 
 function oldestTs(): string {
@@ -206,7 +237,8 @@ async function syncChannel(
   userMap: Map<string, string>,
   admin: ReturnType<typeof createClient>,
   config: MonitoringConfig | null,
-  attendance: Map<string, AttendanceAcc>
+  attendance: Map<string, AttendanceAcc>,
+  attendanceMessages: AttendanceMsg[]
 ): Promise<{ channel_stat_rows: number; user_stat_rows: number; top_msg_rows: number }> {
   // Role of this channel for attendance purposes
   const isAttendanceChannel =
@@ -284,14 +316,25 @@ async function syncChannel(
             first_ms: msgMs,
             last_ms: msgMs,
             message_count: 0,
+            self_reported: false,
+            claim_start_ms: null,
+            claim_text: null,
+            claim_at_ms: null,
           };
           attendance.set(aKey, acc);
         }
         acc.message_count++;
-        if (msgMs < acc.first_ms) acc.first_ms = msgMs;
-        if (msgMs > acc.last_ms) acc.last_ms = msgMs;
-        if (isAttendanceChannel && (acc.check_in_ms === null || msgMs < acc.check_in_ms)) {
-          acc.check_in_ms = msgMs;
+        if (acc.first_ms === null || msgMs < acc.first_ms) acc.first_ms = msgMs;
+        if (acc.last_ms === null || msgMs > acc.last_ms) acc.last_ms = msgMs;
+        if (isAttendanceChannel) {
+          if (acc.check_in_ms === null || msgMs < acc.check_in_ms) acc.check_in_ms = msgMs;
+          // Keep the raw message for the bulk-attendance AI parse pass.
+          attendanceMessages.push({
+            user: msg.user,
+            display_name: userMap.get(msg.user) ?? msg.user,
+            ts: tsSec,
+            text: (msg.text ?? "").slice(0, 400),
+          });
         }
         if (isUpdatesChannel && (acc.update_ms === null || msgMs < acc.update_ms)) {
           acc.update_ms = msgMs;
@@ -435,6 +478,80 @@ async function syncChannel(
   return { channel_stat_rows, user_stat_rows, top_msg_rows };
 }
 
+// ─── Bulk-attendance AI parse ────────────────────────────────
+//
+// Sends attendance-channel messages to the Lovable AI gateway and asks it to
+// resolve any claimed work-days to absolute dates (anchored to each message's
+// posted date + the configured timezone). Returns one entry per message with
+// the claimed dates and optional shift start/end times. Free-form input like
+// "8th 8-5pm, 9th 7pm-5am" resolves to explicit dates. On any failure it
+// returns null so the sync proceeds without self-report data.
+
+interface ParsedClaim {
+  date: string;          // YYYY-MM-DD
+  start: string | null;  // HH:MM local
+  end: string | null;    // HH:MM local
+}
+
+function stripJsonFence(s: string): string {
+  return s.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
+}
+
+async function parseBulkAttendance(
+  messages: AttendanceMsg[],
+  timeZone: string,
+  apiKey: string
+): Promise<Map<number, ParsedClaim[]> | null> {
+  if (messages.length === 0) return new Map();
+
+  // Cap + shape the payload the model sees.
+  const capped = messages.slice(-100);
+  const payload = capped.map((m, i) => ({
+    i,
+    posted_date: new Date(m.ts * 1000).toISOString().slice(0, 10),
+    text: m.text,
+  }));
+
+  const systemPrompt = `You parse Slack #attendance messages. Each message's author is reporting which day(s) they worked, sometimes with shift times. Resolve every day reference to an absolute calendar date using that message's "posted_date" as the anchor, in timezone ${timeZone}. Always resolve to the most recent past-or-equal date — never a future date. Day numbers like "8th", "11 th", "12 th" refer to days of the current/most-recent month relative to posted_date.
+
+Return ONLY a JSON array, no prose, no markdown fences. Shape:
+[{"i": <message index>, "claims": [{"date": "YYYY-MM-DD", "start": "HH:MM" | null, "end": "HH:MM" | null}]}]
+
+Rules:
+- Use 24-hour HH:MM for start/end. "8 to 5 pm" → start 08:00, end 17:00. "7 pm to 5 am" → start 19:00, end 05:00. "12 am to 8 am" → start 00:00, end 08:00.
+- Only include dates where the author states they worked / were present. Ignore messages announcing FUTURE leave or absence (return "claims": []).
+- A plain greeting with no day reference → claims for posted_date only.
+- Never invent dates that aren't implied by the text.`;
+
+  try {
+    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "google/gemini-3-flash-preview",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: JSON.stringify(payload) },
+        ],
+      }),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const content: string = data.choices?.[0]?.message?.content ?? "";
+    const parsed = JSON.parse(stripJsonFence(content)) as { i: number; claims: ParsedClaim[] }[];
+
+    const out = new Map<number, ParsedClaim[]>();
+    for (const row of parsed) {
+      if (typeof row.i === "number" && Array.isArray(row.claims)) {
+        out.set(row.i, row.claims);
+      }
+    }
+    return out;
+  } catch (_err) {
+    return null;
+  }
+}
+
 // ─── Main handler ────────────────────────────────────────────
 
 Deno.serve(async (req) => {
@@ -462,6 +579,7 @@ Deno.serve(async (req) => {
       .maybeSingle();
     const config = (cfgRow as MonitoringConfig | null) ?? null;
     const attendance = new Map<string, AttendanceAcc>();
+    const attendanceMessages: AttendanceMsg[] = [];
 
     // 1. Workspace info
     const teamData = await slackGet("team.info", token);
@@ -566,7 +684,8 @@ Deno.serve(async (req) => {
           userMap,
           admin,
           config,
-          attendance
+          attendance,
+          attendanceMessages
         );
         total_channel_stat_rows += result.channel_stat_rows;
         total_user_stat_rows += result.user_stat_rows;
@@ -576,23 +695,86 @@ Deno.serve(async (req) => {
       }
     }
 
+    // 4b. Bulk-attendance parse: resolve claimed days from attendance messages
+    //     and merge as self-reported check-ins (live check-ins always win).
+    let self_report_rows = 0;
+    let self_report_status = "skipped";
+    const lovableKey = Deno.env.get("LOVABLE_API_KEY");
+    if (config?.is_enabled && config.attendance_channel_id && lovableKey && attendanceMessages.length > 0) {
+      const claimsByMsg = await parseBulkAttendance(attendanceMessages, config.timezone, lovableKey);
+      if (claimsByMsg === null) {
+        self_report_status = "parse_failed";
+      } else {
+        self_report_status = "ok";
+        const nowMs = Date.now();
+        for (const [i, claims] of claimsByMsg) {
+          const src = attendanceMessages[i];
+          if (!src) continue;
+          const claimAtMs = src.ts * 1000;
+          for (const claim of claims) {
+            // Sanity: a real, non-future date within the sync window.
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(claim.date)) continue;
+            const claimDateMs = Date.parse(`${claim.date}T00:00:00Z`);
+            if (isNaN(claimDateMs) || claimDateMs > nowMs + 86400000) continue;
+
+            const key = `${claim.date}:${src.user}`;
+            const existing = attendance.get(key);
+            // A live check-in for that day always wins — never downgrade it.
+            if (existing && existing.check_in_ms !== null) continue;
+
+            const startMs = claim.start ? localToUtcMs(claim.date, claim.start, config.timezone) : null;
+            if (existing) {
+              existing.self_reported = true;
+              existing.claim_start_ms = startMs;
+              existing.claim_text = src.text;
+              existing.claim_at_ms = claimAtMs;
+            } else {
+              attendance.set(key, {
+                user_id: src.user,
+                display_name: src.display_name,
+                work_date: claim.date,
+                check_in_ms: null,
+                update_ms: null,
+                first_ms: null,
+                last_ms: null,
+                message_count: 0,
+                self_reported: true,
+                claim_start_ms: startMs,
+                claim_text: src.text,
+                claim_at_ms: claimAtMs,
+              });
+            }
+            self_report_rows++;
+          }
+        }
+      }
+    }
+
     // 5. Write attendance rows (only if monitoring is configured + enabled)
     let attendance_rows = 0;
     if (config?.is_enabled && attendance.size > 0) {
-      const rows = Array.from(attendance.values()).map((a) => ({
-        startup_id,
-        user_id_source: a.user_id,
-        display_name: a.display_name,
-        work_date: a.work_date,
-        checked_in: a.check_in_ms !== null,
-        check_in_time: a.check_in_ms !== null ? new Date(a.check_in_ms).toISOString() : null,
-        posted_update: a.update_ms !== null,
-        update_time: a.update_ms !== null ? new Date(a.update_ms).toISOString() : null,
-        was_active: true,
-        first_activity: new Date(a.first_ms).toISOString(),
-        last_activity: new Date(a.last_ms).toISOString(),
-        message_count: a.message_count,
-      }));
+      const rows = Array.from(attendance.values()).map((a) => {
+        const live = a.check_in_ms !== null;
+        const checkedIn = live || a.self_reported;
+        const checkInMs = live ? a.check_in_ms : a.self_reported ? a.claim_start_ms : null;
+        return {
+          startup_id,
+          user_id_source: a.user_id,
+          display_name: a.display_name,
+          work_date: a.work_date,
+          checked_in: checkedIn,
+          check_in_time: checkInMs !== null ? new Date(checkInMs).toISOString() : null,
+          check_in_source: checkedIn ? (live ? "live" : "self_reported") : null,
+          check_in_claim_text: !live && a.self_reported ? a.claim_text : null,
+          check_in_claim_at: !live && a.self_reported && a.claim_at_ms ? new Date(a.claim_at_ms).toISOString() : null,
+          posted_update: a.update_ms !== null,
+          update_time: a.update_ms !== null ? new Date(a.update_ms).toISOString() : null,
+          was_active: a.message_count > 0,
+          first_activity: a.first_ms !== null ? new Date(a.first_ms).toISOString() : null,
+          last_activity: a.last_ms !== null ? new Date(a.last_ms).toISOString() : null,
+          message_count: a.message_count,
+        };
+      });
       // Chunked upsert to stay well under payload limits on busy workspaces.
       for (let i = 0; i < rows.length; i += 500) {
         const chunk = rows.slice(i, i + 500);
@@ -618,6 +800,8 @@ Deno.serve(async (req) => {
         top_msg_rows: total_top_msg_rows,
         attendance_rows,
         attendance_enabled: !!config?.is_enabled,
+        self_report_rows,
+        self_report_status,
         skipped,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
