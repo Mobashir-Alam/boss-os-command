@@ -89,6 +89,7 @@ export default function SlackDashboard() {
     try {
       toast.info("Syncing Slack data…");
       const result = await triggerSync(startupId);
+      console.log("[slack-sync] result:", result);
       if (result.ok) {
         toast.success(
           `Sync complete — ${result.channels_synced} channels · ${result.user_stat_rows} user-day rows · ${result.top_msg_rows} top messages` +

@@ -497,12 +497,33 @@ function stripJsonFence(s: string): string {
   return s.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
 }
 
+// Robustly pull an array out of an LLM response that may be fenced, wrapped in
+// an object, or padded with prose.
+function extractArray(content: string): unknown[] | null {
+  const cleaned = stripJsonFence(content);
+  const tryParse = (s: string): unknown[] | null => {
+    try {
+      const v = JSON.parse(s);
+      if (Array.isArray(v)) return v;
+      if (v && typeof v === "object") {
+        for (const k of ["results", "messages", "claims", "data", "items"]) {
+          if (Array.isArray((v as Record<string, unknown>)[k])) {
+            return (v as Record<string, unknown[]>)[k];
+          }
+        }
+      }
+    } catch (_e) { /* fall through */ }
+    return null;
+  };
+  return tryParse(cleaned) ?? (cleaned.match(/\[[\s\S]*\]/) ? tryParse(cleaned.match(/\[[\s\S]*\]/)![0]) : null);
+}
+
 async function parseBulkAttendance(
   messages: AttendanceMsg[],
   timeZone: string,
   apiKey: string
-): Promise<Map<number, ParsedClaim[]> | null> {
-  if (messages.length === 0) return new Map();
+): Promise<{ claims: Map<number, ParsedClaim[]> | null; raw: string; sent: number }> {
+  if (messages.length === 0) return { claims: new Map(), raw: "", sent: 0 };
 
   // Cap + shape the payload the model sees.
   const capped = messages.slice(-100);
@@ -523,6 +544,7 @@ Rules:
 - A plain greeting with no day reference → claims for posted_date only.
 - Never invent dates that aren't implied by the text.`;
 
+  let raw = "";
   try {
     const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -535,20 +557,29 @@ Rules:
         ],
       }),
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      raw = `HTTP ${res.status}: ${(await res.text()).slice(0, 300)}`;
+      console.error("parseBulkAttendance gateway error:", raw);
+      return { claims: null, raw, sent: capped.length };
+    }
     const data = await res.json();
-    const content: string = data.choices?.[0]?.message?.content ?? "";
-    const parsed = JSON.parse(stripJsonFence(content)) as { i: number; claims: ParsedClaim[] }[];
+    raw = data.choices?.[0]?.message?.content ?? "";
+    const arr = extractArray(raw);
+    if (!arr) {
+      console.error("parseBulkAttendance: could not extract array from:", raw.slice(0, 500));
+      return { claims: null, raw, sent: capped.length };
+    }
 
     const out = new Map<number, ParsedClaim[]>();
-    for (const row of parsed) {
-      if (typeof row.i === "number" && Array.isArray(row.claims)) {
-        out.set(row.i, row.claims);
-      }
-    }
-    return out;
-  } catch (_err) {
-    return null;
+    arr.forEach((row, idx) => {
+      const r = row as { i?: number; claims?: ParsedClaim[] };
+      const i = typeof r.i === "number" ? r.i : idx; // fall back to position
+      if (Array.isArray(r.claims)) out.set(i, r.claims);
+    });
+    return { claims: out, raw, sent: capped.length };
+  } catch (err) {
+    console.error("parseBulkAttendance threw:", (err as Error).message, "raw:", raw.slice(0, 300));
+    return { claims: null, raw: raw || (err as Error).message, sent: capped.length };
   }
 }
 
@@ -699,9 +730,21 @@ Deno.serve(async (req) => {
     //     and merge as self-reported check-ins (live check-ins always win).
     let self_report_rows = 0;
     let self_report_status = "skipped";
+    let self_report_debug: Record<string, unknown> = {
+      attendance_messages_seen: attendanceMessages.length,
+      has_lovable_key: !!Deno.env.get("LOVABLE_API_KEY"),
+      attendance_channel_configured: !!config?.attendance_channel_id,
+    };
     const lovableKey = Deno.env.get("LOVABLE_API_KEY");
     if (config?.is_enabled && config.attendance_channel_id && lovableKey && attendanceMessages.length > 0) {
-      const claimsByMsg = await parseBulkAttendance(attendanceMessages, config.timezone, lovableKey);
+      const parseRes = await parseBulkAttendance(attendanceMessages, config.timezone, lovableKey);
+      const claimsByMsg = parseRes.claims;
+      self_report_debug = {
+        ...self_report_debug,
+        ai_messages_sent: parseRes.sent,
+        ai_raw_snippet: parseRes.raw.slice(0, 600),
+        ai_parsed_messages: claimsByMsg?.size ?? -1,
+      };
       if (claimsByMsg === null) {
         self_report_status = "parse_failed";
       } else {
@@ -802,6 +845,7 @@ Deno.serve(async (req) => {
         attendance_enabled: !!config?.is_enabled,
         self_report_rows,
         self_report_status,
+        self_report_debug,
         skipped,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
