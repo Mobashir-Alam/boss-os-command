@@ -355,7 +355,16 @@ export function useTriggerGitHubSync() {
   return useMutation({
     mutationFn: async (startupId: string) => {
       const { data, error } = await supabase.functions.invoke("github-sync", { body: { startup_id: startupId } });
-      if (error) throw error;
+      if (error) {
+        // FunctionsHttpError carries the real response body in .context — pull
+        // the actual reason out instead of the generic "non-2xx" message.
+        let detail = error.message;
+        try {
+          const body = await (error as { context?: Response }).context?.json?.();
+          if (body?.error) detail = body.error;
+        } catch { /* keep generic */ }
+        throw new Error(detail);
+      }
       if (!data?.ok) throw new Error(data?.error ?? "Sync failed");
       return data as {
         ok: boolean; orgs: string[]; repos_synced: number; records_upserted: number;

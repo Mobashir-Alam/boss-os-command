@@ -40,6 +40,7 @@ export default function GitHubDashboard() {
     try {
       toast.info("Syncing GitHub…");
       const r = await triggerSync(startupId);
+      console.log("[github-sync] result:", r);
       toast.success(`Synced ${r.repos_synced} repos · ${r.commits} commits · ${r.prs} PRs · ${r.daily_rows} daily rows`);
       if (r.rate_limited) toast.warning("Hit GitHub rate limit mid-sync — some repos may be partial. Try again later.");
       if (r.errors?.length) toast.warning(`${r.errors.length} repo error(s): ${r.errors.slice(0, 2).join("; ")}`);
@@ -51,6 +52,7 @@ export default function GitHubDashboard() {
         qc.invalidateQueries({ queryKey: ["github-identity"] }),
       ]);
     } catch (err) {
+      console.error("[github-sync] error:", err);
       toast.error(`Sync error: ${(err as Error).message}`);
     }
   }

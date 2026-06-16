@@ -160,6 +160,9 @@ Deno.serve(async (req) => {
               body: null,
               labels: [],
               created_at_source: cm.commit?.author?.date ?? null,
+              updated_at_source: null,
+              closed_at_source: null,
+              merged_at_source: null,
               raw_payload: { sha: cm.sha, html_url: cm.html_url },
             });
             bumpDaily(effLogin, repoName, date, "commits");
