@@ -477,6 +477,56 @@ export type Database = {
           },
         ]
       }
+      connector_data_github_daily: {
+        Row: {
+          activity_date: string
+          additions: number
+          commits: number
+          deletions: number
+          github_login: string
+          id: string
+          prs_merged: number
+          prs_opened: number
+          repo_name: string
+          startup_id: string
+          synced_at: string
+        }
+        Insert: {
+          activity_date: string
+          additions?: number
+          commits?: number
+          deletions?: number
+          github_login: string
+          id?: string
+          prs_merged?: number
+          prs_opened?: number
+          repo_name: string
+          startup_id: string
+          synced_at?: string
+        }
+        Update: {
+          activity_date?: string
+          additions?: number
+          commits?: number
+          deletions?: number
+          github_login?: string
+          id?: string
+          prs_merged?: number
+          prs_opened?: number
+          repo_name?: string
+          startup_id?: string
+          synced_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "connector_data_github_daily_startup_id_fkey"
+            columns: ["startup_id"]
+            isOneToOne: false
+            referencedRelation: "startups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       connector_data_slack: {
         Row: {
           author_profile_id: string | null
