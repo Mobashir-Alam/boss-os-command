@@ -13,7 +13,6 @@ CREATE TABLE IF NOT EXISTS public.connector_data_github_repos (
   language      text,
   open_issues   int         NOT NULL DEFAULT 0,
   pushed_at     timestamptz,
-  html_url      text,
   synced_at     timestamptz NOT NULL DEFAULT now(),
   UNIQUE (startup_id, full_name)
 );

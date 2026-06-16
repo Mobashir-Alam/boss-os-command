@@ -140,7 +140,6 @@ Deno.serve(async (req) => {
           language: r.language ?? null,
           open_issues: r.open_issues_count ?? 0,
           pushed_at: r.pushed_at ?? null,
-          html_url: r.html_url ?? null,
         });
       }
 
