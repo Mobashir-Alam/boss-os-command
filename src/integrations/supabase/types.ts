@@ -527,6 +527,45 @@ export type Database = {
           },
         ]
       }
+      connector_data_github_repos: {
+        Row: {
+          default_branch: string | null
+          discovered_at: string
+          id: string
+          is_archived: boolean
+          is_private: boolean
+          org_login: string
+          pushed_at: string | null
+          repo_name: string
+          startup_id: string
+          synced_at: string
+        }
+        Insert: {
+          default_branch?: string | null
+          discovered_at?: string
+          id?: string
+          is_archived?: boolean
+          is_private?: boolean
+          org_login: string
+          pushed_at?: string | null
+          repo_name: string
+          startup_id: string
+          synced_at?: string
+        }
+        Update: {
+          default_branch?: string | null
+          discovered_at?: string
+          id?: string
+          is_archived?: boolean
+          is_private?: boolean
+          org_login?: string
+          pushed_at?: string | null
+          repo_name?: string
+          startup_id?: string
+          synced_at?: string
+        }
+        Relationships: []
+      }
       connector_data_slack: {
         Row: {
           author_profile_id: string | null
