@@ -37,6 +37,7 @@ import Verify2FA from "./pages/Verify2FA.tsx";
 import HRDashboard from "./pages/HRDashboard.tsx";
 import SocialMediaDashboard from "./pages/SocialMediaDashboard.tsx";
 import SlackDashboard from "./pages/SlackDashboard.tsx";
+import GitHubDashboard from "./pages/GitHubDashboard.tsx";
 import CommandPalette from "./components/CommandPalette";
 
 const queryClient = new QueryClient({});
@@ -78,6 +79,10 @@ const App = () => (
               <Route
                 path="/team/tech"
                 element={<AuthGuard><TechLeadGuard><TechTeamDashboard /></TechLeadGuard></AuthGuard>}
+              />
+              <Route
+                path="/team/github"
+                element={<AuthGuard><TechLeadGuard><GitHubDashboard /></TechLeadGuard></AuthGuard>}
               />
               <Route
                 path="/team/hr"

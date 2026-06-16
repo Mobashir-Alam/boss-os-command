@@ -19,6 +19,7 @@ export interface SearchItem {
 const STATIC_DESTINATIONS: SearchItem[] = [
   { id: "dest-home",     kind: "destination", title: "Founder Command Center", path: "/" },
   { id: "dest-tech",     kind: "destination", title: "Tech Team",              path: "/team/tech" },
+  { id: "dest-github",   kind: "destination", title: "Engineering — GitHub",   path: "/team/github" },
   { id: "dest-techdept", kind: "destination", title: "Tech Department",        path: "/department/tech" },
   { id: "dest-employee", kind: "destination", title: "My Work",                path: "/employee" },
   { id: "dest-people",   kind: "destination", title: "People OS",              path: "/people" },
