@@ -42,9 +42,14 @@ export interface GitHubRepo {
   prs_merged: number;
   contributors: number;
   top_contributor: string | null;
-  last_active: string | null;
-  bus_factor_risk: boolean; // single dominant contributor
-  stale: boolean;           // no activity in last 14d (within window)
+  last_active: string | null;     // last commit/PR in the activity window
+  pushed_at: string | null;       // last push from the repo registry (any branch)
+  is_private: boolean;
+  is_archived: boolean;
+  language: string | null;
+  bus_factor_risk: boolean;       // single dominant contributor
+  active: boolean;                // had commits/PRs in the activity window
+  bus_factor_risk_relevant: boolean;
 }
 
 // ─── Identity helpers ────────────────────────────────────────
@@ -197,15 +202,33 @@ export function useGitHubPeople(startupId?: string, windowDays = 14) {
 
 // ─── Repos ───────────────────────────────────────────────────
 
+interface RepoRegistryRow {
+  repo_name: string;
+  full_name: string;
+  is_private: boolean;
+  is_archived: boolean;
+  language: string | null;
+  pushed_at: string | null;
+}
+
 export function useGitHubRepos(startupId?: string, windowDays = 14) {
   return useQuery({
     queryKey: ["github-repos", startupId, windowDays],
     enabled: !!startupId,
     queryFn: async (): Promise<GitHubRepo[]> => {
-      const [rows, profiles] = await Promise.all([fetchDaily(startupId!, windowDays), fetchProfiles()]);
+      const [rows, profiles, registryRes] = await Promise.all([
+        fetchDaily(startupId!, windowDays),
+        fetchProfiles(),
+        supabase
+          .from("connector_data_github_repos")
+          .select("repo_name,full_name,is_private,is_archived,language,pushed_at")
+          .eq("startup_id", startupId!),
+      ]);
       const { nameByLogin } = identityMaps(profiles);
       const display = (login: string) => nameByLogin.get(login.toLowerCase()) ?? login;
+      const registry = (registryRes.data ?? []) as RepoRegistryRow[];
 
+      // Activity rollup per repo (from the daily window)
       const map = new Map<string, { commits: number; prs_merged: number; contribCommits: Map<string, number>; last: string | null }>();
       for (const r of rows) {
         let x = map.get(r.repo_name);
@@ -216,21 +239,48 @@ export function useGitHubRepos(startupId?: string, windowDays = 14) {
         if ((r.commits > 0 || r.prs_merged > 0) && (!x.last || r.activity_date > x.last)) x.last = r.activity_date;
       }
 
-      return Array.from(map.entries()).map(([repo, x]) => {
-        const contribs = Array.from(x.contribCommits.entries()).sort(([, a], [, b]) => b - a);
+      const build = (repoName: string, reg?: RepoRegistryRow): GitHubRepo => {
+        const x = map.get(repoName);
+        const contribs = x ? Array.from(x.contribCommits.entries()).sort(([, a], [, b]) => b - a) : [];
         const total = contribs.reduce((s, [, c]) => s + c, 0);
         const topShare = total ? (contribs[0]?.[1] ?? 0) / total : 0;
+        const commits = x?.commits ?? 0;
+        const active = commits > 0 || (x?.prs_merged ?? 0) > 0;
         return {
-          repo_name: repo,
-          commits: x.commits,
-          prs_merged: x.prs_merged,
-          contributors: x.contribCommits.size,
+          repo_name: repoName,
+          commits,
+          prs_merged: x?.prs_merged ?? 0,
+          contributors: x?.contribCommits.size ?? 0,
           top_contributor: contribs[0] ? display(contribs[0][0]) : null,
-          last_active: x.last,
-          bus_factor_risk: x.contribCommits.size <= 1 || topShare >= 0.8,
-          stale: !x.last || x.last < nAgo(14),
+          last_active: x?.last ?? null,
+          pushed_at: reg?.pushed_at ?? null,
+          is_private: reg?.is_private ?? false,
+          is_archived: reg?.is_archived ?? false,
+          language: reg?.language ?? null,
+          bus_factor_risk: active && (contribs.length <= 1 || topShare >= 0.8),
+          active,
+          bus_factor_risk_relevant: active,
         };
-      }).sort((a, b) => b.commits - a.commits);
+      };
+
+      // Prefer the registry (all repos); fall back to activity-only repos if the
+      // registry hasn't been synced yet.
+      let result: GitHubRepo[];
+      if (registry.length > 0) {
+        const seen = new Set(registry.map((r) => r.repo_name));
+        result = registry.map((r) => build(r.repo_name, r));
+        // Include any active repo missing from the registry (edge case)
+        for (const repoName of map.keys()) if (!seen.has(repoName)) result.push(build(repoName));
+      } else {
+        result = Array.from(map.keys()).map((repoName) => build(repoName));
+      }
+
+      // Active first (by commits), then dormant by most-recent push
+      return result.sort((a, b) =>
+        (b.active ? 1 : 0) - (a.active ? 1 : 0) ||
+        b.commits - a.commits ||
+        (b.pushed_at ?? "").localeCompare(a.pushed_at ?? "")
+      );
     },
   });
 }
@@ -367,7 +417,7 @@ export function useTriggerGitHubSync() {
       }
       if (!data?.ok) throw new Error(data?.error ?? "Sync failed");
       return data as {
-        ok: boolean; orgs: string[]; repos_synced: number; records_upserted: number;
+        ok: boolean; orgs: string[]; repos_synced: number; repos_registered: number; records_upserted: number;
         daily_rows: number; commits: number; prs: number; rate_limited: boolean; errors: string[];
       };
     },

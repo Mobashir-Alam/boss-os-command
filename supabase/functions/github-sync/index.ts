@@ -103,6 +103,7 @@ Deno.serve(async (req) => {
     const sinceDate = since.slice(0, 10);
     const ghRecords: Record<string, unknown>[] = [];
     const daily = new Map<string, DailyAcc>();
+    const repoRegistry: Record<string, unknown>[] = [];
     const errors: string[] = [];
     let repos_synced = 0;
     let rate_limited = false;
@@ -124,7 +125,26 @@ Deno.serve(async (req) => {
         errors.push(`${org} repos: ${reposRes.status} — ${(reposRes.body as any)?.message ?? "no message"}`);
         continue;
       }
-      const repos = (reposRes.body as any[])
+      const allRepos = (reposRes.body as any[]) ?? [];
+
+      // Registry: every repo in the org (incl. archived/dormant) so the Repos
+      // tab can list them all, not just the recently-active ones.
+      for (const r of allRepos) {
+        repoRegistry.push({
+          startup_id,
+          org,
+          repo_name: r.name,
+          full_name: r.full_name,
+          is_private: !!r.private,
+          is_archived: !!r.archived,
+          language: r.language ?? null,
+          open_issues: r.open_issues_count ?? 0,
+          pushed_at: r.pushed_at ?? null,
+          html_url: r.html_url ?? null,
+        });
+      }
+
+      const repos = allRepos
         .filter((r) => !r.archived && r.pushed_at >= since)
         .slice(0, MAX_REPOS_PER_ORG);
 
@@ -215,6 +235,16 @@ Deno.serve(async (req) => {
       }
     }
 
+    // ── Upsert repo registry ──
+    let repos_registered = 0;
+    if (repoRegistry.length > 0) {
+      const { error, count } = await admin
+        .from("connector_data_github_repos")
+        .upsert(repoRegistry, { onConflict: "startup_id,full_name", count: "exact" });
+      if (error) throw new Error(`github_repos upsert: ${error.message}`);
+      repos_registered = count ?? repoRegistry.length;
+    }
+
     // ── Upsert raw records (chunked) ──
     let records_upserted = 0;
     for (let i = 0; i < ghRecords.length; i += 500) {
@@ -250,6 +280,7 @@ Deno.serve(async (req) => {
         ok: true,
         orgs,
         repos_synced,
+        repos_registered,
         records_upserted,
         daily_rows,
         commits: ghRecords.filter((r) => r.record_type === "commit").length,

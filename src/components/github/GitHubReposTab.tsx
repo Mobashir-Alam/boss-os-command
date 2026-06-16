@@ -1,7 +1,9 @@
-import { Card, CardContent } from "@/components/ui/card";
+import { useState, useMemo } from "react";
+import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { GitCommit, GitMerge, Users, AlertTriangle, Moon, Hash } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { GitCommit, GitMerge, Users, AlertTriangle, Moon, Hash, Lock, Search, Archive } from "lucide-react";
 import { cn } from "@/lib/utils";
 import InfoTooltip from "@/components/social/InfoTooltip";
 import type { GitHubRepo } from "@/hooks/useGitHub";
@@ -13,22 +15,22 @@ function fmtDate(iso: string | null) {
 
 function RepoCard({ r }: { r: GitHubRepo }) {
   return (
-    <Card className={cn("p-4", r.stale && "opacity-70")}>
+    <Card className={cn("p-4", !r.active && "opacity-70")}>
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-1.5 min-w-0">
-          <Hash className="w-4 h-4 text-muted-foreground shrink-0" />
+          {r.is_private ? <Lock className="w-4 h-4 text-muted-foreground shrink-0" /> : <Hash className="w-4 h-4 text-muted-foreground shrink-0" />}
           <span className="font-medium text-sm truncate">{r.repo_name}</span>
+          {r.language && <Badge variant="secondary" className="text-[10px] py-0 px-1 shrink-0">{r.language}</Badge>}
         </div>
         <div className="flex items-center gap-1 shrink-0">
-          {r.bus_factor_risk && (
-            <Badge variant="outline" className="text-[10px] py-0 px-1 text-red-600 border-red-300 gap-0.5">
-              <AlertTriangle className="w-3 h-3" /> bus factor
-            </Badge>
+          {r.is_archived && (
+            <Badge variant="outline" className="text-[10px] py-0 px-1 text-muted-foreground gap-0.5"><Archive className="w-3 h-3" /> archived</Badge>
           )}
-          {r.stale && (
-            <Badge variant="outline" className="text-[10px] py-0 px-1 text-muted-foreground gap-0.5">
-              <Moon className="w-3 h-3" /> stale
-            </Badge>
+          {r.bus_factor_risk && (
+            <Badge variant="outline" className="text-[10px] py-0 px-1 text-red-600 border-red-300 gap-0.5"><AlertTriangle className="w-3 h-3" /> bus factor</Badge>
+          )}
+          {!r.active && !r.is_archived && (
+            <Badge variant="outline" className="text-[10px] py-0 px-1 text-muted-foreground gap-0.5"><Moon className="w-3 h-3" /> dormant</Badge>
           )}
         </div>
       </div>
@@ -48,7 +50,7 @@ function RepoCard({ r }: { r: GitHubRepo }) {
       </div>
       <div className="text-xs text-muted-foreground mt-2 flex items-center justify-between">
         <span>{r.top_contributor ? `Lead: ${r.top_contributor}` : "—"}</span>
-        <span>Last {fmtDate(r.last_active)}</span>
+        <span>{r.active ? `Active ${fmtDate(r.last_active)}` : `Pushed ${fmtDate(r.pushed_at)}`}</span>
       </div>
     </Card>
   );
@@ -57,34 +59,56 @@ function RepoCard({ r }: { r: GitHubRepo }) {
 interface Props { data: GitHubRepo[] | undefined; isLoading: boolean }
 
 export default function GitHubReposTab({ data, isLoading }: Props) {
+  const [search, setSearch] = useState("");
+  const [mode, setMode] = useState<"active" | "all">("active");
+
+  const filtered = useMemo(() => {
+    let list = data ?? [];
+    if (mode === "active") list = list.filter((r) => r.active);
+    const q = search.trim().toLowerCase();
+    if (q) list = list.filter((r) => r.repo_name.toLowerCase().includes(q));
+    return list;
+  }, [data, mode, search]);
+
   if (isLoading) {
     return <div className="grid md:grid-cols-2 gap-4">{[...Array(6)].map((_, i) => <Skeleton key={i} className="h-36" />)}</div>;
   }
   if (!data?.length) {
-    return <div className="text-center py-16 text-muted-foreground text-sm">No repo activity yet — sync GitHub first.</div>;
+    return <div className="text-center py-16 text-muted-foreground text-sm">No repos yet — sync GitHub first.</div>;
   }
 
-  const active = data.filter((r) => !r.stale);
-  const stale = data.filter((r) => r.stale);
-  const risk = data.filter((r) => r.bus_factor_risk && !r.stale).length;
+  const activeCount = data.filter((r) => r.active).length;
+  const riskCount = data.filter((r) => r.bus_factor_risk).length;
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-2 text-sm text-muted-foreground flex-wrap">
-        <span><span className="font-medium text-foreground">{active.length}</span> active repos</span>
-        {risk > 0 && <span className="text-red-600">· {risk} with bus-factor risk</span>}
-        {stale.length > 0 && <span>· {stale.length} stale</span>}
-        <InfoTooltip size="xs">Bus-factor risk = one person owns ≥80% of commits (or it's a single-contributor repo). Stale = no activity in the last 14 days.</InfoTooltip>
+    <div className="space-y-4">
+      {/* Toolbar */}
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <div className="flex items-center gap-1 bg-muted rounded-md p-1">
+            {(["active", "all"] as const).map((m) => (
+              <button key={m} type="button" onClick={() => setMode(m)}
+                className={cn("px-3 py-1 text-xs rounded font-medium transition-colors capitalize",
+                  mode === m ? "bg-white shadow text-foreground" : "text-muted-foreground hover:text-foreground")}>
+                {m === "active" ? `Active (${activeCount})` : `All (${data.length})`}
+              </button>
+            ))}
+          </div>
+          {riskCount > 0 && <span className="text-red-600">{riskCount} bus-factor risk</span>}
+          <InfoTooltip size="xs">Active = had commits/PRs in the last 14 days. All = every repo in the org, including dormant + archived. Bus-factor = one person owns ≥80% of commits.</InfoTooltip>
+        </div>
+        <div className="relative w-56">
+          <Search className="w-3.5 h-3.5 absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Filter repos (e.g. nasheedio)…" className="h-8 pl-7 text-sm" />
+        </div>
       </div>
 
       <div className="grid md:grid-cols-2 gap-4">
-        {active.map((r) => <RepoCard key={r.repo_name} r={r} />)}
+        {filtered.map((r) => <RepoCard key={r.repo_name} r={r} />)}
       </div>
-
-      {stale.length > 0 && (
-        <div>
-          <h3 className="text-sm font-medium text-muted-foreground mb-3">Stale (no activity in 14d)</h3>
-          <div className="grid md:grid-cols-2 gap-4">{stale.map((r) => <RepoCard key={r.repo_name} r={r} />)}</div>
+      {filtered.length === 0 && (
+        <div className="text-center py-12 text-sm text-muted-foreground">
+          No repos match{search ? ` "${search}"` : ""}{mode === "active" ? " in the active view — try All" : ""}.
         </div>
       )}
     </div>
