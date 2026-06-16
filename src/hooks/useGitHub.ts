@@ -42,6 +42,7 @@ export interface GitHubRepo {
   prs_merged: number;
   contributors: number;
   top_contributor: string | null;
+  contributors_list: { name: string; commits: number }[]; // who worked on it + commit counts
   last_active: string | null;     // last commit/PR in the activity window
   pushed_at: string | null;       // last push from the repo registry (any branch)
   is_private: boolean;
@@ -252,6 +253,7 @@ export function useGitHubRepos(startupId?: string, windowDays = 14) {
           prs_merged: x?.prs_merged ?? 0,
           contributors: x?.contribCommits.size ?? 0,
           top_contributor: contribs[0] ? display(contribs[0][0]) : null,
+          contributors_list: contribs.map(([login, c]) => ({ name: display(login), commits: c })),
           last_active: x?.last ?? null,
           pushed_at: reg?.pushed_at ?? null,
           is_private: reg?.is_private ?? false,

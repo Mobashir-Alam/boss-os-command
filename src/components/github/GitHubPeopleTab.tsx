@@ -45,7 +45,7 @@ export default function GitHubPeopleTab({ data, isLoading, startupId }: Props) {
           <div className="flex items-center justify-between gap-2">
             <CardTitle className="text-sm flex items-center gap-1">
               Who&apos;s working on what
-              <InfoTooltip size="xs">Per-engineer activity over the last 14 days. Click anyone to see their commits + PRs. Unmapped GitHub handles are shown raw — map them in Setup.</InfoTooltip>
+              <InfoTooltip size="xs">Per-engineer activity over the selected window (top-right). Click anyone to see their commits + PRs. Unmapped GitHub handles are shown raw — map them in Setup.</InfoTooltip>
             </CardTitle>
             <div className="relative w-48">
               <Search className="w-3.5 h-3.5 absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />

@@ -16,7 +16,7 @@ const corsHeaders = {
 };
 
 const GH_BASE = "https://api.github.com";
-const WINDOW_DAYS = 30;
+const WINDOW_DAYS = 90; // pull 90d of history so the dashboard's 30/60/90 filters have data
 const MAX_REPOS_PER_ORG = 80; // gurucool-xyz has ~56 repos; cover all active ones
 const MAX_COMMIT_PAGES = 10; // 100/page → up to 1000 commits/repo/window
 

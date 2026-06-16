@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Github, RefreshCw, Loader2, Users2, AlertTriangle } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useStartups } from "@/hooks/useStartups";
 import { useQueryClient } from "@tanstack/react-query";
@@ -26,11 +27,12 @@ export default function GitHubDashboard() {
   const qc = useQueryClient();
 
   const [baselineDays, setBaselineDays] = useState<7 | 28>(7);
+  const [windowDays, setWindowDays] = useState<30 | 60 | 90>(30);
   const [identityOpen, setIdentityOpen] = useState(false);
 
   const { data: overview, isLoading: overviewLoading } = useGitHubOverview(startupId, baselineDays);
-  const { data: people, isLoading: peopleLoading } = useGitHubPeople(startupId);
-  const { data: repos, isLoading: reposLoading } = useGitHubRepos(startupId);
+  const { data: people, isLoading: peopleLoading } = useGitHubPeople(startupId, windowDays);
+  const { data: repos, isLoading: reposLoading } = useGitHubRepos(startupId, windowDays);
   const { data: focus, isLoading: focusLoading } = useGitHubFocus(startupId);
 
   const { mutateAsync: triggerSync, isPending: syncing } = useTriggerGitHubSync();
@@ -96,13 +98,33 @@ export default function GitHubDashboard() {
         )}
 
         <Tabs defaultValue="overview">
-          <TabsList className="flex-wrap h-auto gap-1">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="people">People</TabsTrigger>
-            <TabsTrigger value="repos">Repos</TabsTrigger>
-            <TabsTrigger value="focus">Focus</TabsTrigger>
-            <TabsTrigger value="kai">✦ Ask KAI</TabsTrigger>
-          </TabsList>
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <TabsList className="flex-wrap h-auto gap-1">
+              <TabsTrigger value="overview">Overview</TabsTrigger>
+              <TabsTrigger value="people">People</TabsTrigger>
+              <TabsTrigger value="repos">Repos</TabsTrigger>
+              <TabsTrigger value="focus">Focus</TabsTrigger>
+              <TabsTrigger value="kai">✦ Ask KAI</TabsTrigger>
+            </TabsList>
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs text-muted-foreground">Window (People &amp; Repos):</span>
+              <div className="flex items-center gap-1 bg-muted rounded-md p-1">
+                {([30, 60, 90] as const).map((d) => (
+                  <button
+                    key={d}
+                    type="button"
+                    onClick={() => setWindowDays(d)}
+                    className={cn(
+                      "px-2.5 py-1 text-xs rounded font-medium transition-colors",
+                      windowDays === d ? "bg-white shadow text-foreground" : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    {d}d
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
 
           <div className="mt-6">
             <TabsContent value="overview">
