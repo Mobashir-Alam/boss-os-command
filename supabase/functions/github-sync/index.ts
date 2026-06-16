@@ -120,7 +120,10 @@ Deno.serve(async (req) => {
     for (const org of orgs) {
       // Active repos (pushed within window, not archived)
       const reposRes = await gh(`/orgs/${org}/repos?per_page=100&sort=pushed`, token);
-      if (!reposRes.ok) { errors.push(`${org} repos: ${reposRes.status}`); continue; }
+      if (!reposRes.ok) {
+        errors.push(`${org} repos: ${reposRes.status} — ${(reposRes.body as any)?.message ?? "no message"}`);
+        continue;
+      }
       const repos = (reposRes.body as any[])
         .filter((r) => !r.archived && r.pushed_at >= since)
         .slice(0, MAX_REPOS_PER_ORG);
