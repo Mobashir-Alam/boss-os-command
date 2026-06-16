@@ -27,7 +27,8 @@ export default function GitHubDashboard() {
   const qc = useQueryClient();
 
   const [baselineDays, setBaselineDays] = useState<7 | 28>(7);
-  const [windowDays, setWindowDays] = useState<30 | 60 | 90>(30);
+  // 3650 ≈ "All time" (reads every accumulated daily row).
+  const [windowDays, setWindowDays] = useState<number>(30);
   const [identityOpen, setIdentityOpen] = useState(false);
 
   const { data: overview, isLoading: overviewLoading } = useGitHubOverview(startupId, baselineDays);
@@ -45,6 +46,7 @@ export default function GitHubDashboard() {
       console.log("[github-sync] result:", r);
       toast.success(`Synced ${r.repos_synced} repos · ${r.commits} commits · ${r.prs} PRs · ${r.daily_rows} daily rows`);
       if (r.rate_limited) toast.warning("Hit GitHub rate limit mid-sync — some repos may be partial. Try again later.");
+      if (r.time_budget_hit) toast.warning("Sync ran long and stopped early — most-active repos are covered. Re-run to fill the rest.");
       if (r.errors?.length) toast.warning(`${r.errors.length} repo error(s): ${r.errors.slice(0, 2).join("; ")}`);
       await Promise.all([
         qc.invalidateQueries({ queryKey: ["github-overview"] }),
@@ -109,17 +111,23 @@ export default function GitHubDashboard() {
             <div className="flex items-center gap-1.5">
               <span className="text-xs text-muted-foreground">Window (People &amp; Repos):</span>
               <div className="flex items-center gap-1 bg-muted rounded-md p-1">
-                {([30, 60, 90] as const).map((d) => (
+                {[
+                  { label: "30d", val: 30 },
+                  { label: "60d", val: 60 },
+                  { label: "90d", val: 90 },
+                  { label: "180d", val: 180 },
+                  { label: "All", val: 3650 },
+                ].map((o) => (
                   <button
-                    key={d}
+                    key={o.val}
                     type="button"
-                    onClick={() => setWindowDays(d)}
+                    onClick={() => setWindowDays(o.val)}
                     className={cn(
                       "px-2.5 py-1 text-xs rounded font-medium transition-colors",
-                      windowDays === d ? "bg-white shadow text-foreground" : "text-muted-foreground hover:text-foreground"
+                      windowDays === o.val ? "bg-white shadow text-foreground" : "text-muted-foreground hover:text-foreground"
                     )}
                   >
-                    {d}d
+                    {o.label}
                   </button>
                 ))}
               </div>

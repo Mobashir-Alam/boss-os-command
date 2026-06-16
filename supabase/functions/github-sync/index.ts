@@ -16,9 +16,13 @@ const corsHeaders = {
 };
 
 const GH_BASE = "https://api.github.com";
-const WINDOW_DAYS = 90; // pull 90d of history so the dashboard's 30/60/90 filters have data
+const WINDOW_DAYS = 180; // pull 180d of history; "All time" view reads whatever has accumulated
 const MAX_REPOS_PER_ORG = 80; // gurucool-xyz has ~56 repos; cover all active ones
 const MAX_COMMIT_PAGES = 10; // 100/page → up to 1000 commits/repo/window
+// Soft wall-clock budget. Repos are processed most-recently-pushed first, so if
+// we run out of time the least-active repos are the ones skipped, and the
+// partial data collected so far is still upserted. Re-run to fill the rest.
+const TIME_BUDGET_MS = 110_000;
 
 // Bot / automation logins we never want polluting People stats.
 const BOT_LOGINS = new Set(["web-flow", "github-actions[bot]", "dependabot[bot]"]);
@@ -107,6 +111,8 @@ Deno.serve(async (req) => {
     const errors: string[] = [];
     let repos_synced = 0;
     let rate_limited = false;
+    let time_budget_hit = false;
+    const startMs = Date.now();
 
     function bumpDaily(login: string, repo: string, date: string, field: "commits" | "prs_opened" | "prs_merged") {
       const key = `${login}:${repo}:${date}`;
@@ -149,6 +155,7 @@ Deno.serve(async (req) => {
 
       for (const repo of repos) {
         if (rate_limited) break;
+        if (Date.now() - startMs > TIME_BUDGET_MS) { time_budget_hit = true; break; }
         const full = repo.full_name as string;
         const repoName = repo.name as string;
         repos_synced++;
@@ -193,7 +200,7 @@ Deno.serve(async (req) => {
         }
       }
 
-      if (rate_limited) break;
+      if (rate_limited || time_budget_hit) break;
 
       // ── PRs across the org (open + merged in window) via search ──
       const prQueries = [
@@ -285,6 +292,7 @@ Deno.serve(async (req) => {
         commits: ghRecords.filter((r) => r.record_type === "commit").length,
         prs: ghRecords.filter((r) => r.record_type === "pull_request").length,
         rate_limited,
+        time_budget_hit,
         errors,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }

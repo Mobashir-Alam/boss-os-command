@@ -420,7 +420,7 @@ export function useTriggerGitHubSync() {
       if (!data?.ok) throw new Error(data?.error ?? "Sync failed");
       return data as {
         ok: boolean; orgs: string[]; repos_synced: number; repos_registered: number; records_upserted: number;
-        daily_rows: number; commits: number; prs: number; rate_limited: boolean; errors: string[];
+        daily_rows: number; commits: number; prs: number; rate_limited: boolean; time_budget_hit: boolean; errors: string[];
       };
     },
   });
