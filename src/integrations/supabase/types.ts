@@ -531,9 +531,11 @@ export type Database = {
         Row: {
           default_branch: string | null
           discovered_at: string
+          full_name: string | null
           id: string
           is_archived: boolean
           is_private: boolean
+          language: string | null
           org_login: string
           pushed_at: string | null
           repo_name: string
@@ -543,9 +545,11 @@ export type Database = {
         Insert: {
           default_branch?: string | null
           discovered_at?: string
+          full_name?: string | null
           id?: string
           is_archived?: boolean
           is_private?: boolean
+          language?: string | null
           org_login: string
           pushed_at?: string | null
           repo_name: string
@@ -555,9 +559,11 @@ export type Database = {
         Update: {
           default_branch?: string | null
           discovered_at?: string
+          full_name?: string | null
           id?: string
           is_archived?: boolean
           is_private?: boolean
+          language?: string | null
           org_login?: string
           pushed_at?: string | null
           repo_name?: string
