@@ -144,6 +144,7 @@ export default function GitHubDashboard() {
                 repos={repos}
                 focus={focus}
                 windowDays={windowDays}
+                startupId={startupId}
               />
             </TabsContent>
             <TabsContent value="people">

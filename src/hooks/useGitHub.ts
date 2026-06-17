@@ -375,6 +375,50 @@ export function useGitHubFocus(startupId?: string) {
   });
 }
 
+// ─── Commits feed (raw commits, filterable) ─────────────────
+
+export interface GitHubCommit {
+  sha: string;
+  repo_name: string;
+  author: string;        // mapped employee name, or the handle
+  author_login: string;
+  title: string;
+  date: string | null;   // commit date (created_at_source)
+  url: string | null;
+}
+
+export function useGitHubCommits(startupId?: string, windowDays = 180) {
+  return useQuery({
+    queryKey: ["github-commits", startupId, windowDays],
+    enabled: !!startupId,
+    queryFn: async (): Promise<GitHubCommit[]> => {
+      const since = new Date(Date.now() - windowDays * 864e5).toISOString();
+      const [{ data, error }, profiles] = await Promise.all([
+        supabase
+          .from("connector_data_github")
+          .select("external_id,repo_name,author_login,title,created_at_source,raw_payload")
+          .eq("startup_id", startupId!)
+          .eq("record_type", "commit")
+          .gte("created_at_source", since)
+          .order("created_at_source", { ascending: false })
+          .limit(2000),
+        fetchProfiles(),
+      ]);
+      if (error) throw error;
+      const { nameByLogin } = identityMaps(profiles);
+      return (data ?? []).map((c) => ({
+        sha: c.external_id,
+        repo_name: c.repo_name,
+        author_login: c.author_login ?? "unknown",
+        author: c.author_login ? (nameByLogin.get(c.author_login.toLowerCase()) ?? c.author_login) : "unknown",
+        title: c.title ?? "",
+        date: c.created_at_source ?? null,
+        url: (c.raw_payload as Record<string, unknown>)?.html_url as string ?? null,
+      }));
+    },
+  });
+}
+
 // ─── Person drill-down ───────────────────────────────────────
 
 export function useGitHubPersonProfile(startupId: string | undefined, login: string | null) {

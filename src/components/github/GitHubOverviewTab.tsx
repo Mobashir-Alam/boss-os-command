@@ -9,6 +9,7 @@ import {
   LineChart, Line, AreaChart, Area, ResponsiveContainer, Tooltip, XAxis, CartesianGrid, Legend,
 } from "recharts";
 import InfoTooltip from "@/components/social/InfoTooltip";
+import GitHubCommitsPanel from "@/components/github/GitHubCommitsPanel";
 import type { GitHubOverview, GitHubKpi, GitHubRepo, OpenPR } from "@/hooks/useGitHub";
 
 const HELP: Record<string, string> = {
@@ -100,9 +101,10 @@ interface Props {
   repos: GitHubRepo[] | undefined;
   focus: { openPrs: OpenPR[]; stale_count: number } | undefined;
   windowDays: number;
+  startupId: string | undefined;
 }
 
-export default function GitHubOverviewTab({ data, isLoading, baselineDays, onBaselineChange, repos, focus, windowDays }: Props) {
+export default function GitHubOverviewTab({ data, isLoading, baselineDays, onBaselineChange, repos, focus, windowDays, startupId }: Props) {
   const activeRepos = (repos ?? []).filter((r) => r.active);
   const busFactor = (repos ?? []).filter((r) => r.bus_factor_risk);
   const dormant = (repos ?? []).filter((r) => !r.active && !r.is_archived);
@@ -141,6 +143,9 @@ export default function GitHubOverviewTab({ data, isLoading, baselineDays, onBas
               tone={(focus?.stale_count ?? 0) > 0 ? "text-amber-600" : undefined}
               help="Pull requests currently open across the org." />
           </div>
+
+          {/* All commits (filterable) */}
+          {startupId && <GitHubCommitsPanel startupId={startupId} windowDays={windowDays} />}
 
           {/* Activity trend */}
           <Card>
