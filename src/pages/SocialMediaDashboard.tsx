@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import Navbar from "@/components/Navbar";
+import { useExecTheme } from "@/contexts/ExecThemeContext";
+import ExecBackdrop from "@/components/ExecBackdrop";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -60,6 +62,7 @@ export default function SocialMediaDashboard() {
   const nasheedio = dbStartups.find((s) => s.slug === "nasheedio");
   const startupId = nasheedio?.id;
 
+  const { exec } = useExecTheme();
   const isFounder = profile?.role === "founder";
   const isSMHead = profile?.role === "functional_head" && profile?.department === "social_media";
   const canWrite = isFounder || isSMHead;
@@ -234,14 +237,15 @@ export default function SocialMediaDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className={cn("min-h-screen bg-background relative", exec && "exec-theme")}>
       <Navbar />
-      <main className="mx-auto max-w-6xl px-6 py-8 space-y-6">
+      {exec && <ExecBackdrop />}
+      <main className={cn("mx-auto max-w-6xl px-6 py-8 space-y-6 relative z-10", exec && "exec-enter")}>
         {/* Header */}
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div>
             <h1 className="text-2xl font-bold flex items-center gap-2">
-              <Youtube className="h-6 w-6 text-red-600" /> Social Media
+              <Youtube className="h-6 w-6 text-red-600" /> <span className={cn(exec && "exec-gradient-text")}>Social Media</span>
             </h1>
             <p className="text-sm text-muted-foreground mt-1">
               Nasheedio · {channels.length} channel{channels.length === 1 ? "" : "s"} · YouTube data

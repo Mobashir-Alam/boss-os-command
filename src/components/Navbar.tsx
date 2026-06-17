@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import NavTabs from "./NavTabs";
 import NotificationDropdown from "./NotificationDropdown";
 import InviteModal from "./InviteModal";
+import ExecModeToggle from "./ExecModeToggle";
 import { StartupManagementPanel } from "./StartupManagement";
 import { useAuth } from "@/contexts/AuthContext";
 import { Building2, LogOut, Settings, User } from "lucide-react";
@@ -65,6 +66,7 @@ const Navbar = () => {
         </Tooltip>
 
         <div className="flex items-center gap-3">
+          <ExecModeToggle />
           <InviteModal />
           <NotificationDropdown />
           <DropdownMenu>

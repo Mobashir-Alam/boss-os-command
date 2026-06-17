@@ -8,6 +8,8 @@ import { Github, RefreshCw, Loader2, Users2, AlertTriangle } from "lucide-react"
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useStartups } from "@/hooks/useStartups";
+import { useExecTheme } from "@/contexts/ExecThemeContext";
+import ExecBackdrop from "@/components/ExecBackdrop";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   useGitHubOverview, useGitHubPeople, useGitHubRepos, useGitHubFocus,
@@ -25,6 +27,7 @@ export default function GitHubDashboard() {
   const nasheedio = dbStartups.find((s) => s.slug === "nasheedio");
   const startupId = nasheedio?.id;
   const qc = useQueryClient();
+  const { exec } = useExecTheme();
 
   const [baselineDays, setBaselineDays] = useState<7 | 28>(7);
   // 3650 ≈ "All time" (reads every accumulated daily row).
@@ -64,9 +67,10 @@ export default function GitHubDashboard() {
   const unmappedCount = (people ?? []).filter((p) => !p.mapped && p.commits > 0).length;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className={cn("min-h-screen bg-background relative", exec && "exec-theme")}>
       <Navbar />
-      <div className="max-w-7xl mx-auto px-4 py-6 space-y-6">
+      {exec && <ExecBackdrop />}
+      <div className={cn("max-w-7xl mx-auto px-4 py-6 space-y-6 relative z-10", exec && "exec-enter")}>
         {/* Header */}
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-center gap-3">
@@ -74,7 +78,7 @@ export default function GitHubDashboard() {
               <Github className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-bold">Engineering — GitHub</h1>
+              <h1 className={cn("text-xl font-bold", exec && "exec-gradient-text")}>Engineering — GitHub</h1>
               <p className="text-sm text-muted-foreground">Who's working on what, commits, and where focus is right now</p>
             </div>
           </div>

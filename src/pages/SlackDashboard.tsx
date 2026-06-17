@@ -1,5 +1,8 @@
 import { useState, useMemo } from "react";
 import Navbar from "@/components/Navbar";
+import { cn } from "@/lib/utils";
+import { useExecTheme } from "@/contexts/ExecThemeContext";
+import ExecBackdrop from "@/components/ExecBackdrop";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -40,6 +43,7 @@ export default function SlackDashboard() {
   const nasheedio = dbStartups.find((s) => s.slug === "nasheedio");
   const startupId = nasheedio?.id;
   const qc = useQueryClient();
+  const { exec } = useExecTheme();
 
   const [setupOpen, setSetupOpen] = useState(false);
   const [presenceMap, setPresenceMap] = useState<Record<string, string> | null>(null);
@@ -137,9 +141,10 @@ export default function SlackDashboard() {
   const isConnected = !!workspace;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className={cn("min-h-screen bg-background relative", exec && "exec-theme")}>
       <Navbar />
-      <div className="max-w-7xl mx-auto px-4 py-6 space-y-6">
+      {exec && <ExecBackdrop />}
+      <div className={cn("max-w-7xl mx-auto px-4 py-6 space-y-6 relative z-10", exec && "exec-enter")}>
 
         {/* Header */}
         <div className="flex items-start justify-between gap-4">
@@ -148,7 +153,7 @@ export default function SlackDashboard() {
               <MessageSquare className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-bold">Slack — Team Ops</h1>
+              <h1 className={cn("text-xl font-bold", exec && "exec-gradient-text")}>Slack — Team Ops</h1>
               <div className="flex items-center gap-2 mt-0.5">
                 {wsLoading ? (
                   <Skeleton className="h-4 w-32" />

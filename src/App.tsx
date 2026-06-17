@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { TaskProvider } from "@/contexts/TaskContext";
 import { EscalationProvider } from "@/contexts/EscalationContext";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { ExecThemeProvider } from "@/contexts/ExecThemeContext";
 import AuthGuard from "@/components/AuthGuard";
 import TechLeadGuard from "@/components/TechLeadGuard";
 import HRGuard from "@/components/HRGuard";
@@ -46,6 +47,7 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <AuthProvider>
+        <ExecThemeProvider>
         <TaskProvider>
           <EscalationProvider>
           <Toaster />
@@ -108,6 +110,7 @@ const App = () => (
           </BrowserRouter>
           </EscalationProvider>
         </TaskProvider>
+        </ExecThemeProvider>
       </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>

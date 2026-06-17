@@ -144,6 +144,177 @@
   }
 }
 
+/* ============================================================
+   EXECUTIVE MODE — bold red / yellow / black CEO skin.
+   Scoped to `.exec-theme`: overrides the design tokens so every
+   existing card / tab / chart re-skins automatically, plus a set
+   of animation utilities for the immersive feel.
+   ============================================================ */
+.exec-theme {
+  --background: 0 0% 5%;
+  --paper: 0 0% 8%;
+  --foreground: 40 30% 96%;
+
+  --card: 0 0% 9%;
+  --card-foreground: 40 30% 96%;
+
+  --popover: 0 0% 8%;
+  --popover-foreground: 40 30% 96%;
+
+  /* Primary = vivid red */
+  --primary: 0 84% 55%;
+  --primary-foreground: 0 0% 100%;
+
+  --secondary: 0 0% 14%;
+  --secondary-foreground: 40 30% 96%;
+
+  --muted: 0 0% 13%;
+  --muted-foreground: 40 8% 64%;
+
+  /* Accent = electric gold */
+  --accent: 45 95% 55%;
+  --accent-foreground: 0 0% 8%;
+  --accent-soft: 45 60% 14%;
+
+  --signal-positive: 145 70% 48%;
+  --signal-positive-soft: 145 40% 14%;
+  --signal-warning: 45 95% 55%;
+  --signal-warning-soft: 45 60% 14%;
+  --signal-critical: 0 84% 58%;
+  --signal-critical-soft: 0 50% 16%;
+
+  --destructive: 0 84% 55%;
+  --destructive-foreground: 0 0% 100%;
+
+  --border: 0 20% 18%;
+  --border-strong: 0 30% 30%;
+  --input: 0 20% 18%;
+  --ring: 45 95% 55%;
+
+  color-scheme: dark;
+}
+
+/* Animated backdrop layer (red + gold blobs drifting over black). */
+.exec-bg-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+.exec-bg-layer::before,
+.exec-bg-layer::after {
+  content: "";
+  position: absolute;
+  width: 60vw;
+  height: 60vw;
+  border-radius: 9999px;
+  filter: blur(90px);
+  opacity: 0.5;
+  will-change: transform;
+}
+.exec-bg-layer::before {
+  background: radial-gradient(circle, hsl(0 84% 50% / 0.55), transparent 70%);
+  top: -20vw;
+  left: -10vw;
+  animation: exec-drift-a 18s ease-in-out infinite alternate;
+}
+.exec-bg-layer::after {
+  background: radial-gradient(circle, hsl(45 95% 55% / 0.4), transparent 70%);
+  bottom: -25vw;
+  right: -10vw;
+  animation: exec-drift-b 22s ease-in-out infinite alternate;
+}
+/* fine grid for a "console" feel */
+.exec-bg-grid {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(hsl(0 0% 100% / 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, hsl(0 0% 100% / 0.03) 1px, transparent 1px);
+  background-size: 44px 44px;
+  -webkit-mask-image: radial-gradient(circle at 50% 0%, black, transparent 80%);
+  mask-image: radial-gradient(circle at 50% 0%, black, transparent 80%);
+}
+
+@keyframes exec-drift-a {
+  from { transform: translate(0, 0) scale(1); }
+  to   { transform: translate(12vw, 10vh) scale(1.15); }
+}
+@keyframes exec-drift-b {
+  from { transform: translate(0, 0) scale(1.1); }
+  to   { transform: translate(-10vw, -8vh) scale(1); }
+}
+
+/* Glassy cards with a hover lift + gold edge glow. */
+.exec-theme .bg-card {
+  background-color: hsl(var(--card) / 0.72) !important;
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  border-color: hsl(0 20% 20%);
+  box-shadow: 0 1px 0 hsl(0 0% 100% / 0.03) inset, 0 10px 30px hsl(0 0% 0% / 0.5);
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+}
+.exec-theme .bg-card:hover {
+  transform: translateY(-2px);
+  border-color: hsl(45 95% 55% / 0.45);
+  box-shadow: 0 0 0 1px hsl(45 95% 55% / 0.15), 0 16px 40px hsl(0 0% 0% / 0.6);
+}
+
+/* Gradient primary buttons with glow. */
+.exec-theme .bg-primary {
+  background-image: linear-gradient(135deg, hsl(0 84% 55%), hsl(14 90% 52%));
+  box-shadow: 0 6px 18px hsl(0 84% 50% / 0.35);
+}
+
+/* Tab bar + active pill. */
+.exec-theme [role="tablist"] {
+  background-color: hsl(0 0% 11%);
+  border: 1px solid hsl(0 20% 18%);
+}
+.exec-theme [role="tab"][data-state="active"] {
+  background-image: linear-gradient(135deg, hsl(0 84% 55%), hsl(45 95% 55%));
+  color: hsl(0 0% 8%);
+  font-weight: 600;
+  box-shadow: 0 4px 14px hsl(0 84% 50% / 0.3);
+}
+
+/* Entrance: content rises + fades in. */
+.exec-enter { animation: exec-rise 0.5s cubic-bezier(0.16, 1, 0.3, 1) both; }
+@keyframes exec-rise {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Animated gradient text for hero titles. */
+.exec-gradient-text {
+  background: linear-gradient(90deg, hsl(0 84% 58%), hsl(45 95% 58%), hsl(0 84% 58%));
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: exec-shine 5s linear infinite;
+}
+@keyframes exec-shine {
+  to { background-position: 200% center; }
+}
+
+/* Toggle button shimmer when active. */
+@keyframes exec-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 hsl(45 95% 55% / 0.5); }
+  50%      { box-shadow: 0 0 0 6px hsl(45 95% 55% / 0); }
+}
+.exec-pulse { animation: exec-pulse 2.2s ease-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .exec-bg-layer::before, .exec-bg-layer::after,
+  .exec-enter, .exec-gradient-text, .exec-pulse {
+    animation: none !important;
+  }
+}
+
 @layer components {
   /* Editorial section heading: small caps + hairline rule */
   .eyebrow {
