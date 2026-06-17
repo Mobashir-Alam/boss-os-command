@@ -28,7 +28,7 @@ export default function GitHubDashboard() {
 
   const [baselineDays, setBaselineDays] = useState<7 | 28>(7);
   // 3650 ≈ "All time" (reads every accumulated daily row).
-  const [windowDays, setWindowDays] = useState<number>(30);
+  const [windowDays, setWindowDays] = useState<number>(180);
   const [identityOpen, setIdentityOpen] = useState(false);
 
   const { data: overview, isLoading: overviewLoading } = useGitHubOverview(startupId, baselineDays, windowDays);
