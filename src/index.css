@@ -281,6 +281,58 @@
   box-shadow: 0 4px 14px hsl(0 84% 50% / 0.3);
 }
 
+/* --- Hardcoded-utility rescue ---------------------------------------------
+   Many components hardcode light backgrounds (bg-white, bg-*-50/100) paired
+   with dark text (text-*-700). Those don't follow the token swap, so on the
+   dark exec canvas they'd be invisible (white-on-white) or color-on-color.
+   Neutralize the light backgrounds to a subtle dark surface and lift the dark
+   text shades to readable light tints. Exact-token [class~=] selectors avoid
+   catching e.g. bg-amber-500. */
+.exec-theme [class~="bg-white"],
+.exec-theme [class~="bg-amber-50"], .exec-theme [class~="bg-amber-50/50"], .exec-theme [class~="bg-amber-100"],
+.exec-theme [class~="bg-yellow-50"], .exec-theme [class~="bg-yellow-100"],
+.exec-theme [class~="bg-orange-50"], .exec-theme [class~="bg-orange-100"],
+.exec-theme [class~="bg-green-50"], .exec-theme [class~="bg-green-100"],
+.exec-theme [class~="bg-emerald-50"], .exec-theme [class~="bg-emerald-100"],
+.exec-theme [class~="bg-red-50"], .exec-theme [class~="bg-red-50/40"], .exec-theme [class~="bg-red-100"],
+.exec-theme [class~="bg-rose-50"], .exec-theme [class~="bg-rose-100"],
+.exec-theme [class~="bg-blue-50"], .exec-theme [class~="bg-blue-100"],
+.exec-theme [class~="bg-sky-50"], .exec-theme [class~="bg-sky-100"],
+.exec-theme [class~="bg-indigo-50"], .exec-theme [class~="bg-indigo-100"],
+.exec-theme [class~="bg-violet-50"], .exec-theme [class~="bg-violet-100"],
+.exec-theme [class~="bg-purple-50"], .exec-theme [class~="bg-purple-100"],
+.exec-theme [class~="bg-gray-50"], .exec-theme [class~="bg-gray-100"],
+.exec-theme [class~="bg-slate-50"], .exec-theme [class~="bg-slate-100"] {
+  background-color: hsl(0 0% 100% / 0.06) !important;
+}
+
+/* Lift dark text shades to light, hue-preserving tints. */
+.exec-theme [class~="text-amber-600"], .exec-theme [class~="text-amber-700"], .exec-theme [class~="text-amber-800"],
+.exec-theme [class~="text-yellow-600"], .exec-theme [class~="text-yellow-700"], .exec-theme [class~="text-yellow-800"] { color: hsl(43 96% 64%) !important; }
+.exec-theme [class~="text-orange-600"], .exec-theme [class~="text-orange-700"], .exec-theme [class~="text-orange-800"] { color: hsl(27 96% 64%) !important; }
+.exec-theme [class~="text-green-600"], .exec-theme [class~="text-green-700"], .exec-theme [class~="text-green-800"] { color: hsl(142 58% 60%) !important; }
+.exec-theme [class~="text-emerald-600"], .exec-theme [class~="text-emerald-700"], .exec-theme [class~="text-emerald-800"] { color: hsl(160 55% 58%) !important; }
+.exec-theme [class~="text-red-500"], .exec-theme [class~="text-red-600"], .exec-theme [class~="text-red-700"], .exec-theme [class~="text-red-800"] { color: hsl(0 84% 68%) !important; }
+.exec-theme [class~="text-rose-600"], .exec-theme [class~="text-rose-700"], .exec-theme [class~="text-rose-800"] { color: hsl(350 84% 70%) !important; }
+.exec-theme [class~="text-blue-600"], .exec-theme [class~="text-blue-700"], .exec-theme [class~="text-blue-800"] { color: hsl(213 90% 70%) !important; }
+.exec-theme [class~="text-sky-600"], .exec-theme [class~="text-sky-700"], .exec-theme [class~="text-sky-800"] { color: hsl(199 90% 66%) !important; }
+.exec-theme [class~="text-indigo-600"], .exec-theme [class~="text-indigo-700"], .exec-theme [class~="text-indigo-800"] { color: hsl(234 85% 76%) !important; }
+.exec-theme [class~="text-violet-600"], .exec-theme [class~="text-violet-700"], .exec-theme [class~="text-violet-800"] { color: hsl(258 80% 76%) !important; }
+.exec-theme [class~="text-purple-600"], .exec-theme [class~="text-purple-700"], .exec-theme [class~="text-purple-800"] { color: hsl(270 75% 76%) !important; }
+.exec-theme [class~="text-gray-600"], .exec-theme [class~="text-gray-700"], .exec-theme [class~="text-gray-800"], .exec-theme [class~="text-gray-900"],
+.exec-theme [class~="text-slate-600"], .exec-theme [class~="text-slate-700"], .exec-theme [class~="text-slate-800"], .exec-theme [class~="text-slate-900"] { color: hsl(0 0% 78%) !important; }
+
+/* Soften bright light borders that were meant for light surfaces. */
+.exec-theme [class~="border-amber-200"], .exec-theme [class~="border-amber-300"],
+.exec-theme [class~="border-green-200"], .exec-theme [class~="border-green-300"],
+.exec-theme [class~="border-red-200"], .exec-theme [class~="border-red-300"],
+.exec-theme [class~="border-blue-200"], .exec-theme [class~="border-blue-300"],
+.exec-theme [class~="border-indigo-200"], .exec-theme [class~="border-indigo-300"],
+.exec-theme [class~="border-gray-200"], .exec-theme [class~="border-gray-300"],
+.exec-theme [class~="border-slate-200"], .exec-theme [class~="border-slate-300"] {
+  border-color: hsl(0 0% 100% / 0.14) !important;
+}
+
 /* Entrance: content rises + fades in. */
 .exec-enter { animation: exec-rise 0.5s cubic-bezier(0.16, 1, 0.3, 1) both; }
 @keyframes exec-rise {
