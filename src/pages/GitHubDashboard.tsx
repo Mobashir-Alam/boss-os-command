@@ -31,7 +31,7 @@ export default function GitHubDashboard() {
   const [windowDays, setWindowDays] = useState<number>(30);
   const [identityOpen, setIdentityOpen] = useState(false);
 
-  const { data: overview, isLoading: overviewLoading } = useGitHubOverview(startupId, baselineDays);
+  const { data: overview, isLoading: overviewLoading } = useGitHubOverview(startupId, baselineDays, windowDays);
   const { data: people, isLoading: peopleLoading } = useGitHubPeople(startupId, windowDays);
   const { data: repos, isLoading: reposLoading } = useGitHubRepos(startupId, windowDays);
   const { data: focus, isLoading: focusLoading } = useGitHubFocus(startupId);
@@ -136,7 +136,16 @@ export default function GitHubDashboard() {
 
           <div className="mt-6">
             <TabsContent value="overview">
-              <GitHubOverviewTab data={overview} isLoading={overviewLoading} baselineDays={baselineDays} onBaselineChange={setBaselineDays} />
+              <GitHubOverviewTab
+                data={overview}
+                isLoading={overviewLoading}
+                baselineDays={baselineDays}
+                onBaselineChange={setBaselineDays}
+                people={people}
+                repos={repos}
+                focus={focus}
+                windowDays={windowDays}
+              />
             </TabsContent>
             <TabsContent value="people">
               {startupId && <GitHubPeopleTab data={people} isLoading={peopleLoading} startupId={startupId} />}

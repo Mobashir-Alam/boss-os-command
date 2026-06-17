@@ -96,15 +96,27 @@ async function fetchDaily(startupId: string, sinceDays: number): Promise<DailyRo
 
 // ─── Overview (KPIs + anomalies) ─────────────────────────────
 
-export function useGitHubOverview(startupId?: string, baselineDays: 7 | 28 = 7) {
+export interface GitHubTrendPoint { date: string; commits: number; prs_merged: number; prs_opened: number }
+
+export interface GitHubOverview {
+  kpis: GitHubKpi[];
+  anomalies: { who: string; message: string }[];
+  series: GitHubTrendPoint[];                 // daily activity over the selected window
+  concentration: { top3_share_pct: number | null; contributor_count: number };
+}
+
+export function useGitHubOverview(startupId?: string, baselineDays: 7 | 28 = 7, windowDays = 30) {
   return useQuery({
-    queryKey: ["github-overview", startupId, baselineDays],
+    queryKey: ["github-overview", startupId, baselineDays, windowDays],
     enabled: !!startupId,
-    queryFn: async () => {
-      const rows = await fetchDaily(startupId!, 14 + baselineDays);
+    queryFn: async (): Promise<GitHubOverview> => {
+      const lookback = Math.max(windowDays, 14 + baselineDays);
+      const rows = await fetchDaily(startupId!, lookback);
       const recentStart = nAgo(14);
       const baselineStart = nAgo(14 + baselineDays);
+      const windowStart = nAgo(windowDays);
 
+      // KPI sparkline series (recent 14d)
       const dayMap = new Map<string, { commits: number; prs_merged: number; prs_opened: number }>();
       for (const r of rows) {
         if (r.activity_date < recentStart) continue;
@@ -129,6 +141,32 @@ export function useGitHubOverview(startupId?: string, baselineDays: 7 | 28 = 7) 
         { label: "Active devs", key: "active", value: activeRecent, baseline: activeBase, delta_pct: pct(activeRecent, activeBase), series: [] },
       ];
 
+      // Trend series over the selected window (the big chart)
+      const winMap = new Map<string, { commits: number; prs_merged: number; prs_opened: number }>();
+      for (const r of rows) {
+        if (r.activity_date < windowStart) continue;
+        const prev = winMap.get(r.activity_date) ?? { commits: 0, prs_merged: 0, prs_opened: 0 };
+        prev.commits += r.commits; prev.prs_merged += r.prs_merged; prev.prs_opened += r.prs_opened;
+        winMap.set(r.activity_date, prev);
+      }
+      const series: GitHubTrendPoint[] = Array.from(winMap.entries())
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([date, v]) => ({ date, commits: v.commits, prs_merged: v.prs_merged, prs_opened: v.prs_opened }));
+
+      // Contribution concentration over the window (org-level bus factor)
+      const winPerPerson = new Map<string, number>();
+      for (const r of rows) {
+        if (r.activity_date < windowStart) continue;
+        winPerPerson.set(r.github_login, (winPerPerson.get(r.github_login) ?? 0) + r.commits);
+      }
+      const winSorted = Array.from(winPerPerson.values()).sort((a, b) => b - a);
+      const totalWin = winSorted.reduce((s, v) => s + v, 0);
+      const top3 = winSorted.slice(0, 3).reduce((s, v) => s + v, 0);
+      const concentration = {
+        top3_share_pct: totalWin > 0 ? Math.round((top3 / totalWin) * 100) : null,
+        contributor_count: winPerPerson.size,
+      };
+
       // Anomalies: per-person commit spike/drop vs their own prior week
       const perPersonRecent = new Map<string, number>();
       const perPersonBase = new Map<string, number>();
@@ -143,7 +181,7 @@ export function useGitHubOverview(startupId?: string, baselineDays: 7 | 28 = 7) 
         if (base >= 3 && !perPersonRecent.has(login)) anomalies.push({ who: login, message: `Went quiet: 0 commits (was ${base})` });
       }
 
-      return { kpis, anomalies };
+      return { kpis, anomalies, series, concentration };
     },
   });
 }
