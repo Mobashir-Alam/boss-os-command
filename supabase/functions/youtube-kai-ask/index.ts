@@ -214,7 +214,7 @@ async function buildSnapshot(
     })
     .filter((x): x is any => x != null)
     .sort((a, b) => b.recent_30d_views - a.recent_30d_views)
-    .slice(0, 10);
+    .slice(0, 30);
 
   const topByRecentRevenue = Array.from(latestByVideo.entries())
     .map(([vid, info]) => {
@@ -228,7 +228,7 @@ async function buildSnapshot(
     })
     .filter((x): x is any => x != null)
     .sort((a, b) => b.revenue_usd - a.revenue_usd)
-    .slice(0, 10);
+    .slice(0, 30);
 
   // ─── 3. Audience (demographics, geography, devices, traffic) — latest period only ───
   const [demoR, geoR, devR, trafR] = await Promise.all([
@@ -291,7 +291,7 @@ async function buildSnapshot(
       revenue_usd: v.revenue != null ? Number(v.revenue.toFixed(2)) : null,
     }))
     .sort((a, b) => b.views - a.views)
-    .slice(0, 10);
+    .slice(0, 25);
 
   const devLatest = latestRows(devR.data as any[]);
   const devBy = new Map<string, number>();
@@ -322,7 +322,7 @@ async function buildSnapshot(
       share_pct: totalTrafViews > 0 ? Number(((views / totalTrafViews) * 100).toFixed(1)) : 0,
     }))
     .sort((a, b) => b.share_pct - a.share_pct)
-    .slice(0, 10);
+    .slice(0, 20);
 
   // ─── 4. Retention summary ───
   const { data: retRows } = await admin
@@ -368,8 +368,8 @@ async function buildSnapshot(
     cohort_avg_watch_ratio: retentionPerVideo.length > 0
       ? Number((retentionPerVideo.reduce((acc, r) => acc + r.avg_watch_ratio, 0) / retentionPerVideo.length).toFixed(3))
       : 0,
-    top_3_retention: retentionPerVideo.slice(0, 3),
-    bottom_3_retention: retentionPerVideo.slice(-3).reverse(),
+    top_retention: retentionPerVideo.slice(0, 5),
+    bottom_retention: retentionPerVideo.slice(-5).reverse(),
   };
 
   // ─── 5. Content patterns: upload heatmap, title length, duration, tags ───
@@ -455,7 +455,7 @@ async function buildSnapshot(
       avg_views_per_video: Math.round(v.totalViews / v.count),
     }))
     .sort((a, b) => b.avg_views_per_video - a.avg_views_per_video)
-    .slice(0, 15);
+    .slice(0, 30);
 
   return {
     startup_name: startup?.name ?? null,
@@ -482,7 +482,7 @@ async function buildSnapshot(
       total_videos: videoList.length,
       trajectory_mix: trajectoryTotals,
       long_tail_winners_count: longTail.length,
-      top_5_long_tail: longTail.slice(0, 5),
+      top_long_tail: longTail.slice(0, 15),
     },
     top_videos_by_recent_views: topByRecentViews,
     top_videos_by_recent_revenue: topByRecentRevenue,

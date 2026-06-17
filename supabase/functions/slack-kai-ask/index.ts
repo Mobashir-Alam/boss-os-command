@@ -25,6 +25,8 @@ function avg(arr: number[]): number {
 
 // ─── Snapshot builder ────────────────────────────────────────
 
+const FULL_DAYS = 60; // matches the slack-sync history window
+
 async function buildSnapshot(
   admin: ReturnType<typeof createClient>,
   startup_id: string
@@ -35,9 +37,9 @@ async function buildSnapshot(
     dateStr(new Date(Date.now() - n * 864e5));
 
   const period_end = dateStr(today);
-  const period_start = nDaysAgo(14);
-  const baseline_start = nDaysAgo(28);
-  const baseline_end = nDaysAgo(14);
+  const full_start = nDaysAgo(FULL_DAYS);  // comprehensive window
+  const period_start = nDaysAgo(14);       // "recent" slice for momentum
+  const baseline_start = nDaysAgo(28);     // prior 14d for momentum
 
   // Workspace
   const { data: ws } = await admin
@@ -46,29 +48,22 @@ async function buildSnapshot(
     .eq("startup_id", startup_id)
     .maybeSingle();
 
-  // Channel stats — last 14 days
-  const { data: chanStats } = await admin
+  // Channel stats — FULL window; recent/baseline slices derived below for momentum
+  const { data: allChanStats } = await admin
     .from("connector_data_slack_channel_stats")
-    .select("channel_id,channel_name,stat_date,message_count,active_users,reactions_total,replies_total")
+    .select("channel_id,channel_name,stat_date,message_count,active_users,reactions_total,replies_total,peak_hour")
     .eq("startup_id", startup_id)
-    .gte("stat_date", period_start)
+    .gte("stat_date", full_start)
     .lte("stat_date", period_end);
-
-  // Channel stats — prior 14 days (baseline)
-  const { data: baselineStats } = await admin
-    .from("connector_data_slack_channel_stats")
-    .select("channel_id,channel_name,stat_date,message_count,active_users,reactions_total,replies_total")
-    .eq("startup_id", startup_id)
-    .gte("stat_date", baseline_start)
-    .lte("stat_date", baseline_end);
+  const chanStats = (allChanStats ?? []).filter((r) => r.stat_date >= period_start);
+  const baselineStats = (allChanStats ?? []).filter((r) => r.stat_date >= baseline_start && r.stat_date < period_start);
 
   // Aggregate recent KPIs
   const recent = {
-    messages: chanStats?.reduce((s, r) => s + r.message_count, 0) ?? 0,
-    active_users: new Set(chanStats?.flatMap(() => []) ?? []).size, // approx via user_stats
-    reactions: chanStats?.reduce((s, r) => s + r.reactions_total, 0) ?? 0,
-    replies: chanStats?.reduce((s, r) => s + r.replies_total, 0) ?? 0,
-    active_channels: new Set(chanStats?.filter(r => r.message_count > 0).map(r => r.channel_id) ?? []).size,
+    messages: chanStats.reduce((s, r) => s + r.message_count, 0),
+    reactions: chanStats.reduce((s, r) => s + r.reactions_total, 0),
+    replies: chanStats.reduce((s, r) => s + r.replies_total, 0),
+    active_channels: new Set(chanStats.filter(r => r.message_count > 0).map(r => r.channel_id)).size,
   };
 
   const baseline_rec = {
@@ -83,31 +78,32 @@ async function buildSnapshot(
     replies: pctDelta(recent.replies, baseline_rec.replies),
   };
 
-  // Per-channel breakdown (last 14d)
-  const channelMap = new Map<string, { name: string; messages: number; active_users: number; reactions: number }>();
-  for (const r of chanStats ?? []) {
-    const prev = channelMap.get(r.channel_id) ?? { name: r.channel_name, messages: 0, active_users: 0, reactions: 0 };
+  // Per-channel breakdown over the FULL window (every channel)
+  const channelMap = new Map<string, { name: string; messages: number; active_users: number; reactions: number; replies: number; last_active: string | null }>();
+  for (const r of allChanStats ?? []) {
+    const prev = channelMap.get(r.channel_id) ?? { name: r.channel_name, messages: 0, active_users: 0, reactions: 0, replies: 0, last_active: null };
     channelMap.set(r.channel_id, {
       name: r.channel_name,
       messages: prev.messages + r.message_count,
       active_users: Math.max(prev.active_users, r.active_users),
       reactions: prev.reactions + r.reactions_total,
+      replies: prev.replies + r.replies_total,
+      last_active: r.message_count > 0 && (!prev.last_active || r.stat_date > prev.last_active) ? r.stat_date : prev.last_active,
     });
   }
-  const top_channels = Array.from(channelMap.values())
-    .sort((a, b) => b.messages - a.messages)
-    .slice(0, 8);
+  const channels = Array.from(channelMap.values()).sort((a, b) => b.messages - a.messages);
 
-  // User stats — last 14 days
-  const { data: userStats } = await admin
+  // User stats — FULL window (every contributor); recent slice for active posters
+  const { data: allUserStats } = await admin
     .from("connector_data_slack_user_stats")
     .select("user_id_source,display_name,stat_date,messages_sent,reactions_given,replies_sent")
     .eq("startup_id", startup_id)
-    .gte("stat_date", period_start)
+    .gte("stat_date", full_start)
     .lte("stat_date", period_end);
+  const userStats = (allUserStats ?? []).filter((r) => r.stat_date >= period_start);
 
   const userMap = new Map<string, { name: string; messages: number; reactions: number; replies: number }>();
-  for (const r of userStats ?? []) {
+  for (const r of allUserStats ?? []) {
     const prev = userMap.get(r.user_id_source) ?? { name: r.display_name ?? r.user_id_source, messages: 0, reactions: 0, replies: 0 };
     userMap.set(r.user_id_source, {
       name: r.display_name ?? prev.name,
@@ -116,21 +112,12 @@ async function buildSnapshot(
       replies: prev.replies + r.replies_sent,
     });
   }
-  const top_contributors = Array.from(userMap.values())
-    .sort((a, b) => b.messages - a.messages)
-    .slice(0, 8);
+  const contributors = Array.from(userMap.values())
+    .sort((a, b) => b.messages - a.messages);
 
-  // Timing: aggregate hour × day of week from channel stats raw peek_hour
-  const { data: timingStats } = await admin
-    .from("connector_data_slack_channel_stats")
-    .select("stat_date,message_count,peak_hour")
-    .eq("startup_id", startup_id)
-    .gte("stat_date", period_start)
-    .lte("stat_date", period_end)
-    .not("peak_hour", "is", null);
-
+  // Timing: peak posting hour over the full window (each channel-day's peak_hour)
   const hourBuckets: number[] = new Array(24).fill(0);
-  for (const r of timingStats ?? []) {
+  for (const r of allChanStats ?? []) {
     if (r.peak_hour != null) hourBuckets[r.peak_hour] += r.message_count;
   }
   const peak_hour = hourBuckets.indexOf(Math.max(...hourBuckets));
@@ -148,21 +135,21 @@ async function buildSnapshot(
     ? Math.round(((total_users - active_poster_ids.size) / total_users) * 100)
     : null;
 
-  // Top reacted messages
+  // Top reacted messages — full window
   const { data: topMsgs } = await admin
     .from("connector_data_slack")
     .select("channel_name,text,reaction_count,reply_count,message_date,raw_payload")
     .eq("startup_id", startup_id)
-    .gte("message_date", period_start)
+    .gte("message_date", full_start)
     .order("reaction_count", { ascending: false })
-    .limit(5);
+    .limit(15);
 
-  // Attendance — last 14 work-days, per person
+  // Attendance — FULL window, per person
   const { data: attRows } = await admin
     .from("slack_daily_attendance")
     .select("user_id_source,display_name,work_date,checked_in,check_in_source,posted_update,was_active,message_count")
     .eq("startup_id", startup_id)
-    .gte("work_date", period_start);
+    .gte("work_date", full_start);
 
   let attendance_summary: Record<string, unknown> | null = null;
   if (attRows && attRows.length > 0) {
@@ -201,17 +188,17 @@ async function buildSnapshot(
         .filter((p) => p.self_reported > 0)
         .map((p) => ({ name: p.name, self_reported_days: p.self_reported, days_seen: p.days }))
         .sort((a, b) => b.self_reported_days - a.self_reported_days)
-        .slice(0, 8),
+        .slice(0, 50),
       lowest_checkin_rate: people
         .filter((p) => p.days >= 3)
         .map((p) => ({ name: p.name, checkin_rate_pct: Math.round((p.present / p.days) * 100), days_seen: p.days }))
         .sort((a, b) => a.checkin_rate_pct - b.checkin_rate_pct)
-        .slice(0, 8),
+        .slice(0, 50),
       lowest_update_rate: people
         .filter((p) => p.days >= 3)
         .map((p) => ({ name: p.name, update_rate_pct: Math.round((p.updates / p.days) * 100), days_seen: p.days }))
         .sort((a, b) => a.update_rate_pct - b.update_rate_pct)
-        .slice(0, 8),
+        .slice(0, 50),
     };
   }
 
@@ -222,16 +209,16 @@ async function buildSnapshot(
       total_members: ws?.member_count_total,
       last_synced: ws?.synced_at,
     },
-    period: { start: period_start, end: period_end, days: 14 },
+    window: { full_window_days: FULL_DAYS, momentum: "last 14 days vs prior 14 days" },
     kpis: {
-      recent,
-      delta_vs_prior_14d_pct: kpis_delta_pct,
+      recent_14d: recent,
+      delta_14d_vs_prior_pct: kpis_delta_pct,
     },
-    top_channels,
-    top_contributors,
+    channels,        // every channel over the full window
+    contributors,    // every contributor over the full window
     engagement: {
       lurker_pct,
-      active_posters: active_poster_ids.size,
+      active_posters_14d: active_poster_ids.size,
       peak_hour_utc: peak_hour,
       top_messages: topMsgs?.map(m => ({
         channel: m.channel_name,
@@ -268,10 +255,15 @@ Deno.serve(async (req) => {
 
     const snapshot = await buildSnapshot(admin, startup_id);
 
-    const systemPrompt = `You are KAI, a senior team operations and accountability analyst. You have a JSON snapshot of the workspace's Slack activity for the last 14 days vs the prior 14-day baseline, plus an attendance section (who checked in, who posted work updates, who was active but never checked in).
+    const systemPrompt = `You are KAI, a senior team operations and accountability analyst. You have a JSON snapshot of the workspace's Slack activity over the FULL synced window (~60 days):
+- "kpis" — recent-14-days totals + a 14d-vs-prior-14d momentum read.
+- "channels" — EVERY channel over the full window (messages, active users, reactions, replies, last_active).
+- "contributors" — EVERY person over the full window (messages, reactions given, replies).
+- "engagement" — lurker rate, peak posting hour (UTC), and the top reacted messages.
+- "attendance" — the accountability section over the full window (check-in/update rates, self-reported backfills, today's exceptions).
 
 Rules:
-- Only cite numbers that appear in the snapshot. Never invent data.
+- Only cite numbers that appear in the snapshot. Never invent data. You have the whole picture — scan the full "channels"/"contributors" arrays for questions about a specific channel or person, not just the top entries.
 - For accountability questions ("who isn't showing up", "who skips updates"), use the attendance section: check-in rates, update rates, and today's active_but_no_checkin / active_but_no_update lists.
 - "active_but_no_checkin" means the person was clearly working in Slack but never posted in the attendance channel — flag these as the real accountability gap, not as absences.
 - "most_self_reported" lists people whose attendance was filled from a later bulk message rather than a live same-day check-in. High self-reported counts mean someone consistently backfills instead of checking in on time — worth noting.
