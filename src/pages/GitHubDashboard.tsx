@@ -141,7 +141,6 @@ export default function GitHubDashboard() {
                 isLoading={overviewLoading}
                 baselineDays={baselineDays}
                 onBaselineChange={setBaselineDays}
-                people={people}
                 repos={repos}
                 focus={focus}
                 windowDays={windowDays}

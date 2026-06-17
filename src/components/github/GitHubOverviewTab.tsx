@@ -9,7 +9,7 @@ import {
   LineChart, Line, AreaChart, Area, ResponsiveContainer, Tooltip, XAxis, CartesianGrid, Legend,
 } from "recharts";
 import InfoTooltip from "@/components/social/InfoTooltip";
-import type { GitHubOverview, GitHubKpi, GitHubPerson, GitHubRepo, OpenPR } from "@/hooks/useGitHub";
+import type { GitHubOverview, GitHubKpi, GitHubRepo, OpenPR } from "@/hooks/useGitHub";
 
 const HELP: Record<string, string> = {
   commits: "Commits to default branches in the last 14 days. Activity signal, not a productivity score.",
@@ -97,17 +97,15 @@ interface Props {
   isLoading: boolean;
   baselineDays: 7 | 28;
   onBaselineChange: (d: 7 | 28) => void;
-  people: GitHubPerson[] | undefined;
   repos: GitHubRepo[] | undefined;
   focus: { openPrs: OpenPR[]; stale_count: number } | undefined;
   windowDays: number;
 }
 
-export default function GitHubOverviewTab({ data, isLoading, baselineDays, onBaselineChange, people, repos, focus, windowDays }: Props) {
+export default function GitHubOverviewTab({ data, isLoading, baselineDays, onBaselineChange, repos, focus, windowDays }: Props) {
   const activeRepos = (repos ?? []).filter((r) => r.active);
   const busFactor = (repos ?? []).filter((r) => r.bus_factor_risk);
   const dormant = (repos ?? []).filter((r) => !r.active && !r.is_archived);
-  const topContributors = (people ?? []).filter((p) => p.commits > 0).slice(0, 6);
   const topRepos = activeRepos.slice(0, 6);
   const win = windowLabel(windowDays);
 
@@ -183,38 +181,21 @@ export default function GitHubOverviewTab({ data, isLoading, baselineDays, onBas
             </CardContent>
           </Card>
 
-          {/* Two-column breakdowns */}
-          <div className="grid md:grid-cols-2 gap-4">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm flex items-center gap-1">
-                  Top contributors <span className="text-xs font-normal text-muted-foreground">({win})</span>
-                  <InfoTooltip size="xs">Most commits over the selected window. Full list in the People tab.</InfoTooltip>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {topContributors.length > 0 ? topContributors.map((p) => (
-                  <BarRow key={p.github_login} name={p.name} value={p.commits} max={topContributors[0].commits}
-                    sub={`${p.prs_merged} merged · ${p.repos_touched} repo${p.repos_touched === 1 ? "" : "s"}${p.mapped ? "" : " · unmapped"}`} />
-                )) : <p className="text-sm text-muted-foreground py-4 text-center">No contributor activity in this window.</p>}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm flex items-center gap-1">
-                  Where effort's going <span className="text-xs font-normal text-muted-foreground">({win})</span>
-                  <InfoTooltip size="xs">Repos with the most commits over the window — where the team is actually spending time. Full list in the Repos tab.</InfoTooltip>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {topRepos.length > 0 ? topRepos.map((r) => (
-                  <BarRow key={r.repo_name} name={r.repo_name} value={r.commits} max={topRepos[0].commits}
-                    sub={`${r.contributors} contributor${r.contributors === 1 ? "" : "s"}${r.bus_factor_risk ? " · bus-factor risk" : ""}`} />
-                )) : <p className="text-sm text-muted-foreground py-4 text-center">No repo activity in this window.</p>}
-              </CardContent>
-            </Card>
-          </div>
+          {/* Where effort's going */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm flex items-center gap-1">
+                Where effort's going <span className="text-xs font-normal text-muted-foreground">({win})</span>
+                <InfoTooltip size="xs">Repos with the most commits over the window — where the team is actually spending time. Full list in the Repos tab.</InfoTooltip>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {topRepos.length > 0 ? topRepos.map((r) => (
+                <BarRow key={r.repo_name} name={r.repo_name} value={r.commits} max={topRepos[0].commits}
+                  sub={`${r.contributors} contributor${r.contributors === 1 ? "" : "s"}${r.bus_factor_risk ? " · bus-factor risk" : ""}`} />
+              )) : <p className="text-sm text-muted-foreground py-4 text-center">No repo activity in this window.</p>}
+            </CardContent>
+          </Card>
 
           {/* Risk strip */}
           <div>
