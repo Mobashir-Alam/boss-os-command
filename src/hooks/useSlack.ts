@@ -751,6 +751,21 @@ function dateDiffDays(a: string, b: string): number {
   return Math.round((Date.UTC(by, bm - 1, bd) - Date.UTC(ay, am - 1, ad)) / 86400000);
 }
 
+// The current "work-day" by the wall clock, mirroring slack-sync's
+// localWorkDate: shift by the boundary hour so before-boundary times roll into
+// the previous calendar day. Lets "Today" flip at the boundary (e.g. 6am) even
+// before anyone has posted or a sync has run.
+function currentWorkDate(timeZone: string, boundaryHour: number): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone, year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", hourCycle: "h23",
+  }).formatToParts(new Date());
+  const get = (t: string) => Number(parts.find((p) => p.type === t)?.value ?? "0");
+  let base = Date.UTC(get("year"), get("month") - 1, get("day"));
+  if (get("hour") < boundaryHour) base -= 86400000;
+  return new Date(base).toISOString().slice(0, 10);
+}
+
 export interface TodayBoard {
   work_date: string | null;
   people: TodayPerson[];
@@ -765,9 +780,9 @@ export interface TodayBoard {
 // as absent (they have no attendance row at all). `backfillCap` controls how
 // stale a person's last update can be before they're flagged: a normal batch
 // cadence within the cap won't trigger a "no update" nag.
-export function useTodayBoard(startupId?: string, backfillCap = 3) {
+export function useTodayBoard(startupId?: string, backfillCap = 3, timeZone = "Asia/Kolkata", boundaryHour = 6) {
   return useQuery({
-    queryKey: ["slack-today-board", startupId, backfillCap],
+    queryKey: ["slack-today-board", startupId, backfillCap, timeZone, boundaryHour],
     enabled: !!startupId,
     queryFn: async (): Promise<TodayBoard> => {
       const lookback = Math.max(backfillCap + 3, 5);
@@ -789,10 +804,14 @@ export function useTodayBoard(startupId?: string, backfillCap = 3) {
       ]);
 
       const allRows = (rows ?? []) as AttendanceRow[];
-      if (allRows.length === 0) {
+      // Truly nothing synced yet → keep the "run a sync" empty state.
+      if (allRows.length === 0 && (roster ?? []).length === 0) {
         return { work_date: null, people: [], checked_in: [], active_no_checkin: [], absent: [], no_update: [] };
       }
-      const latest = allRows[0].work_date;
+      // "Today" is the current work-day by the wall clock — not the latest day
+      // with data — so the board rolls over at the boundary even before anyone
+      // posts. Early in a fresh day this is correctly empty (everyone absent).
+      const latest = currentWorkDate(timeZone, boundaryHour);
       const todayRows = allRows.filter((r) => r.work_date === latest);
       const rowByUser = new Map(todayRows.map((r) => [r.user_id_source, r]));
 

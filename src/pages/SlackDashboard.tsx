@@ -61,7 +61,10 @@ export default function SlackDashboard() {
   const { data: timingData, isLoading: timingLoading } = useSlackTiming(startupId);
   const { data: engagementData, isLoading: engagementLoading } = useSlackEngagement(startupId);
   const backfillCap = config?.update_backfill_cap_days ?? 3;
-  const { data: todayBoard, isLoading: todayLoading } = useTodayBoard(startupId, backfillCap);
+  const dayBoundaryHour = config?.day_boundary_hour ?? 6;
+  const { data: todayBoard, isLoading: todayLoading } = useTodayBoard(
+    startupId, backfillCap, config?.timezone ?? "Asia/Kolkata", dayBoundaryHour
+  );
   const { data: monthlySheet, isLoading: monthlyLoading } = useMonthlySheet(startupId, sheetMonth, backfillCap);
 
   const { mutateAsync: triggerSync, isPending: syncing } = useTriggerSlackSync();
