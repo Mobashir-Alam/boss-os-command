@@ -18,8 +18,9 @@ const corsHeaders = {
 const GH_BASE = "https://api.github.com";
 const WINDOW_DAYS = 180; // pull 180d of history; "All time" view reads whatever has accumulated
 const MAX_REPOS_PER_ORG = 80; // gurucool-xyz has ~56 repos; cover all active ones
-const MAX_COMMIT_PAGES = 20; // 100/page → up to 2000 commits/repo/window
-const MAX_PR_PAGES = 10;     // 100/page → up to 1000 PRs/org per state (open|merged)
+const MAX_COMMIT_PAGES = 20;      // 100/page → up to 2000 commits per branch/window
+const MAX_BRANCHES_PER_REPO = 50; // scan up to this many branches (default branch first)
+const MAX_PR_PAGES = 10;          // 100/page → up to 1000 PRs/org per state (open|merged)
 // Soft wall-clock budget. Repos are processed most-recently-pushed first, so if
 // we run out of time the least-active repos are the ones skipped, and the
 // partial data collected so far is still upserted. Re-run to fill the rest.
@@ -166,46 +167,73 @@ Deno.serve(async (req) => {
         const repoName = repo.name as string;
         repos_synced++;
 
-        // ── Commits ──
-        for (let page = 1; page <= MAX_COMMIT_PAGES; page++) {
-          const res = await gh(`/repos/${full}/commits?since=${since}&per_page=100&page=${page}`, token);
-          if (res.remaining < 50) { rate_limited = true; break; }
-          if (!res.ok) {
-            // 409 = empty repo; ignore quietly
-            if (res.status !== 409) errors.push(`${full} commits p${page}: ${res.status}`);
-            break;
+        // ── Commits across ALL branches, deduped by SHA ──
+        // Default-branch commits aren't the whole story: work on an unmerged
+        // feature branch never reaches the default branch. We list the repo's
+        // branches (default first) and walk each, but a commit is only counted
+        // once (seenShas). Because we visit the default branch first, every
+        // feature branch quickly hits already-seen shared history — when a page
+        // yields no new SHAs we stop early, so feature branches cost ~1 page.
+        const seenShas = new Set<string>();
+        const branchNames: string[] = [repo.default_branch as string];
+        const brRes = await gh(`/repos/${full}/branches?per_page=100`, token);
+        if (brRes.ok && Array.isArray(brRes.body)) {
+          for (const b of brRes.body as any[]) {
+            if (b?.name && b.name !== repo.default_branch) branchNames.push(b.name);
           }
-          const commits = (res.body as any[]) ?? [];
-          if (commits.length === 0) break;
+        } else if (!brRes.ok && brRes.status !== 409) {
+          errors.push(`${full} branches: ${brRes.status}`);
+        }
+        const branches = branchNames.slice(0, MAX_BRANCHES_PER_REPO);
 
-          for (const cm of commits) {
-            const login: string | null = cm.author?.login ?? null;
-            // Only skip genuine bot ACCOUNTS. A null login just means the commit
-            // email isn't linked to a GitHub account — that's a real commit and
-            // must still be counted (attributed by the commit author's name).
-            if (login && isBot(login)) continue;
-            const date = dateOf(cm.commit?.author?.date ?? cm.commit?.committer?.date ?? since);
-            const effLogin = login ?? (cm.commit?.author?.name as string) ?? "unknown";
-            ghRecords.push({
-              startup_id,
-              record_type: "commit",
-              external_id: cm.sha,
-              repo_name: repoName,
-              author_login: effLogin,
-              author_profile_id: login ? loginToProfile.get(login.toLowerCase()) ?? null : null,
-              title: (cm.commit?.message ?? "").split("\n")[0].slice(0, 500),
-              state: null,
-              body: null,
-              labels: [],
-              created_at_source: cm.commit?.author?.date ?? null,
-              updated_at_source: null,
-              closed_at_source: null,
-              merged_at_source: null,
-              raw_payload: { sha: cm.sha, html_url: cm.html_url },
-            });
-            bumpDaily(effLogin, repoName, date, "commits");
+        for (const branch of branches) {
+          if (rate_limited) break;
+          if (Date.now() - startMs > TIME_BUDGET_MS) { time_budget_hit = true; break; }
+          for (let page = 1; page <= MAX_COMMIT_PAGES; page++) {
+            const res = await gh(`/repos/${full}/commits?sha=${encodeURIComponent(branch)}&since=${since}&per_page=100&page=${page}`, token);
+            if (res.remaining < 50) { rate_limited = true; break; }
+            if (!res.ok) {
+              // 409 = empty repo; ignore quietly
+              if (res.status !== 409) errors.push(`${full}@${branch} commits p${page}: ${res.status}`);
+              break;
+            }
+            const commits = (res.body as any[]) ?? [];
+            if (commits.length === 0) break;
+
+            let newOnPage = 0;
+            for (const cm of commits) {
+              if (seenShas.has(cm.sha)) continue; // already counted via another branch
+              seenShas.add(cm.sha);
+              newOnPage++;
+              const login: string | null = cm.author?.login ?? null;
+              // Only skip genuine bot ACCOUNTS. A null login just means the commit
+              // email isn't linked to a GitHub account — that's a real commit and
+              // must still be counted (attributed by the commit author's name).
+              if (login && isBot(login)) continue;
+              const date = dateOf(cm.commit?.author?.date ?? cm.commit?.committer?.date ?? since);
+              const effLogin = login ?? (cm.commit?.author?.name as string) ?? "unknown";
+              ghRecords.push({
+                startup_id,
+                record_type: "commit",
+                external_id: cm.sha,
+                repo_name: repoName,
+                author_login: effLogin,
+                author_profile_id: login ? loginToProfile.get(login.toLowerCase()) ?? null : null,
+                title: (cm.commit?.message ?? "").split("\n")[0].slice(0, 500),
+                state: null,
+                body: null,
+                labels: [],
+                created_at_source: cm.commit?.author?.date ?? null,
+                updated_at_source: null,
+                closed_at_source: null,
+                merged_at_source: null,
+                raw_payload: { sha: cm.sha, html_url: cm.html_url, branch },
+              });
+              bumpDaily(effLogin, repoName, date, "commits");
+            }
+            if (newOnPage === 0) break;          // fully into shared/seen history
+            if (commits.length < 100) break;
           }
-          if (commits.length < 100) break;
         }
       }
 
