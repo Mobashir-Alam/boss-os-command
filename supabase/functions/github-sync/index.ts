@@ -18,7 +18,8 @@ const corsHeaders = {
 const GH_BASE = "https://api.github.com";
 const WINDOW_DAYS = 180; // pull 180d of history; "All time" view reads whatever has accumulated
 const MAX_REPOS_PER_ORG = 80; // gurucool-xyz has ~56 repos; cover all active ones
-const MAX_COMMIT_PAGES = 10; // 100/page → up to 1000 commits/repo/window
+const MAX_COMMIT_PAGES = 20; // 100/page → up to 2000 commits/repo/window
+const MAX_PR_PAGES = 10;     // 100/page → up to 1000 PRs/org per state (open|merged)
 // Soft wall-clock budget. Repos are processed most-recently-pushed first, so if
 // we run out of time the least-active repos are the ones skipped, and the
 // partial data collected so far is still upserted. Re-run to fill the rest.
@@ -109,6 +110,11 @@ Deno.serve(async (req) => {
     const daily = new Map<string, DailyAcc>();
     const repoRegistry: Record<string, unknown>[] = [];
     const errors: string[] = [];
+    // External ids of every currently-open PR we fetched this run, used to
+    // reconcile (close) stale "open" rows. prReconcilable stays true only if we
+    // fetched every org's open PRs completely (no early break / failure / cap).
+    const openExternalIds = new Set<string>();
+    let prReconcilable = true;
     let repos_synced = 0;
     let rate_limited = false;
     let time_budget_hit = false;
@@ -174,7 +180,10 @@ Deno.serve(async (req) => {
 
           for (const cm of commits) {
             const login: string | null = cm.author?.login ?? null;
-            if (isBot(login)) continue;
+            // Only skip genuine bot ACCOUNTS. A null login just means the commit
+            // email isn't linked to a GitHub account — that's a real commit and
+            // must still be counted (attributed by the commit author's name).
+            if (login && isBot(login)) continue;
             const date = dateOf(cm.commit?.author?.date ?? cm.commit?.committer?.date ?? since);
             const effLogin = login ?? (cm.commit?.author?.name as string) ?? "unknown";
             ghRecords.push({
@@ -200,46 +209,71 @@ Deno.serve(async (req) => {
         }
       }
 
-      if (rate_limited || time_budget_hit) break;
+      if (rate_limited || time_budget_hit) { prReconcilable = false; break; }
 
-      // ── PRs across the org (open + merged in window) via search ──
-      const prQueries = [
-        { q: `type:pr+org:${org}+state:open`, merged: false },
-        { q: `type:pr+org:${org}+merged:>=${sinceDate}`, merged: true },
-      ];
-      for (const { q, merged } of prQueries) {
-        const res = await gh(`/search/issues?q=${q}&per_page=100&sort=updated`, token);
-        if (!res.ok) { errors.push(`${org} PRs(${merged ? "merged" : "open"}): ${res.status}`); continue; }
-        const items = (res.body?.items as any[]) ?? [];
-        for (const pr of items) {
-          const login: string | null = pr.user?.login ?? null;
-          if (isBot(login)) continue;
-          const repoName = pr.repository_url?.split("/").slice(-1)[0] ?? "unknown";
-          const mergedAt = pr.pull_request?.merged_at ?? null;
-          ghRecords.push({
-            startup_id,
-            record_type: "pull_request",
-            external_id: `${repoName}#${pr.number}`,
-            repo_name: repoName,
-            author_login: login,
-            author_profile_id: login ? loginToProfile.get(login.toLowerCase()) ?? null : null,
-            title: pr.title,
-            state: mergedAt ? "merged" : pr.state,
-            body: (pr.body ?? "").slice(0, 2000),
-            labels: (pr.labels ?? []).map((l: any) => l.name),
-            created_at_source: pr.created_at ?? null,
-            updated_at_source: pr.updated_at ?? null,
-            closed_at_source: pr.closed_at ?? null,
-            merged_at_source: mergedAt,
-            raw_payload: { number: pr.number, html_url: pr.html_url, comments: pr.comments },
-          });
-          if (login && !isBot(login)) {
-            if (merged && mergedAt) bumpDaily(login, repoName, dateOf(mergedAt), "prs_merged");
-            else if (!merged) bumpDaily(login, repoName, dateOf(pr.created_at), "prs_opened");
-          }
+      // ── PRs across the org via search. ALL open PRs are paginated so every
+      //    non-merged PR is captured; merged-in-window PRs feed velocity. ──
+      const pushPR = (pr: any, merged: boolean): string | null => {
+        const login: string | null = pr.user?.login ?? null;
+        if (login && isBot(login)) return null; // skip bot accounts, keep null-author PRs
+        const repoName = pr.repository_url?.split("/").slice(-1)[0] ?? "unknown";
+        const mergedAt = pr.pull_request?.merged_at ?? null;
+        const extId = `${repoName}#${pr.number}`;
+        ghRecords.push({
+          startup_id,
+          record_type: "pull_request",
+          external_id: extId,
+          repo_name: repoName,
+          author_login: login,
+          author_profile_id: login ? loginToProfile.get(login.toLowerCase()) ?? null : null,
+          title: pr.title,
+          state: mergedAt ? "merged" : "open",
+          body: (pr.body ?? "").slice(0, 2000),
+          labels: (pr.labels ?? []).map((l: any) => l.name),
+          created_at_source: pr.created_at ?? null,
+          updated_at_source: pr.updated_at ?? null,
+          closed_at_source: pr.closed_at ?? null,
+          merged_at_source: mergedAt,
+          raw_payload: { number: pr.number, html_url: pr.html_url, comments: pr.comments },
+        });
+        if (login) {
+          if (merged && mergedAt) bumpDaily(login, repoName, dateOf(mergedAt), "prs_merged");
+          else if (!merged) bumpDaily(login, repoName, dateOf(pr.created_at), "prs_opened");
         }
+        return extId;
+      };
+
+      // OPEN PRs — paginate to capture them all; collect ids for reconciliation.
+      // The Search API has its own ~30/min budget, so detect throttling by HTTP
+      // status (403/429) rather than the core x-ratelimit-remaining header.
+      for (let page = 1; page <= MAX_PR_PAGES; page++) {
+        const res = await gh(`/search/issues?q=type:pr+org:${org}+state:open&per_page=100&page=${page}&sort=updated`, token);
+        if (!res.ok) {
+          if (res.status === 403 || res.status === 429) rate_limited = true;
+          errors.push(`${org} PRs(open) p${page}: ${res.status}`);
+          prReconcilable = false;
+          break;
+        }
+        const items = (res.body?.items as any[]) ?? [];
+        for (const pr of items) { const id = pushPR(pr, false); if (id) openExternalIds.add(id); }
+        if (items.length < 100) break;
+        if (page === MAX_PR_PAGES) prReconcilable = false; // hit the cap → possibly truncated
+      }
+
+      // MERGED-in-window PRs — paginate for accurate merge velocity.
+      for (let page = 1; page <= MAX_PR_PAGES; page++) {
+        const res = await gh(`/search/issues?q=type:pr+org:${org}+merged:>=${sinceDate}&per_page=100&page=${page}&sort=updated`, token);
+        if (!res.ok) {
+          if (res.status === 403 || res.status === 429) rate_limited = true;
+          errors.push(`${org} PRs(merged) p${page}: ${res.status}`);
+          break;
+        }
+        const items = (res.body?.items as any[]) ?? [];
+        for (const pr of items) pushPR(pr, true);
+        if (items.length < 100) break;
       }
     }
+    if (rate_limited || time_budget_hit) prReconcilable = false;
 
     // ── Upsert repo registry ──
     let repos_registered = 0;
@@ -274,6 +308,33 @@ Deno.serve(async (req) => {
       daily_rows += count ?? chunk.length;
     }
 
+    // ── Reconcile stale "open" PRs ──
+    // Anything still marked "open" in the DB but absent from this run's freshly
+    // fetched open set has since been merged or closed on GitHub. Only safe when
+    // we fetched every org's open PRs completely (prReconcilable).
+    let prs_closed_stale = 0;
+    if (prReconcilable) {
+      const { data: dbOpen } = await admin
+        .from("connector_data_github")
+        .select("external_id")
+        .eq("startup_id", startup_id)
+        .eq("record_type", "pull_request")
+        .eq("state", "open");
+      const stale = (dbOpen ?? [])
+        .map((r) => r.external_id as string)
+        .filter((id) => !openExternalIds.has(id));
+      for (let i = 0; i < stale.length; i += 200) {
+        const chunk = stale.slice(i, i + 200);
+        const { error } = await admin
+          .from("connector_data_github")
+          .update({ state: "closed" })
+          .eq("startup_id", startup_id)
+          .eq("record_type", "pull_request")
+          .in("external_id", chunk);
+        if (!error) prs_closed_stale += chunk.length;
+      }
+    }
+
     // Touch last_synced_at
     await admin
       .from("connector_credentials")
@@ -291,6 +352,7 @@ Deno.serve(async (req) => {
         daily_rows,
         commits: ghRecords.filter((r) => r.record_type === "commit").length,
         prs: ghRecords.filter((r) => r.record_type === "pull_request").length,
+        prs_closed_stale,
         rate_limited,
         time_budget_hit,
         errors,

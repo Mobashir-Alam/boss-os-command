@@ -350,7 +350,7 @@ export function useGitHubFocus(startupId?: string) {
           .eq("record_type", "pull_request")
           .eq("state", "open")
           .order("created_at_source", { ascending: true })
-          .limit(50),
+          .limit(300),
         fetchProfiles(),
       ]);
       const { nameByLogin } = identityMaps(profiles);
@@ -502,7 +502,8 @@ export function useTriggerGitHubSync() {
       if (!data?.ok) throw new Error(data?.error ?? "Sync failed");
       return data as {
         ok: boolean; orgs: string[]; repos_synced: number; repos_registered: number; records_upserted: number;
-        daily_rows: number; commits: number; prs: number; rate_limited: boolean; time_budget_hit: boolean; errors: string[];
+        daily_rows: number; commits: number; prs: number; prs_closed_stale?: number;
+        rate_limited: boolean; time_budget_hit: boolean; errors: string[];
       };
     },
   });
