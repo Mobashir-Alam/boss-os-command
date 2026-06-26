@@ -7,6 +7,7 @@ import {
   CheckCircle2, AlertTriangle, XCircle, FileWarning, Circle, Loader2, Settings,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import InfoTooltip from "@/components/social/InfoTooltip";
 import type { TodayBoard, TodayPerson } from "@/hooks/useSlack";
 
 function fmtTime(iso: string | null, tz: string): string {
