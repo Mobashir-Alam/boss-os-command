@@ -4,10 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  CheckCircle2, AlertTriangle, XCircle, FileWarning, Circle, Loader2, Settings, PenLine,
+  CheckCircle2, AlertTriangle, XCircle, FileWarning, Circle, Loader2, Settings,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import InfoTooltip from "@/components/social/InfoTooltip";
 import type { TodayBoard, TodayPerson } from "@/hooks/useSlack";
 
 function fmtTime(iso: string | null, tz: string): string {
@@ -45,7 +44,6 @@ const STATUS_META: Record<TodayPerson["status"], { label: string; icon: React.Re
 };
 
 function PersonRow({ person, presence, tz }: { person: TodayPerson; presence?: string; tz: string }) {
-  const isSelfReported = person.status === "checked_in" && person.check_in_source === "self_reported";
   const meta = STATUS_META[person.status];
   return (
     <div className="flex items-center gap-3 py-2">
@@ -55,21 +53,10 @@ function PersonRow({ person, presence, tz }: { person: TodayPerson; presence?: s
       </div>
       <div className="flex-1 min-w-0">
         <div className="text-sm font-medium truncate">{person.name}</div>
-        {isSelfReported ? (
-          <div className="text-xs flex items-center gap-1 text-sky-600">
-            <PenLine className="w-3.5 h-3.5" />
-            Self-reported
-            <InfoTooltip size="xs">
-              Filled from a bulk message, not a live check-in.
-              {person.check_in_claim_text ? ` Claim: "${person.check_in_claim_text.slice(0, 140)}"` : ""}
-            </InfoTooltip>
-          </div>
-        ) : (
-          <div className={cn("text-xs flex items-center gap-1", meta.tone)}>
-            {meta.icon}
-            {meta.label}
-          </div>
-        )}
+        <div className={cn("text-xs flex items-center gap-1", meta.tone)}>
+          {meta.icon}
+          {meta.label}
+        </div>
       </div>
       <div className="text-right shrink-0">
         <div className="text-xs text-muted-foreground">

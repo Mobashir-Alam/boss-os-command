@@ -125,10 +125,6 @@ export default function SlackMonthlyTab({ sheet, isLoading, month, onMonthChange
             </div>
           ))}
           <div className="flex items-center gap-1.5">
-            <span className="w-3 h-3 rounded bg-green-300" /> Self-reported
-            <InfoTooltip size="xs">Checked in via a later bulk message (lighter green), not a live same-day check-in. Hover a cell to see the claim.</InfoTooltip>
-          </div>
-          <div className="flex items-center gap-1.5">
             <span className="w-3 h-3 rounded bg-muted" /> No data / off
           </div>
         </div>
@@ -178,12 +174,7 @@ export default function SlackMonthlyTab({ sheet, isLoading, month, onMonthChange
                     <td className="sticky left-0 bg-background px-3 py-1.5 font-medium truncate max-w-[140px] z-10">{row.name}</td>
                     {sheet.dates.map((d) => {
                       const c = row.byDate[d];
-                      const selfReported = !!c && c.status === "checked_in" && c.check_in_source === "self_reported";
-                      const fill = !c
-                        ? "bg-muted"
-                        : selfReported
-                        ? "bg-green-300" // lighter = claimed later, not live
-                        : CELL[c.status];
+                      const fill = !c ? "bg-muted" : CELL[c.status];
                       const ring =
                         c && c.status !== "absent"
                           ? c.update_state === "posted"
@@ -201,14 +192,11 @@ export default function SlackMonthlyTab({ sheet, isLoading, month, onMonthChange
                         : c.status !== "absent"
                         ? " · no update"
                         : "";
-                      const checkLabel = selfReported
-                        ? ` · self-reported${c?.check_in_claim_text ? `: "${c.check_in_claim_text.slice(0, 80)}"` : ""}`
-                        : "";
                       return (
                         <td key={d} className="p-0.5 text-center">
                           <div
                             className={cn("w-4 h-4 mx-auto rounded", fill, ring)}
-                            title={c ? `${d}: ${CELL_LABEL[c.status]}${checkLabel}${updLabel}` : `${d}: no data`}
+                            title={c ? `${d}: ${CELL_LABEL[c.status]}${updLabel}` : `${d}: no data`}
                           />
                         </td>
                       );

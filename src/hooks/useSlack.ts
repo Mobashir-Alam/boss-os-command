@@ -625,8 +625,6 @@ export function useTriggerSlackSync() {
         message_rows: number;
         attendance_rows: number;
         attendance_enabled: boolean;
-        self_report_rows: number;
-        self_report_status: string;
         skipped: string[];
       };
     },

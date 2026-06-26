@@ -98,11 +98,6 @@ export default function SlackDashboard() {
           `Sync complete — ${result.channels_synced} channels · ${result.user_stat_rows} user-day rows · ${result.message_rows} messages archived` +
             (result.attendance_enabled ? ` · ${result.attendance_rows} attendance rows` : "")
         );
-        if (result.attendance_enabled && result.self_report_status === "ok" && result.self_report_rows > 0) {
-          toast.info(`${result.self_report_rows} day(s) filled from bulk attendance messages (self-reported).`);
-        } else if (result.self_report_status === "parse_failed") {
-          toast.warning("Bulk-attendance AI parse failed this run — live check-ins still recorded.");
-        }
         if (!result.attendance_enabled) {
           toast.info("Attendance not computed — set up monitoring (Today tab → Setup) then sync again.");
         }
