@@ -1576,26 +1576,38 @@ export function useTopVideosByMetric(
       const videoIds = (videos ?? []).map((v: any) => v.id);
       if (videoIds.length === 0) return [];
 
-      // Get latest analytics row per video, sorted by metric
+      // Fetch enough rows to deduplicate per video, then pick best per video
       const { data: analytics, error } = await supabase
         .from("connector_data_youtube_video_analytics")
         .select("*")
         .in("video_uuid", videoIds)
         .order(metric, { ascending: false, nullsFirst: false })
-        .limit(limit);
+        .limit(limit * 50);
       if (error) throw error;
 
-      return (analytics ?? []).map((a: any) => {
-        const v = videoMap.get(a.video_uuid) as any;
-        const c = v ? channelMap.get(v.channel_uuid) as any : null;
-        return {
-          ...a,
-          video_id: v?.video_id ?? "",
-          video_title: v?.title ?? null,
-          thumbnail_url: v?.thumbnail_url ?? null,
-          channel_title: c?.title ?? null,
-        };
-      });
+      // Keep only the highest-metric row per video_uuid (dedup across syncs)
+      const bestByVideo = new Map<string, any>();
+      for (const a of analytics ?? []) {
+        const existing = bestByVideo.get(a.video_uuid);
+        if (!existing || (a[metric] ?? 0) > (existing[metric] ?? 0)) {
+          bestByVideo.set(a.video_uuid, a);
+        }
+      }
+
+      return Array.from(bestByVideo.values())
+        .sort((a, b) => (b[metric] ?? 0) - (a[metric] ?? 0))
+        .slice(0, limit)
+        .map((a: any) => {
+          const v = videoMap.get(a.video_uuid) as any;
+          const c = v ? channelMap.get(v.channel_uuid) as any : null;
+          return {
+            ...a,
+            video_id: v?.video_id ?? "",
+            video_title: v?.title ?? null,
+            thumbnail_url: v?.thumbnail_url ?? null,
+            channel_title: c?.title ?? null,
+          };
+        });
     },
   });
 }
