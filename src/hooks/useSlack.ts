@@ -821,7 +821,13 @@ export function useTodayBoard(startupId?: string, backfillCap = 3, timeZone = "A
         if (!prev || r.work_date > prev) lastUpdateByUser.set(r.user_id_source, r.work_date);
       }
 
-      const people: TodayPerson[] = (roster ?? []).map((u) => {
+      // Only show people who have at least one attendance row in the lookback
+      // window — people with no recent history (e.g. who left) are excluded.
+      const usersWithHistory = new Set(allRows.map((r) => r.user_id_source));
+
+      const people: TodayPerson[] = (roster ?? [])
+        .filter((u) => usersWithHistory.has(u.user_id_source))
+        .map((u) => {
         const r = rowByUser.get(u.user_id_source);
         const status: AttendanceStatus = r
           ? r.checked_in
@@ -989,10 +995,13 @@ export function useMonthlySheet(startupId?: string, month?: string, backfillCap 
         };
       });
 
-      // Sort: most-present first, then by name
-      sheetRows.sort((a, b) => b.present_days - a.present_days || a.name.localeCompare(b.name));
+      // Drop people with no data at all for this month (e.g. left the company).
+      const activeRows = sheetRows.filter((r) => Object.keys(r.byDate).length > 0);
 
-      return { dates, rows: sheetRows, month: month! };
+      // Sort: most-present first, then by name
+      activeRows.sort((a, b) => b.present_days - a.present_days || a.name.localeCompare(b.name));
+
+      return { dates, rows: activeRows, month: month! };
     },
   });
 }
