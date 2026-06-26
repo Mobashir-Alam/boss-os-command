@@ -140,10 +140,20 @@ const FounderCommandCenter = () => {
     return parts;
   }, [overview, stats, blockedTasks]);
 
+  const connectors = [
+    { label: "GitHub", sub: "Code · PRs · Contributors", icon: "🐙", to: "/team/github" },
+    { label: "Slack", sub: "Attendance · Channels · People", icon: "💬", to: "/team/slack" },
+    { label: "YouTube", sub: "Analytics · Audience · Content", icon: "▶️", to: "/team/social-media" },
+  ];
+
   return (
     <div className="min-h-screen bg-white text-foreground">
       <Navbar />
 
+      {/* Coming-soon overlay */}
+      <div className="relative">
+        {/* Blurred background content */}
+        <div className="pointer-events-none select-none blur-sm opacity-40">
       <header className="border-b border-border/60 bg-white">
         <div className="mx-auto max-w-7xl px-6 pt-8 pb-6">
           {/* eyebrow row removed for cleaner heading */}
@@ -793,6 +803,36 @@ const FounderCommandCenter = () => {
         onOpenChange={setCreateOpen}
         onCreated={(projectId) => navigate(`/project/${projectId}`)}
       />
+        </div>{/* end blurred content */}
+
+        {/* Overlay */}
+        <div className="absolute inset-0 flex items-start justify-center pt-24 px-4">
+          <div className="w-full max-w-lg rounded-2xl border border-border bg-white/95 shadow-2xl backdrop-blur-sm p-8 text-center">
+            <div className="text-4xl mb-4">🚧</div>
+            <h2 className="text-2xl font-bold tracking-tight mb-2">Dashboard in progress</h2>
+            <p className="text-sm text-muted-foreground mb-8 leading-relaxed">
+              We're building the CEO Command Center. While we do, your live data connectors are fully operational.
+            </p>
+
+            <div className="grid grid-cols-1 gap-3">
+              {connectors.map((c) => (
+                <Link
+                  key={c.to}
+                  to={c.to}
+                  className="flex items-center gap-4 rounded-xl border border-border bg-card px-5 py-4 text-left transition-all hover:border-primary/40 hover:bg-paper hover:shadow-sm group"
+                >
+                  <span className="text-2xl">{c.icon}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-sm group-hover:text-accent transition-colors">{c.label}</div>
+                    <div className="text-xs text-muted-foreground">{c.sub}</div>
+                  </div>
+                  <ArrowRight className="h-4 w-4 text-muted-foreground/40 group-hover:text-accent transition-colors shrink-0" />
+                </Link>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>{/* end relative wrapper */}
     </div>
   );
 };
