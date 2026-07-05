@@ -359,6 +359,38 @@ export type Database = {
           },
         ]
       }
+      ceo_insights_cache: {
+        Row: {
+          generated_at: string
+          id: string
+          insights_json: Json
+          period_days: number
+          startup_id: string
+        }
+        Insert: {
+          generated_at?: string
+          id?: string
+          insights_json: Json
+          period_days: number
+          startup_id: string
+        }
+        Update: {
+          generated_at?: string
+          id?: string
+          insights_json?: Json
+          period_days?: number
+          startup_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ceo_insights_cache_startup_id_fkey"
+            columns: ["startup_id"]
+            isOneToOne: false
+            referencedRelation: "startups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       connector_credentials: {
         Row: {
           connector_type: string
@@ -1720,6 +1752,51 @@ export type Database = {
         }
         Relationships: []
       }
+      employee_connector_links: {
+        Row: {
+          created_at: string | null
+          github_login: string | null
+          id: string
+          person_id: string | null
+          slack_user_id: string | null
+          startup_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          github_login?: string | null
+          id?: string
+          person_id?: string | null
+          slack_user_id?: string | null
+          startup_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          github_login?: string | null
+          id?: string
+          person_id?: string | null
+          slack_user_id?: string | null
+          startup_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_connector_links_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: true
+            referencedRelation: "people"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_connector_links_startup_id_fkey"
+            columns: ["startup_id"]
+            isOneToOne: false
+            referencedRelation: "startups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       equity_documents: {
         Row: {
           created_at: string
@@ -2469,124 +2546,6 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
-      }
-      ceo_insights_cache: {
-        Row: {
-          generated_at: string
-          id: string
-          insights_json: Json
-          period_days: number
-          startup_id: string
-        }
-        Insert: {
-          generated_at?: string
-          id?: string
-          insights_json: Json
-          period_days: number
-          startup_id: string
-        }
-        Update: {
-          generated_at?: string
-          id?: string
-          insights_json?: Json
-          period_days?: number
-          startup_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "ceo_insights_cache_startup_id_fkey"
-            columns: ["startup_id"]
-            isOneToOne: false
-            referencedRelation: "startups"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      employee_connector_links: {
-        Row: {
-          created_at: string
-          github_login: string | null
-          id: string
-          person_id: string | null
-          slack_user_id: string | null
-          startup_id: string | null
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          github_login?: string | null
-          id?: string
-          person_id?: string | null
-          slack_user_id?: string | null
-          startup_id?: string | null
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          github_login?: string | null
-          id?: string
-          person_id?: string | null
-          slack_user_id?: string | null
-          startup_id?: string | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "employee_connector_links_person_id_fkey"
-            columns: ["person_id"]
-            isOneToOne: true
-            referencedRelation: "people"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "employee_connector_links_startup_id_fkey"
-            columns: ["startup_id"]
-            isOneToOne: false
-            referencedRelation: "startups"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      sync_log: {
-        Row: {
-          error: string | null
-          finished_at: string | null
-          id: string
-          rows_touched: number | null
-          source: string
-          started_at: string
-          startup_id: string | null
-          status: string
-        }
-        Insert: {
-          error?: string | null
-          finished_at?: string | null
-          id?: string
-          rows_touched?: number | null
-          source: string
-          started_at?: string
-          startup_id?: string | null
-          status?: string
-        }
-        Update: {
-          error?: string | null
-          finished_at?: string | null
-          id?: string
-          rows_touched?: number | null
-          source?: string
-          started_at?: string
-          startup_id?: string | null
-          status?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "sync_log_startup_id_fkey"
-            columns: ["startup_id"]
-            isOneToOne: false
-            referencedRelation: "startups"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       people: {
         Row: {
@@ -3922,6 +3881,47 @@ export type Database = {
           reason?: string
         }
         Relationships: []
+      }
+      sync_log: {
+        Row: {
+          error: string | null
+          finished_at: string | null
+          id: string
+          rows_touched: number | null
+          source: string
+          started_at: string
+          startup_id: string | null
+          status: string
+        }
+        Insert: {
+          error?: string | null
+          finished_at?: string | null
+          id?: string
+          rows_touched?: number | null
+          source: string
+          started_at?: string
+          startup_id?: string | null
+          status?: string
+        }
+        Update: {
+          error?: string | null
+          finished_at?: string | null
+          id?: string
+          rows_touched?: number | null
+          source?: string
+          started_at?: string
+          startup_id?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sync_log_startup_id_fkey"
+            columns: ["startup_id"]
+            isOneToOne: false
+            referencedRelation: "startups"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       tasks: {
         Row: {
