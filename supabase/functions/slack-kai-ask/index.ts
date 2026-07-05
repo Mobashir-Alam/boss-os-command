@@ -1,10 +1,12 @@
 // Slack KAI — natural-language Q&A over the full Slack snapshot
 //
-// Body: { startup_id: string, question: string, scope?: "all" | string }
-// Reads all Slack analytics tables via service role, builds a compact JSON
-// snapshot, and calls the Lovable AI gateway (google/gemini-flash).
+// Body: { startup_id: string, question: string, scope?: "all" | string, stream?: boolean }
+// Reads all Slack analytics tables via service role and asks the AI helper
+// (Lovable Gemini today; auto-upgrades to Claude Opus 4.8 when ANTHROPIC_API_KEY
+// is configured). stream: true returns SSE.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { askAI, streamAI } from "../_shared/kai-ai.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -240,9 +242,10 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { startup_id, question } = (await req.json()) as {
+    const { startup_id, question, stream } = (await req.json()) as {
       startup_id: string;
       question: string;
+      stream?: boolean;
     };
     if (!startup_id || !question) {
       throw new Error("startup_id and question are required");
@@ -279,50 +282,23 @@ Snapshot:
 ${JSON.stringify(snapshot, null, 2)}
 \`\`\``;
 
-    const apiKey = Deno.env.get("LOVABLE_API_KEY");
-    if (!apiKey) throw new Error("LOVABLE_API_KEY not set");
-
-    const aiRes = await fetch(
-      "https://ai.gateway.lovable.dev/v1/chat/completions",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          model: "google/gemini-3-flash-preview",
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: question },
-          ],
-        }),
-      }
-    );
-
-    if (aiRes.status === 429) {
-      return new Response(
-        JSON.stringify({ ok: false, error: "Rate limited — wait a moment and try again." }),
-        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    if (stream === true) {
+      return await streamAI(
+        { system: systemPrompt, user: question, maxTokens: 4096 },
+        corsHeaders
       );
     }
-    if (aiRes.status === 402) {
+
+    const result = await askAI({ system: systemPrompt, user: question, maxTokens: 4096 });
+    if (!result.ok) {
       return new Response(
-        JSON.stringify({ ok: false, error: "AI credits exhausted — contact your admin." }),
-        { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ ok: false, error: result.error }),
+        { status: result.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
-    if (!aiRes.ok) {
-      const txt = await aiRes.text();
-      throw new Error(`AI gateway error ${aiRes.status}: ${txt}`);
-    }
-
-    const aiJson = await aiRes.json();
-    const answer =
-      aiJson.choices?.[0]?.message?.content ?? "No answer returned.";
 
     return new Response(
-      JSON.stringify({ ok: true, answer }),
+      JSON.stringify({ ok: true, answer: result.answer }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {

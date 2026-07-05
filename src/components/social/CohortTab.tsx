@@ -404,6 +404,18 @@ function AgeViewsScatter({ points }: { points: CohortScatterPoint[] }) {
     return out;
   }, [points]);
 
+  // Explicit domain needed — recharts log scale with "dataMin"/"dataMax" across
+  // multiple <Scatter> series doesn't unify domains correctly, so dots vanish.
+  const axisDomain = useMemo(() => {
+    if (points.length === 0) return { x: [1, 1] as [number, number], y: [1, 1] as [number, number] };
+    const ages = points.map((p) => Math.max(1, p.age_days));
+    const views = points.map((p) => Math.max(1, p.lifetime_views));
+    return {
+      x: [Math.min(...ages), Math.max(...ages)] as [number, number],
+      y: [Math.min(...views), Math.max(...views)] as [number, number],
+    };
+  }, [points]);
+
   return (
     <Card className="border-border/40">
       <CardContent className="p-5">
@@ -437,7 +449,8 @@ function AgeViewsScatter({ points }: { points: CohortScatterPoint[] }) {
                   dataKey="age_days"
                   name="Age"
                   scale="log"
-                  domain={["dataMin", "dataMax"]}
+                  domain={axisDomain.x}
+                  allowDataOverflow
                   tickFormatter={(v) => fmtAge(v)}
                   tick={{ fontSize: 10 }}
                   height={36}
@@ -453,7 +466,8 @@ function AgeViewsScatter({ points }: { points: CohortScatterPoint[] }) {
                   dataKey="lifetime_views"
                   name="Views"
                   scale="log"
-                  domain={["dataMin", "dataMax"]}
+                  domain={axisDomain.y}
+                  allowDataOverflow
                   tickFormatter={(v) => fmtNum(v)}
                   tick={{ fontSize: 10 }}
                   width={48}

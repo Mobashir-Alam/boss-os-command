@@ -1,0 +1,12 @@
+%% Figure: Generic connector ingestion pipeline (sync -> normalise -> serve)
+flowchart LR
+    A["User clicks<br/>Sync"] --> B["functions.invoke<br/>(*-sync edge function)"]
+    B --> C{"Load credential<br/>connector_credentials<br/>(is_active = true)"}
+    C -->|"missing"| E1["404 — no active credential"]
+    C -->|"found"| D["Call external API<br/>(paginated, rate-limit aware)"]
+    D --> F["Normalise records<br/>(uniform row shapes)"]
+    F --> G["Idempotent UPSERT<br/>connector_data_* (onConflict)"]
+    G --> H["Daily roll-ups<br/>*_daily aggregate tables"]
+    H --> I["Update last_synced_at"]
+    I --> J["Dashboard reads<br/>via TanStack Query (RLS)"]
+    J --> K["KAI snapshot<br/>reads same tables"]

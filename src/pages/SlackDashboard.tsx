@@ -37,6 +37,8 @@ import SlackMonthlyTab from "@/components/slack/SlackMonthlyTab";
 import SlackSetupDialog from "@/components/slack/SlackSetupDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
+import SyncStatusBadge from "@/components/SyncStatusBadge";
+import { useAutoSyncToast } from "@/hooks/useSyncLog";
 
 export default function SlackDashboard() {
   const { dbStartups } = useStartups();
@@ -69,6 +71,9 @@ export default function SlackDashboard() {
 
   const { mutateAsync: triggerSync, isPending: syncing } = useTriggerSlackSync();
   const { mutateAsync: checkPresence, isPending: presenceLoading } = useSlackPresence();
+
+  // Toast when the 3-hourly auto-sync lands new sync_log rows
+  useAutoSyncToast(startupId);
 
   // Raw channels for metadata + setup pickers
   const { data: rawChannels } = useQuery({
@@ -166,11 +171,7 @@ export default function SlackDashboard() {
                         {workspace.member_count_total} members
                       </span>
                     )}
-                    {workspace.synced_at && (
-                      <span className="text-xs text-muted-foreground">
-                        · Last synced {new Date(workspace.synced_at).toLocaleDateString()}
-                      </span>
-                    )}
+                    <SyncStatusBadge startupId={startupId} sources={["slack"]} />
                   </>
                 ) : (
                   <Badge variant="outline" className="text-amber-700 border-amber-300 bg-amber-50 gap-1">

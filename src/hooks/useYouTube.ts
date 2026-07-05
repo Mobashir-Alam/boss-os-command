@@ -179,6 +179,7 @@ export function useRecentYouTubeUploads(
       const { data: videos, error } = await supabase
         .from("connector_data_youtube_videos")
         .select("*")
+        // cap: URL limit @200 (channel list is ~7 per startup, far below cap)
         .in("channel_uuid", channelIds)
         .order("published_at", { ascending: false })
         .limit(limit);
@@ -222,6 +223,7 @@ export function useTopYouTubeVideos(
       const { data: videos, error } = await supabase
         .from("connector_data_youtube_videos")
         .select("*")
+        // cap: URL limit @200 (channel list is ~7 per startup, far below cap)
         .in("channel_uuid", channelIds)
         .order("view_count", { ascending: false })
         .limit(limit);
@@ -527,6 +529,7 @@ export function usePulseSnapshot(
       const { data: rows, error } = await supabase
         .from("connector_data_youtube_channel_analytics")
         .select("*")
+        // cap: URL limit @200 (channel list is ~7 per startup, far below cap)
         .in("channel_uuid", ids)
         .gte("date", since)
         .order("date", { ascending: true });
@@ -771,6 +774,7 @@ export function useAudienceSnapshot(
       if (ids.length === 0) return empty;
 
       // Four tables in parallel — small payloads, all keyed by channel_uuid + period_end_date
+      // cap: URL limit @200 (each .in() below carries the ~7-channel id list)
       const [demoRes, geoRes, devRes, trafRes] = await Promise.all([
         supabase.from("connector_data_youtube_demographics")
           .select("channel_uuid, period_end_date, age_group, gender, viewer_percentage")
@@ -927,11 +931,16 @@ export function useRetentionCurves(
       const channelMap = new Map(all.map((c) => [c.id, c]));
       const channelIds = scoped.map((c) => c.id);
 
-      // 2. Videos in those channels
+      // 2. Videos in those channels — cap at 100 by views. Sync only stores
+      // retention for the top 25; keeping this list short prevents the .in()
+      // filter from exceeding URL length limits (629+ UUIDs → ~23 KB URL → 400).
       const { data: videos } = await supabase
         .from("connector_data_youtube_videos")
         .select("id, video_id, title, thumbnail_url, duration_seconds, published_at, channel_uuid, view_count")
-        .in("channel_uuid", channelIds);
+        // cap: URL limit @200 (channel list is ~7 per startup, far below cap)
+        .in("channel_uuid", channelIds)
+        .order("view_count", { ascending: false })
+        .limit(100);
       const videoList = (videos ?? []) as Array<{
         id: string; video_id: string; title: string | null;
         thumbnail_url: string | null; duration_seconds: number | null;
@@ -948,6 +957,7 @@ export function useRetentionCurves(
       const { data: retention, error } = await supabase
         .from("connector_data_youtube_video_retention")
         .select("video_uuid, period_end_date, elapsed_video_time_ratio, audience_watch_ratio, relative_retention_performance")
+        // cap: URL limit @200 (videoUuids capped at top-100 by views above)
         .in("video_uuid", videoUuids)
         .order("period_end_date", { ascending: false })
         .order("elapsed_video_time_ratio", { ascending: true });
@@ -1115,6 +1125,7 @@ export function useContentLab(
       const { data: videos, error } = await supabase
         .from("connector_data_youtube_videos")
         .select("id, title, tags, duration_seconds, published_at, view_count")
+        // cap: URL limit @200 (channel list is ~7 per startup, far below cap)
         .in("channel_uuid", channelIds);
       if (error) throw error;
       const vids = (videos ?? []) as Array<{
@@ -1127,12 +1138,17 @@ export function useContentLab(
       }>;
       if (vids.length === 0) return empty;
 
-      // Optional: avg_view_percentage per video from latest analytics row
-      // (only matters for duration buckets — small payload, single in() query)
-      const videoIds = vids.map((v) => v.id);
+      // Optional: avg_view_percentage per video from latest analytics row.
+      // Cap at 200 top-viewed to stay under URL length limits.
+      const videoIds = vids
+        .slice()
+        .sort((a, b) => (b.view_count ?? 0) - (a.view_count ?? 0))
+        .slice(0, 200)
+        .map((v) => v.id);
       const { data: analytics } = await supabase
         .from("connector_data_youtube_video_analytics")
         .select("video_uuid, average_view_percentage, date")
+        // cap: URL limit @200 (videoIds sliced to top-200 by views above)
         .in("video_uuid", videoIds);
       // Keep the most recent date per video
       const latestAvgPct = new Map<string, number>();
@@ -1394,6 +1410,7 @@ export function useCohortAnalysis(
       const { data: videos } = await supabase
         .from("connector_data_youtube_videos")
         .select("id, video_id, title, thumbnail_url, published_at, view_count, channel_uuid")
+        // cap: URL limit @200 (channel list is ~7 per startup, far below cap)
         .in("channel_uuid", channelIds);
       const vids = (videos ?? []) as Array<{
         id: string; video_id: string; title: string | null;
@@ -1402,11 +1419,17 @@ export function useCohortAnalysis(
       }>;
       if (vids.length === 0) return empty;
 
-      // 3. Latest analytics row per video (gives recent-30d views)
-      const videoIds = vids.map((v) => v.id);
+      // 3. Latest analytics row per video (gives recent-30d views).
+      // Cap at 200 top-viewed videos to keep the .in() URL under length limits.
+      const videoIds = vids
+        .slice()
+        .sort((a, b) => b.view_count - a.view_count)
+        .slice(0, 200)
+        .map((v) => v.id);
       const { data: analytics } = await supabase
         .from("connector_data_youtube_video_analytics")
         .select("video_uuid, views, date")
+        // cap: URL limit @200 (videoIds sliced to top-200 by views above)
         .in("video_uuid", videoIds);
       const latestRecentByVideo = new Map<string, number>();
       const latestDateByVideo = new Map<string, string>();
@@ -1488,7 +1511,7 @@ export function useCohortAnalysis(
             thumbnail_url: v.thumbnail_url,
             channel_uuid: v.channel_uuid,
             channel_title: ch?.title ?? null,
-            age_days: Math.round(ageDays),
+            age_days: Math.max(1, Math.round(ageDays)),
             lifetime_views: lifetime,
             recent_views: recent,
             trajectory: traj,
@@ -1567,11 +1590,15 @@ export function useTopVideosByMetric(
       const channelMap = new Map((channels ?? []).map((c: any) => [c.id, c]));
       const channelIds = (channels ?? []).map((c: any) => c.id);
 
-      // Get videos for those channels
+      // Get top videos for those channels — cap at 200 by view_count so the
+      // subsequent .in("video_uuid", videoIds) stays within URL length limits.
       const { data: videos } = await supabase
         .from("connector_data_youtube_videos")
-        .select("id, video_id, title, thumbnail_url, channel_uuid")
-        .in("channel_uuid", channelIds);
+        .select("id, video_id, title, thumbnail_url, channel_uuid, view_count")
+        // cap: URL limit @200 (channel list is ~7 per startup, far below cap)
+        .in("channel_uuid", channelIds)
+        .order("view_count", { ascending: false })
+        .limit(200);
       const videoMap = new Map((videos ?? []).map((v: any) => [v.id, v]));
       const videoIds = (videos ?? []).map((v: any) => v.id);
       if (videoIds.length === 0) return [];
@@ -1580,6 +1607,7 @@ export function useTopVideosByMetric(
       const { data: analytics, error } = await supabase
         .from("connector_data_youtube_video_analytics")
         .select("*")
+        // cap: URL limit @200 (videoIds limited to 200 by the query above)
         .in("video_uuid", videoIds)
         .order(metric, { ascending: false, nullsFirst: false })
         .limit(limit * 50);

@@ -9,8 +9,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, ArrowUpDown, Trash2, Pencil, Users, ChevronDown, ChevronRight, Layers, Calendar } from "lucide-react";
+import { Plus, Search, ArrowUpDown, Trash2, Pencil, Users, ChevronDown, ChevronRight, Layers, Calendar, Link2, Activity } from "lucide-react";
 import AddPersonModal from "@/components/people/AddPersonModal";
+import EditLinksModal from "@/components/people/EditLinksModal";
+import PersonActivityRow from "@/components/people/PersonActivityRow";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -113,6 +115,12 @@ export default function PeopleOS() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editPerson, setEditPerson] = useState<Person | null>(null);
   const [expandedPersonId, setExpandedPersonId] = useState<string | null>(null);
+  const [activityPersonId, setActivityPersonId] = useState<string | null>(null);
+  const [linksPerson, setLinksPerson] = useState<Person | null>(null);
+
+  // Connector data (Slack/GitHub) is scoped to the nasheedio startup
+  const connectorStartupId =
+    dbStartups?.find((s) => s.slug === "nasheedio")?.id ?? dbStartups?.[0]?.id;
 
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -282,6 +290,29 @@ export default function PeopleOS() {
                             </button>
                             <button
                               type="button"
+                              title={`Edit Slack/GitHub links for ${p.full_name}`}
+                              onClick={() => setLinksPerson(p)}
+                              className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-primary transition-colors"
+                            >
+                              <Link2 className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              title={`View 7-day activity for ${p.full_name}`}
+                              onClick={() =>
+                                setActivityPersonId(activityPersonId === p.id ? null : p.id)
+                              }
+                              className={cn(
+                                "p-1 rounded hover:bg-muted transition-colors",
+                                activityPersonId === p.id
+                                  ? "text-primary"
+                                  : "text-muted-foreground hover:text-primary"
+                              )}
+                            >
+                              <Activity className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              type="button"
                               title={`Edit ${p.full_name}`}
                               onClick={() => setEditPerson(p)}
                               className="p-1 rounded hover:bg-muted opacity-0 group-hover:opacity-100 transition-opacity"
@@ -302,6 +333,14 @@ export default function PeopleOS() {
                       {isExpanded && (
                         <PersonProjectsRow key={`${p.id}-projects`} personId={p.id} colSpan={11} />
                       )}
+                      {activityPersonId === p.id && connectorStartupId && (
+                        <PersonActivityRow
+                          key={`${p.id}-activity`}
+                          personId={p.id}
+                          startupId={connectorStartupId}
+                          colSpan={11}
+                        />
+                      )}
                     </>
                   );
                 })
@@ -318,6 +357,15 @@ export default function PeopleOS() {
       {editPerson && (
         <AddPersonModal open={!!editPerson} onOpenChange={(v) => !v && setEditPerson(null)} onSubmit={handleEdit}
           isPending={updatePerson.isPending} startups={startupList} people={people} editPerson={editPerson} />
+      )}
+      {linksPerson && connectorStartupId && (
+        <EditLinksModal
+          open={!!linksPerson}
+          onOpenChange={(v) => !v && setLinksPerson(null)}
+          personId={linksPerson.id}
+          personName={linksPerson.full_name}
+          startupId={connectorStartupId}
+        />
       )}
     </div>
   );

@@ -1,0 +1,28 @@
+%% Figure: Authentication + email one-time-password (OTP) MFA
+sequenceDiagram
+    autonumber
+    actor User
+    participant UI as Login / Verify2FA
+    participant Auth as Supabase Auth
+    participant Send as send-mfa-code
+    participant Verify as verify-mfa-code
+    participant Mail as Email (SMTP)
+    participant DB as Supabase DB
+
+    User->>UI: email + password
+    UI->>Auth: signInWithPassword
+    Auth-->>UI: JWT session (MFA pending)
+    UI->>Send: invoke (user)
+    Send->>DB: store hashed OTP + expiry
+    Send->>Mail: deliver 6-digit code
+    Mail-->>User: OTP email
+    User->>UI: enter 6-digit code
+    UI->>Verify: invoke (code)
+    Verify->>DB: check code + expiry + attempts
+    alt valid
+        Verify-->>UI: verified -> grant access
+        UI-->>User: redirect to dashboard
+    else invalid / expired
+        Verify-->>UI: rejected
+        UI-->>User: retry / resend
+    end

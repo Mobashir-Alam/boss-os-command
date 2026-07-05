@@ -40,6 +40,8 @@ import RetentionTab from "@/components/social/RetentionTab";
 import ContentLabTab from "@/components/social/ContentLabTab";
 import CohortTab from "@/components/social/CohortTab";
 import KaiTab from "@/components/social/KaiTab";
+import SyncStatusBadge from "@/components/SyncStatusBadge";
+import { useAutoSyncToast } from "@/hooks/useSyncLog";
 
 function fmtNum(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
@@ -93,6 +95,9 @@ export default function SocialMediaDashboard() {
   const triggerAnalyticsSync = useTriggerYouTubeAnalyticsSync();
   const { data: topByRevenue = [] } = useTopVideosByMetric(startupId, "estimated_revenue_usd", 10);
   const { data: topByWatchTime = [] } = useTopVideosByMetric(startupId, "estimated_minutes_watched", 10);
+
+  // Toast when the 3-hourly auto-sync lands new sync_log rows
+  useAutoSyncToast(startupId);
 
   const authorizedSet = useMemo(() => new Set(authorizedIds), [authorizedIds]);
   const anyAuthorized = authorizedIds.length > 0;
@@ -253,6 +258,7 @@ export default function SocialMediaDashboard() {
                 <> · last sync {formatDistanceToNow(new Date(credentials.last_synced_at), { addSuffix: true })}</>
               )}
             </p>
+            <SyncStatusBadge startupId={startupId} sources={["youtube", "youtube_analytics"]} className="mt-0.5" />
           </div>
           {canWrite && (
             <div className="flex items-center gap-2 flex-wrap">

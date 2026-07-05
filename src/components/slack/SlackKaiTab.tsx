@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Bot, Send, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useAskSlackKai } from "@/hooks/useSlack";
+import { streamKaiFunction } from "@/lib/kaiStream";
 
 interface ChatTurn {
   id: string;
@@ -97,7 +97,7 @@ interface Props {
 export default function SlackKaiTab({ startupId }: Props) {
   const [question, setQuestion] = useState("");
   const [history, setHistory] = useState<ChatTurn[]>([]);
-  const { mutateAsync: ask, isPending } = useAskSlackKai();
+  const [isPending, setIsPending] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const idPrefix = useId();
 
@@ -111,12 +111,19 @@ export default function SlackKaiTab({ startupId }: Props) {
     };
     setHistory((h) => [...h, turn]);
     setQuestion("");
+    setIsPending(true);
     setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
 
     try {
-      const answer = await ask({ startupId, question: q.trim() });
-      setHistory((h) =>
-        h.map((t) => (t.id === turn.id ? { ...t, answer } : t))
+      // Stream tokens in as they arrive — the turn's answer grows word by word
+      await streamKaiFunction(
+        "slack-kai-ask",
+        { startup_id: startupId, question: q.trim() },
+        (full) => {
+          setHistory((h) =>
+            h.map((t) => (t.id === turn.id ? { ...t, answer: full } : t))
+          );
+        }
       );
     } catch (err) {
       setHistory((h) =>
@@ -124,6 +131,8 @@ export default function SlackKaiTab({ startupId }: Props) {
           t.id === turn.id ? { ...t, error: (err as Error).message } : t
         )
       );
+    } finally {
+      setIsPending(false);
     }
     setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
   }

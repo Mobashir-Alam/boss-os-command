@@ -1,0 +1,16 @@
+%% Figure: GitHub multi-org engineering sync
+flowchart TB
+    A["github-sync invoked"] --> B["Read PAT + orgs[]<br/>from connector_credentials"]
+    B --> C["For each org:<br/>list repos (most-recently-pushed first)"]
+    C --> D{"repo active in window<br/>and not archived?"}
+    D -->|"no"| C
+    D -->|"yes"| E["Fetch commits (since window)<br/>+ open/merged PRs (paginated)"]
+    E --> F["Filter bot authors<br/>([bot], dependabot, actions, web-flow)"]
+    F --> G["Map author_login -> profiles.github_username<br/>(employee identity; handle fallback)"]
+    G --> H["UPSERT connector_data_github<br/>(commit / pull_request rows)"]
+    H --> I["Aggregate connector_data_github_daily<br/>(commits, prs_opened, prs_merged per login/repo/day)"]
+    I --> J["Upsert repo registry<br/>connector_data_github_repos"]
+    J --> K{"X-RateLimit-Remaining low<br/>OR time budget hit?"}
+    K -->|"yes"| L["Stop early — graceful partial<br/>(most-active repos covered)"]
+    K -->|"no"| C
+    L --> M["Return repos_synced, commits, prs, daily_rows"]

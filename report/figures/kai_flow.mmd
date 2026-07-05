@@ -1,0 +1,19 @@
+%% Figure: KAI grounded question-answering (retrieval over synced data)
+sequenceDiagram
+    autonumber
+    actor User
+    participant UI as Dashboard (Ask KAI tab)
+    participant KAI as *-kai-ask edge function
+    participant DB as Supabase DB (synced tables)
+    participant GW as Lovable AI Gateway (Gemini 3 Flash)
+
+    User->>UI: ask a question (natural language)
+    UI->>KAI: invoke (startup_id, question)
+    KAI->>DB: read full synced history<br/>(daily roll-ups, registry, open PRs)
+    DB-->>KAI: rows
+    KAI->>KAI: buildSnapshot()<br/>aggregate people / repos / totals / momentum
+    KAI->>GW: system prompt (grounding rules + JSON snapshot) + question
+    GW-->>KAI: grounded answer (markdown)
+    Note over KAI,GW: 429 -> rate-limited message<br/>402 -> credits-exhausted message
+    KAI-->>UI: { ok, answer }
+    UI-->>User: rendered answer

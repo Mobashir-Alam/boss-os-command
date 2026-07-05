@@ -40,6 +40,7 @@ import SocialMediaDashboard from "./pages/SocialMediaDashboard.tsx";
 import SlackDashboard from "./pages/SlackDashboard.tsx";
 import GitHubDashboard from "./pages/GitHubDashboard.tsx";
 import CommandPalette from "./components/CommandPalette";
+import JarvisKai from "./components/JarvisKai";
 
 const queryClient = new QueryClient({});
 
@@ -59,6 +60,8 @@ const App = () => (
             }}
           >
             <CommandPalette />
+            {/* Jarvis-mode KAI — floating ⚡ assistant, available on every page */}
+            <JarvisKai />
             <Routes>
               <Route path="/login" element={<Login />} />
               <Route path="/onboarding" element={<Onboarding />} />

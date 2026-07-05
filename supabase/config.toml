@@ -86,3 +86,19 @@ verify_jwt = false
 # Aggregates GitHub engineering data via service role and calls the Lovable AI
 # gateway. Same access pattern as the other *-kai-ask functions.
 verify_jwt = false
+
+[functions.auto-sync]
+# Called by pg_cron (with the service role key) and by the dashboards. It only
+# orchestrates the existing *-sync functions; no user-supplied secrets.
+verify_jwt = false
+
+[functions.kai-jarvis]
+# Jarvis-mode KAI: navigation/explain/person-lookup assistant. Reads connector
+# tables via service role. AI provider via _shared/kai-ai.ts (Lovable gateway
+# today; Claude once ANTHROPIC_API_KEY is configured).
+verify_jwt = false
+
+[functions.ceo-insights]
+# CEO dashboard insight generator. Reads connector tables via service role,
+# caches results in ceo_insights_cache. AI provider via _shared/kai-ai.ts.
+verify_jwt = false

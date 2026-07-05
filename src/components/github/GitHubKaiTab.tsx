@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Bot, Send, Loader2 } from "lucide-react";
-import { useAskGitHubKai } from "@/hooks/useGitHub";
+import { streamKaiFunction } from "@/lib/kaiStream";
 
 interface ChatTurn { id: string; question: string; answer: string | null; error?: string }
 
@@ -48,7 +48,7 @@ function MarkdownLite({ text }: { text: string }) {
 export default function GitHubKaiTab({ startupId }: { startupId: string }) {
   const [question, setQuestion] = useState("");
   const [history, setHistory] = useState<ChatTurn[]>([]);
-  const { mutateAsync: ask, isPending } = useAskGitHubKai();
+  const [isPending, setIsPending] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const idPrefix = useId();
 
@@ -57,12 +57,21 @@ export default function GitHubKaiTab({ startupId }: { startupId: string }) {
     const turn: ChatTurn = { id: `${idPrefix}-${Date.now()}`, question: q.trim(), answer: null };
     setHistory((h) => [...h, turn]);
     setQuestion("");
+    setIsPending(true);
     setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
     try {
-      const answer = await ask({ startupId, question: q.trim() });
-      setHistory((h) => h.map((t) => (t.id === turn.id ? { ...t, answer } : t)));
+      // Stream tokens in as they arrive — the answer grows word by word
+      await streamKaiFunction(
+        "github-kai-ask",
+        { startup_id: startupId, question: q.trim() },
+        (full) => {
+          setHistory((h) => h.map((t) => (t.id === turn.id ? { ...t, answer: full } : t)));
+        }
+      );
     } catch (err) {
       setHistory((h) => h.map((t) => (t.id === turn.id ? { ...t, error: (err as Error).message } : t)));
+    } finally {
+      setIsPending(false);
     }
     setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
   }

@@ -39,6 +39,7 @@ import { useMyReviews, useReviewsToWrite, type PerformanceReview } from "@/hooks
 import ReviewDetailModal from "@/components/reviews/ReviewDetailModal";
 import ReviewFormModal from "@/components/reviews/ReviewFormModal";
 import { useOnboardingForProfile, useUpdateOnboardingItem, type OnboardingItem, type OnboardingStatus } from "@/hooks/useOnboarding";
+import MyActivity from "@/components/employee/MyActivity";
 import { toast } from "sonner";
 
 /* ── helpers ─────────────────────────────────────────────── */
@@ -400,6 +401,11 @@ const EmployeeDashboard = () => {
               <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{label}</p>
             </div>
           ))}
+        </div>
+
+        {/* My Activity — GitHub commits + Slack attendance (last 30 days) */}
+        <div className="mb-6">
+          <MyActivity />
         </div>
 
         {/* Loading */}

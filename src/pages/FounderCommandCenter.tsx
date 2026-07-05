@@ -16,6 +16,11 @@ import {
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import SparkLine from "@/components/SparkLine";
+import { StaticPlaceholder } from "@/components/StaticPlaceholder";
+import CommandStrip from "@/components/ceo/CommandStrip";
+import InsightsFeed from "@/components/ceo/InsightsFeed";
+import CrossSourceSummary from "@/components/ceo/CrossSourceSummary";
+import PeoplePulse from "@/components/ceo/PeoplePulse";
 import { useFounderOverview } from "@/hooks/useFounderOverview";
 import { useMyProjects, type Project } from "@/hooks/useEmployeeProjects";
 import CreateProjectModal from "@/components/project/CreateProjectModal";
@@ -97,10 +102,14 @@ const FounderCommandCenter = () => {
   const [mode, setMode] = useState<Mode>("founder");
   const [projectFilter, setProjectFilter] = useState<string>("all");
   const [createOpen, setCreateOpen] = useState(false);
+  const [insightPeriod, setInsightPeriod] = useState<7 | 15 | 30>(7);
   const { getTaskStats, getOverdueTasks, tasks } = useTaskContext();
   const overview = useFounderOverview();
   const { data: allProjects = [], isLoading: projectsLoading } = useMyProjects();
   const { dbStartups } = useStartups();
+  // Live connector data (YouTube/Slack/GitHub) is scoped to the nasheedio startup
+  const connectorStartupId =
+    dbStartups?.find((s: any) => s.slug === "nasheedio")?.id ?? dbStartups?.[0]?.id;
   const stats = getTaskStats();
   const overdueTasks = getOverdueTasks();
   const blockedTasks = tasks.filter((task) => task.status === "blocked");
@@ -150,10 +159,6 @@ const FounderCommandCenter = () => {
     <div className="min-h-screen bg-white text-foreground">
       <Navbar />
 
-      {/* Coming-soon overlay */}
-      <div className="relative">
-        {/* Blurred background content */}
-        <div className="pointer-events-none select-none blur-sm opacity-40">
       <header className="border-b border-border/60 bg-white">
         <div className="mx-auto max-w-7xl px-6 pt-8 pb-6">
           {/* eyebrow row removed for cleaner heading */}
@@ -231,6 +236,71 @@ const FounderCommandCenter = () => {
       </header>
 
       <main className="mx-auto max-w-7xl space-y-10 px-6 py-8">
+        {/* ══ LIVE cross-source intelligence (real connector data) ══ */}
+
+        {/* Section A — Command Strip */}
+        <section className="space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="eyebrow">Live Signals · YouTube + Slack + GitHub</span>
+            <div className="flex items-center gap-3">
+              {connectors.map((c) => (
+                <Link
+                  key={c.to}
+                  to={c.to}
+                  className="flex items-center gap-1 text-[11px] text-muted-foreground transition-colors hover:text-accent"
+                >
+                  <span>{c.icon}</span> {c.label}
+                </Link>
+              ))}
+            </div>
+          </div>
+          <CommandStrip startupId={connectorStartupId} />
+        </section>
+
+        {/* Sections B + C — AI Insights Feed and Cross-Source Summary */}
+        <section>
+          <div className="mb-4 flex items-end justify-between">
+            <div>
+              <span className="eyebrow">Strategic Intelligence</span>
+              <h2 className="mt-1 font-display text-2xl">What deserves your attention</h2>
+            </div>
+            {/* Period selector shared by the feed + summaries */}
+            <div className="flex items-center gap-1 rounded-md border border-border bg-card p-0.5">
+              {([7, 15, 30] as const).map((d) => (
+                <button
+                  key={d}
+                  type="button"
+                  onClick={() => setInsightPeriod(d)}
+                  className={cn(
+                    "rounded-sm px-3 py-1 text-[11px] font-semibold uppercase tracking-wider transition-all",
+                    insightPeriod === d
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  {d}D
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="grid grid-cols-12 gap-6">
+            <div className="col-span-12 lg:col-span-5">
+              <InsightsFeed startupId={connectorStartupId} periodDays={insightPeriod} />
+            </div>
+            <div className="col-span-12 lg:col-span-7">
+              <span className="mb-3 block text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                Cross-Source Summary
+              </span>
+              <CrossSourceSummary startupId={connectorStartupId} periodDays={insightPeriod} />
+            </div>
+          </div>
+        </section>
+
+        {/* Section D — People Pulse */}
+        <section>
+          <PeoplePulse startupId={connectorStartupId} />
+        </section>
+
         {overview.alerts.filter((alert) => alert.severity === "critical" || alert.severity === "warning").length > 0 && (
           <section className="space-y-2">
             {overview.alerts
@@ -276,7 +346,8 @@ const FounderCommandCenter = () => {
 
         {mode === "founder" && (
           <>
-            <section className="grid grid-cols-12 gap-6">
+            <StaticPlaceholder label="KAI BRIEF — PORTFOLIO DATA">
+            <section className="grid grid-cols-12 gap-6 p-4">
               <div className="paper-card-elevated col-span-12 p-6 lg:col-span-8 lg:p-8">
                 <div className="mb-4 flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -362,8 +433,10 @@ const FounderCommandCenter = () => {
                 </ul>
               </aside>
             </section>
+            </StaticPlaceholder>
 
-            <section>
+            <StaticPlaceholder label="PORTFOLIO COMPANIES">
+            <section className="p-4">
               <div className="mb-4 flex items-end justify-between">
                 <div>
                   <span className="eyebrow">Portfolio Health</span>
@@ -461,8 +534,10 @@ const FounderCommandCenter = () => {
                 })}
               </div>
             </section>
+            </StaticPlaceholder>
 
-            <section>
+            <StaticPlaceholder label="DEPARTMENTS">
+            <section className="p-4">
               <div className="mb-4 flex items-end justify-between">
                 <div>
                   <span className="eyebrow">Cross-Portfolio Departments</span>
@@ -511,9 +586,11 @@ const FounderCommandCenter = () => {
                 </div>
               </div>
             </section>
+            </StaticPlaceholder>
 
             {/* ── Portfolio Projects ── */}
-            <section>
+            <StaticPlaceholder label="PROJECTS">
+            <section className="p-4">
               <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
                 <div>
                   <span className="eyebrow">Portfolio Projects</span>
@@ -657,8 +734,10 @@ const FounderCommandCenter = () => {
                 </div>
               )}
             </section>
+            </StaticPlaceholder>
 
-            <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+            <StaticPlaceholder label="FINANCIALS">
+            <section className="grid grid-cols-1 gap-4 p-4 lg:grid-cols-3">
               <ExecutiveSummaryCard
                 eyebrow="Finance Summary"
                 title={overview.executiveSummaries.finance.primary}
@@ -678,9 +757,12 @@ const FounderCommandCenter = () => {
                 insight={overview.executiveSummaries.ownership.insight}
               />
             </section>
+            </StaticPlaceholder>
 
             <section className="grid grid-cols-12 gap-6">
-              <div className="paper-card col-span-12 p-6 lg:col-span-7">
+              <div className="col-span-12 lg:col-span-7">
+              <StaticPlaceholder label="CAPITAL SIGNALS">
+              <div className="paper-card p-6">
                 <div className="mb-4 flex items-center justify-between">
                   <span className="eyebrow">Capital Allocation Signals</span>
                   <span className="font-mono text-[10px] text-muted-foreground">LIVE METRICS</span>
@@ -704,8 +786,12 @@ const FounderCommandCenter = () => {
                   ))}
                 </div>
               </div>
+              </StaticPlaceholder>
+              </div>
 
-              <div className="paper-card col-span-12 bg-paper p-6 lg:col-span-5">
+              <div className="col-span-12 lg:col-span-5">
+              <StaticPlaceholder label="PATTERNS">
+              <div className="paper-card bg-paper p-6">
                 <div className="mb-4 flex items-center gap-2">
                   <Eye className="h-3.5 w-3.5 text-accent" />
                   <span className="eyebrow text-accent">Cross-Portfolio Patterns</span>
@@ -720,6 +806,8 @@ const FounderCommandCenter = () => {
                     </li>
                   ))}
                 </ul>
+              </div>
+              </StaticPlaceholder>
               </div>
             </section>
           </>
@@ -803,36 +891,6 @@ const FounderCommandCenter = () => {
         onOpenChange={setCreateOpen}
         onCreated={(projectId) => navigate(`/project/${projectId}`)}
       />
-        </div>{/* end blurred content */}
-
-        {/* Overlay */}
-        <div className="absolute inset-0 flex items-start justify-center pt-24 px-4">
-          <div className="w-full max-w-lg rounded-2xl border border-border bg-white/95 shadow-2xl backdrop-blur-sm p-8 text-center">
-            <div className="text-4xl mb-4">🚧</div>
-            <h2 className="text-2xl font-bold tracking-tight mb-2">Dashboard in progress</h2>
-            <p className="text-sm text-muted-foreground mb-8 leading-relaxed">
-              We're building the CEO Command Center. While we do, your live data connectors are fully operational.
-            </p>
-
-            <div className="grid grid-cols-1 gap-3">
-              {connectors.map((c) => (
-                <Link
-                  key={c.to}
-                  to={c.to}
-                  className="flex items-center gap-4 rounded-xl border border-border bg-card px-5 py-4 text-left transition-all hover:border-primary/40 hover:bg-paper hover:shadow-sm group"
-                >
-                  <span className="text-2xl">{c.icon}</span>
-                  <div className="flex-1 min-w-0">
-                    <div className="font-semibold text-sm group-hover:text-accent transition-colors">{c.label}</div>
-                    <div className="text-xs text-muted-foreground">{c.sub}</div>
-                  </div>
-                  <ArrowRight className="h-4 w-4 text-muted-foreground/40 group-hover:text-accent transition-colors shrink-0" />
-                </Link>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>{/* end relative wrapper */}
     </div>
   );
 };

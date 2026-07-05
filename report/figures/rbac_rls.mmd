@@ -1,0 +1,38 @@
+%% Figure: Role-based access control enforced by Postgres Row-Level Security
+flowchart TB
+    U["Authenticated user<br/>(JWT carries auth.uid())"]
+
+    subgraph Roles["Application roles (profiles.role)"]
+        F["founder"]
+        M["mfo"]
+        FH["functional_head<br/>(+ department: tech / social_media / hr)"]
+        PM["project_manager"]
+        TM["team_member"]
+    end
+
+    U --> Roles
+
+    subgraph Frontend["Frontend route guards"]
+        AG["AuthGuard"]
+        TLG["TechLeadGuard"]
+        HRG["HRGuard"]
+        SMG["SocialMediaGuard"]
+    end
+
+    Roles --> Frontend
+
+    subgraph DB["PostgreSQL — Row-Level Security policies"]
+        H1["is_founder() / is_founder(uuid)"]
+        H2["is_social_media_lead()"]
+        H3["has_role(uuid, app_role)"]
+        POL["USING (...) / WITH CHECK (...)<br/>per-table SELECT & write policies"]
+        H1 --> POL
+        H2 --> POL
+        H3 --> POL
+    end
+
+    Frontend -->|"supabase-js request<br/>(JWT attached)"| DB
+    POL -->|"row visible only if policy passes"| Result["Filtered result set"]
+
+    note["SECURITY DEFINER helper functions<br/>read profiles / user_roles to decide access.<br/>Even if the UI is bypassed, the database<br/>refuses unauthorized rows."]
+    DB -.-> note

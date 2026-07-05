@@ -1,0 +1,28 @@
+%% Figure: YouTube OAuth 2.0 authorization-code flow + analytics sync
+sequenceDiagram
+    autonumber
+    actor User as Social-Media Lead
+    participant UI as Founder OS (SPA)
+    participant Start as youtube-oauth-start
+    participant Google as Google OAuth + YouTube APIs
+    participant CB as youtube-oauth-callback
+    participant Sync as youtube-analytics-sync
+    participant DB as Supabase DB
+
+    User->>UI: Connect YouTube
+    UI->>Start: invoke (startup_id)
+    Start-->>UI: Google consent URL (scopes + state)
+    UI->>Google: redirect to consent screen
+    User->>Google: grant access
+    Google-->>CB: redirect with auth code + state
+    CB->>Google: exchange code for access + refresh token
+    Google-->>CB: tokens
+    CB->>DB: store tokens in connector_credentials
+    User->>UI: Sync analytics
+    UI->>Sync: invoke (startup_id)
+    Sync->>DB: read refresh token
+    Sync->>Google: refresh token -> access token
+    Sync->>Google: query Data + Analytics API (per channel)
+    Google-->>Sync: views, watch-time, retention, audience
+    Sync->>DB: UPSERT connector_data_youtube_* + metrics
+    Sync-->>UI: counts (channels, videos, rows)

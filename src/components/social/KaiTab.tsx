@@ -11,7 +11,8 @@ import {
   Trash2, User, Bot,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useAskYouTubeKai, useYouTubeChannels, type YouTubeChannel } from "@/hooks/useYouTube";
+import { useYouTubeChannels, type YouTubeChannel } from "@/hooks/useYouTube";
+import { streamKaiFunction } from "@/lib/kaiStream";
 import InfoTooltip from "./InfoTooltip";
 import { toast } from "sonner";
 
@@ -66,7 +67,9 @@ const WINDOW_OPTIONS: Array<{ value: number; label: string }> = [
 
 export default function KaiTab({ startupId, channelFilterUuid }: Props) {
   const { data: channels = [] } = useYouTubeChannels(startupId);
-  const askKai = useAskYouTubeKai();
+  const [isStreaming, setIsStreaming] = useState(false);
+  // Kept shape-compatible with the old mutation-based code below
+  const askKai = { isPending: isStreaming };
 
   // Channel filter: defaults to the dashboard-level one, but the KaiTab also
   // lets you override locally so you can ask a follow-up about a different
@@ -112,28 +115,30 @@ export default function KaiTab({ startupId, channelFilterUuid }: Props) {
     };
     setTurns((prev) => [...prev, newTurn]);
     setQuestion("");
-    askKai.mutate(
+    setIsStreaming(true);
+    // Stream tokens in as they arrive — the answer grows word by word
+    streamKaiFunction(
+      "youtube-kai-ask",
       {
-        startupId,
-        channelUuid: localChannelUuid === "all" ? null : localChannelUuid,
+        startup_id: startupId,
+        channel_uuid: localChannelUuid === "all" ? null : localChannelUuid,
         question: q,
-        windowDays,
+        window_days: windowDays,
       },
-      {
-        onSuccess: (data) => {
-          setTurns((prev) =>
-            prev.map((t) => (t.id === turnId ? { ...t, answer: data.answer } : t))
-          );
-        },
-        onError: (e: any) => {
-          const msg = e?.message ?? "Something went wrong.";
-          setTurns((prev) =>
-            prev.map((t) => (t.id === turnId ? { ...t, error: msg, answer: "" } : t))
-          );
-          toast.error(msg);
-        },
+      (full) => {
+        setTurns((prev) =>
+          prev.map((t) => (t.id === turnId ? { ...t, answer: full } : t))
+        );
       }
-    );
+    )
+      .catch((e: any) => {
+        const msg = e?.message ?? "Something went wrong.";
+        setTurns((prev) =>
+          prev.map((t) => (t.id === turnId ? { ...t, error: msg, answer: "" } : t))
+        );
+        toast.error(msg);
+      })
+      .finally(() => setIsStreaming(false));
   };
 
   const handleSubmit = (e: FormEvent) => {

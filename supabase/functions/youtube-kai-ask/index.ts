@@ -20,6 +20,9 @@
 // upstream (only the social-media lead and founder see this tab).
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+// Provider-agnostic AI helper: Lovable Gemini today; flips to Claude Opus 4.8
+// automatically once ANTHROPIC_API_KEY is set in secrets (see _shared/kai-ai.ts).
+import { askAI, streamAI } from "../_shared/kai-ai.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -33,6 +36,7 @@ interface RequestBody {
   channel_uuid?: string | null;
   question: string;
   window_days?: number;
+  stream?: boolean;
 }
 
 function todayISO(): string {
@@ -507,13 +511,6 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const lovableKey = Deno.env.get("LOVABLE_API_KEY");
-    if (!lovableKey) {
-      return new Response(JSON.stringify({ error: "LOVABLE_API_KEY is not configured" }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRole = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const admin = createClient(supabaseUrl, serviceRole);
@@ -562,44 +559,22 @@ Data snapshot:
 ${JSON.stringify(snapshot, null, 2)}
 \`\`\``;
 
-    const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${lovableKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userMessage },
-        ],
-      }),
-    });
+    if (body.stream === true) {
+      return await streamAI(
+        { system: systemPrompt, user: userMessage, maxTokens: 4096 },
+        corsHeaders
+      );
+    }
 
-    if (!aiRes.ok) {
-      if (aiRes.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limited by the AI gateway. Try again in a minute." }), {
-          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      if (aiRes.status === 402) {
-        return new Response(JSON.stringify({ error: "AI credits exhausted. Top up in Lovable Settings → AI." }), {
-          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      const t = await aiRes.text();
-      console.error("AI gateway error:", aiRes.status, t.slice(0, 300));
-      return new Response(JSON.stringify({ error: `AI gateway returned ${aiRes.status}` }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    const result = await askAI({ system: systemPrompt, user: userMessage, maxTokens: 4096 });
+    if (!result.ok) {
+      return new Response(JSON.stringify({ error: result.error }), {
+        status: result.status, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const data = await aiRes.json();
-    const answer = data.choices?.[0]?.message?.content || "(no answer returned)";
-
     return new Response(JSON.stringify({
-      answer,
+      answer: result.answer,
       snapshot_summary: {
         channels_in_scope: (snapshot as any).scope?.channels_in_scope ?? 0,
         window_days: windowDays,

@@ -1,4 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+// Provider-agnostic: Lovable Gemini gateway today; flips to Claude Opus 4.8
+// automatically once ANTHROPIC_API_KEY is set in secrets (see _shared/kai-ai.ts).
+import { askAI, streamAI } from "../_shared/kai-ai.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -31,9 +34,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { question, context, role } = await req.json();
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+    const { question, context, role, stream } = await req.json();
 
     const rolePrompt = roleSystemPrompts[role] || roleSystemPrompts.founder;
 
@@ -54,43 +55,18 @@ ${context ? `CONTEXT:\n${context}` : ""}
 
 Respond directly.`;
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: question },
-        ],
-      }),
-    });
+    if (stream === true) {
+      return await streamAI({ system: systemPrompt, user: question }, corsHeaders);
+    }
 
-    if (!response.ok) {
-      if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limited. Try again shortly." }), {
-          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "Credits exhausted. Add funds in Settings." }), {
-          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      const t = await response.text();
-      console.error("AI gateway error:", response.status, t);
-      return new Response(JSON.stringify({ error: "AI error" }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    const result = await askAI({ system: systemPrompt, user: question });
+    if (!result.ok) {
+      return new Response(JSON.stringify({ error: result.error }), {
+        status: result.status, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const data = await response.json();
-    const answer = data.choices?.[0]?.message?.content || "No insight available.";
-
-    return new Response(JSON.stringify({ answer }), {
+    return new Response(JSON.stringify({ answer: result.answer }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {

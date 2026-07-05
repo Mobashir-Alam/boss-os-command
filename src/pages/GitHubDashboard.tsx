@@ -20,7 +20,10 @@ import GitHubPeopleTab from "@/components/github/GitHubPeopleTab";
 import GitHubReposTab from "@/components/github/GitHubReposTab";
 import GitHubFocusTab from "@/components/github/GitHubFocusTab";
 import GitHubKaiTab from "@/components/github/GitHubKaiTab";
+import GitHubContributorsTab from "@/components/github/GitHubContributorsTab";
 import GitHubIdentityDialog from "@/components/github/GitHubIdentityDialog";
+import SyncStatusBadge from "@/components/SyncStatusBadge";
+import { useAutoSyncToast } from "@/hooks/useSyncLog";
 
 export default function GitHubDashboard() {
   const { dbStartups } = useStartups();
@@ -40,6 +43,9 @@ export default function GitHubDashboard() {
   const { data: focus, isLoading: focusLoading } = useGitHubFocus(startupId);
 
   const { mutateAsync: triggerSync, isPending: syncing } = useTriggerGitHubSync();
+
+  // Toast when the 3-hourly auto-sync lands new sync_log rows
+  useAutoSyncToast(startupId);
 
   async function handleSync() {
     if (!startupId) return;
@@ -80,6 +86,7 @@ export default function GitHubDashboard() {
             <div>
               <h1 className={cn("text-xl font-bold", exec && "exec-gradient-text")}>Engineering — GitHub</h1>
               <p className="text-sm text-muted-foreground">Who's working on what, commits, and where focus is right now</p>
+              <SyncStatusBadge startupId={startupId} sources={["github"]} className="mt-0.5" />
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
@@ -108,6 +115,7 @@ export default function GitHubDashboard() {
             <TabsList className="flex-wrap h-auto gap-1">
               <TabsTrigger value="overview">Overview</TabsTrigger>
               <TabsTrigger value="people">People</TabsTrigger>
+              <TabsTrigger value="contributors">Contributors</TabsTrigger>
               <TabsTrigger value="repos">Repos</TabsTrigger>
               <TabsTrigger value="focus">Focus</TabsTrigger>
               <TabsTrigger value="kai">✦ Ask KAI</TabsTrigger>
@@ -153,6 +161,9 @@ export default function GitHubDashboard() {
             </TabsContent>
             <TabsContent value="people">
               {startupId && <GitHubPeopleTab data={people} isLoading={peopleLoading} startupId={startupId} />}
+            </TabsContent>
+            <TabsContent value="contributors">
+              {startupId && <GitHubContributorsTab startupId={startupId} />}
             </TabsContent>
             <TabsContent value="repos">
               <GitHubReposTab data={repos} isLoading={reposLoading} />

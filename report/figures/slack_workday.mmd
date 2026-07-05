@@ -1,0 +1,17 @@
+%% Figure: Slack work-day bucketing with a configurable boundary hour
+flowchart TB
+    A["Slack message<br/>(epoch timestamp ts)"] --> B["Convert to local wall-clock<br/>in configured timezone (Asia/Kolkata)<br/>via Intl.DateTimeFormat"]
+    B --> C{"local hour < <br/>day_boundary_hour (e.g. 6)?"}
+    C -->|"yes"| D["work_date = previous calendar day<br/>(night shift stays whole)"]
+    C -->|"no"| E["work_date = current calendar day"]
+    D --> F["Classify message"]
+    E --> F
+    F --> G{"channel == attendance channel<br/>AND first message of work_date?"}
+    G -->|"yes"| H["checked_in = true<br/>(check_in_time = ts)"]
+    G -->|"no"| I{"channel name ends with<br/>work-update suffix?"}
+    I -->|"yes"| J["posted_update = true"]
+    I -->|"no"| K["was_active = true"]
+    H --> L["UPSERT slack_daily_attendance<br/>(startup_id, user, work_date)"]
+    J --> L
+    K --> L
+    L --> M["Today board reads CURRENT work_date<br/>by the wall clock — rolls over at boundary"]

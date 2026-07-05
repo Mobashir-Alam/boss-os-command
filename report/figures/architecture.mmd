@@ -1,0 +1,39 @@
+%% Figure: High-level system architecture of Founder OS
+flowchart TB
+    subgraph Client["Client — Browser (SPA)"]
+        UI["React 18 + TypeScript + Vite<br/>Tailwind CSS + shadcn/ui"]
+        RQ["TanStack Query<br/>(server-state cache)"]
+        Guards["Route Guards<br/>AuthGuard / TechLeadGuard /<br/>HRGuard / SocialMediaGuard"]
+        UI --> RQ
+        UI --> Guards
+    end
+
+    subgraph Supabase["Supabase (Backend-as-a-Service)"]
+        Auth["Auth<br/>(JWT sessions + email OTP MFA)"]
+        DB[("PostgreSQL<br/>Row-Level Security")]
+        EF["Deno Edge Functions<br/>(23 serverless endpoints)"]
+        RT["Realtime<br/>(kai_insights feed)"]
+    end
+
+    subgraph External["External APIs"]
+        GH["GitHub REST API"]
+        SL["Slack Web API"]
+        YT["YouTube Data + Analytics API"]
+        SMTP["Transactional Email (SMTP)"]
+    end
+
+    GW["Lovable AI Gateway<br/>(OpenAI-compatible)<br/>google/gemini-3-flash-preview"]
+
+    RQ -->|"supabase-js (HTTPS)"| Auth
+    RQ -->|"PostgREST (RLS-checked)"| DB
+    RQ -->|"functions.invoke"| EF
+    DB <--> RT
+    RT -->|"websocket"| UI
+
+    EF -->|"service role"| DB
+    EF -->|"OAuth / PAT / Bot token"| GH
+    EF --> SL
+    EF --> YT
+    EF --> SMTP
+    EF -->|"grounded snapshot + question"| GW
+    GW -->|"natural-language answer"| EF
