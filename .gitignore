@@ -26,3 +26,7 @@ docs/credentials.local.md
 *.njsproj
 *.sln
 *.sw?
+
+# Word lock/temp files
+report/~$*
+report/~WRL*.tmp
